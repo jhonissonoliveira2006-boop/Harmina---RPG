@@ -1,60 +1,280 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Hármina RPG 3.1 · Ficha de Personagem</title>
-
+<title>Hármina RPG · Portal</title>
 <style>
 
 @import url('https://fonts.googleapis.com/css?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;600&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-
-  --ink: #1a1410;
-
-  --parchment: #f0e8d5;
-
-  --aged: #d9cdb4;
-
-  --burnish: #8b6914;
-
-  --gold: #c9941a;
-
-  --rust: #7a2e12;
-
-  --vita-color: #ef4444;
-
-  --guard-color: #4ade80;
-
-  --energy-color: #f59e0b;
-
-  --mana-color: #8b5cf6;
-
-  --pp-color: #818cf8;
-
-  --serif: 'Cinzel', serif;
-
-  --body: 'Crimson Pro', Georgia, serif;
-
-  --mono: 'JetBrains Mono', monospace;
-
-}
-
 html { font-size: 14px; }
 
-body { background: #0f0c08; color: var(--ink); font-family: var(--body); min-height: 100vh; padding: 2rem 1rem; }
+:root {
+  --ink: #1a1410;
+  --ink-soft: #3a2f24;
+  --parchment: #f0e8d5;
+  --parchment-dim: #e4d9bf;
+  --aged: #d9cdb4;
+  --gold: #c9941a;
+  --burnish: #8b6914;
+  --rust: #7a2e12;
+  --void: #0f0c08;
+  --void-2: #18130d;
+  --vita-color: #ef4444;
+  --guard-color: #4ade80;
+  --energy-color: #f59e0b;
+  --mana-color: #8b5cf6;
+  --pp-color: #818cf8;
+  --serif: 'Cinzel', serif;
+  --body: 'Crimson Pro', Georgia, serif;
+  --mono: 'JetBrains Mono', monospace;
+  /* Paleta própria do Chat — mais quente e suave que a ficha */
+  --chat-bg: #1c1812;
+  --chat-bg-2: #221c14;
+  --chat-panel: #f5efe1;
+  --chat-panel-ink: #2b241a;
+  --chat-bubble-mine: #6f8c5a;
+  --chat-bubble-mine-text: #fbfaf3;
+  --chat-bubble-other: #ece2c8;
+  --chat-bubble-other-text: #3a2f1f;
+  --chat-action: #c9a227;
+  --chat-muted: #8a8270;
+  --chat-online: #6f8c5a;
+}
+
+
+@import url('https://fonts.googleapis.com/css?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;600&display=swap');
+
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; min-height: 100vh;
+  background: var(--void);
+  font-family: var(--body);
+  color: var(--parchment);
+  overflow-x: hidden;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(139,105,20,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 15% 90%, rgba(122,46,18,0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 80%, rgba(139,105,20,0.08) 0%, transparent 50%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+/* ─── Textura ambiente: poeira/grão sutil via ruído de pontos ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(rgba(201,162,39,0.04) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.5;
+}
+
+/* ─── Constelação de runas no fundo (decorativo, fixo) ─── */
+.rune-field { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5; }
+.rune {
+  position: absolute; font-family: var(--serif); color: var(--burnish);
+  opacity: 0; animation: rune-pulse 8s ease-in-out infinite;
+}
+@keyframes rune-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 0.18; } }
+
+.stage { position: relative; z-index: 1; width: 100%; max-width: 480px; }
+
+/* ═══════════════════════════════════════════
+   VIEW SWITCHING
+   ═══════════════════════════════════════════ */
+.view { display: none; animation: view-in 0.5s ease; }
+.view.active { display: block; }
+.view.active.view-flex { display: flex; } /* usado pela view de chat, que precisa de layout flex */
+@keyframes view-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ═══════════════════════════════════════════
+   PAINEL BASE (cartão de pergaminho)
+   ═══════════════════════════════════════════ */
+.panel {
+  background: var(--parchment);
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(139,105,20,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(90,30,18,0.07) 0%, transparent 50%);
+  border: 1px solid var(--burnish);
+  box-shadow: 0 0 0 4px rgba(139,105,20,0.15), 0 0 0 8px rgba(0,0,0,0.35), 0 20px 80px rgba(0,0,0,0.6);
+  border-radius: 2px;
+  padding: 2.6rem 2.2rem;
+  color: var(--ink);
+}
+
+/* ═══════════════════════════════════════════
+   TELA 1 — PORTAL
+   ═══════════════════════════════════════════ */
+.portal-seal {
+  width: 86px; height: 86px; margin: 0 auto 1.1rem;
+  border: 2px solid var(--rust); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 1.9rem; font-weight: 900; color: var(--rust);
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(122,46,18,0.2), inset 0 0 0 6px rgba(122,46,18,0.06);
+  animation: seal-breathe 5s ease-in-out infinite;
+}
+.portal-seal::before, .portal-seal::after {
+  content: ''; position: absolute; border-radius: 50%; border: 1px solid rgba(122,46,18,0.35);
+}
+.portal-seal::before { inset: -8px; }
+.portal-seal::after { inset: -14px; border-style: dashed; opacity: 0.5; }
+@keyframes seal-breathe { 0%, 100% { box-shadow: 0 0 0 1px rgba(122,46,18,0.2), inset 0 0 0 6px rgba(122,46,18,0.06); } 50% { box-shadow: 0 0 18px 2px rgba(122,46,18,0.25), inset 0 0 0 6px rgba(122,46,18,0.1); } }
+
+.portal-eyebrow {
+  text-align: center; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.35em;
+  color: var(--burnish); text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.portal-title {
+  text-align: center; font-family: var(--serif); font-size: 2.6rem; font-weight: 900;
+  color: var(--rust); letter-spacing: 0.04em; line-height: 1; text-shadow: 1px 1px 0 rgba(90,30,18,0.2);
+}
+.portal-title-sub {
+  text-align: center; font-family: var(--serif); font-size: 0.68rem; color: var(--burnish);
+  letter-spacing: 0.3em; text-transform: uppercase; margin-top: 0.35rem; margin-bottom: 1.5rem;
+}
+
+.portal-phrase-box {
+  min-height: 2.4rem; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.8rem; padding: 0 0.5rem;
+}
+.portal-phrase {
+  font-family: var(--body); font-style: italic; font-size: 1.05rem; color: var(--ink-soft);
+  text-align: center; position: relative;
+}
+.portal-phrase::before, .portal-phrase::after { color: var(--gold); opacity: 0.6; font-family: var(--serif); }
+.portal-phrase::before { content: '“ '; }
+.portal-phrase::after { content: ' ”'; }
+
+.portal-actions { display: flex; flex-direction: column; gap: 0.7rem; }
+
+.btn {
+  font-family: var(--serif); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.18em;
+  text-transform: uppercase; padding: 0.85rem 1rem; border-radius: 2px; cursor: pointer;
+  border: 1px solid var(--burnish); transition: all 0.2s; text-align: center;
+  background: transparent; color: var(--rust); position: relative; overflow: hidden;
+}
+.btn-primary { background: var(--rust); color: var(--parchment); border-color: var(--rust); }
+.btn-primary:hover { background: #5e2209; box-shadow: 0 4px 14px rgba(122,46,18,0.35); transform: translateY(-1px); }
+.btn-secondary:hover { background: rgba(139,105,20,0.08); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-disabled, .btn-disabled:hover {
+  background: rgba(0,0,0,0.04); color: #a39d8e; border-color: #c7c0ac; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+.btn-disabled .btn-note { display: block; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: none; color: #b3ac9c; margin-top: 0.25rem; font-weight: 400; }
+
+.portal-footer-note {
+  text-align: center; margin-top: 1.6rem; font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.1em; color: #999; text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════
+   TELA 2 — CADASTRO / LOGIN
+   ═══════════════════════════════════════════ */
+.form-header { text-align: center; margin-bottom: 1.8rem; }
+.form-eyebrow { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.3em; color: var(--burnish); text-transform: uppercase; margin-bottom: 0.3rem; }
+.form-title { font-family: var(--serif); font-size: 1.5rem; font-weight: 900; color: var(--rust); letter-spacing: 0.03em; }
+.form-sub { font-family: var(--body); font-style: italic; font-size: 0.82rem; color: #777; margin-top: 0.4rem; }
+
+.field-group { margin-bottom: 1.2rem; }
+.field-group label {
+  display: block; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.2em;
+  color: var(--burnish); text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.field-group input {
+  width: 100%; background: rgba(0,0,0,0.02); border: none; border-bottom: 1.5px solid rgba(139,105,20,0.4);
+  font-family: var(--body); font-size: 1rem; color: var(--ink); padding: 0.5rem 0.2rem; outline: none;
+  transition: border-color 0.2s;
+}
+.field-group input:focus { border-color: var(--rust); }
+.field-hint { font-family: var(--mono); font-size: 0.52rem; color: #999; margin-top: 0.35rem; letter-spacing: 0.05em; }
+.field-error { font-family: var(--mono); font-size: 0.58rem; color: var(--rust); margin-top: 0.4rem; letter-spacing: 0.03em; min-height: 1em; }
+
+.form-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.6rem; }
+.link-back {
+  text-align: center; margin-top: 1.2rem; font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.08em; color: var(--burnish); text-transform: uppercase; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px; opacity: 0.8;
+}
+.link-back:hover { opacity: 1; }
+
+/* ═══════════════════════════════════════════
+   TELA 3 — BOAS-VINDAS
+   ═══════════════════════════════════════════ */
+.welcome-header { text-align: center; margin-bottom: 2rem; }
+.welcome-eyebrow { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.3em; color: var(--burnish); text-transform: uppercase; margin-bottom: 0.5rem; }
+.welcome-name { font-family: var(--serif); font-size: 1.7rem; font-weight: 900; color: var(--rust); letter-spacing: 0.02em; }
+.welcome-sub { font-family: var(--body); font-style: italic; font-size: 0.85rem; color: #777; margin-top: 0.5rem; }
+
+.welcome-cards { display: flex; flex-direction: column; gap: 0.9rem; }
+.welcome-card {
+  display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(139,105,20,0.35); border-radius: 2px; cursor: pointer;
+  background: rgba(0,0,0,0.015); transition: all 0.2s; text-align: left;
+}
+.welcome-card:hover { border-color: var(--rust); background: rgba(122,46,18,0.04); transform: translateX(3px); }
+.welcome-card-icon {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--burnish);
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem; background: rgba(139,105,20,0.06);
+}
+.welcome-card-text { flex: 1; }
+.welcome-card-title {
+  font-family: var(--serif); font-size: 0.92rem; font-weight: 600; color: var(--ink);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.welcome-card-desc { font-family: var(--body); font-size: 0.78rem; color: #777; margin-top: 0.15rem; }
+.welcome-card-arrow { font-family: var(--serif); color: var(--burnish); font-size: 1.1rem; }
+
+.welcome-signout {
+  text-align: center; margin-top: 1.6rem; font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.1em; color: #999; text-transform: uppercase; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.welcome-signout:hover { color: var(--rust); }
+
+/* ═══════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 1.6rem; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--void-2); color: var(--parchment); border: 1px solid var(--burnish);
+  padding: 0.7rem 1.2rem; border-radius: 2px; font-family: var(--body); font-size: 0.82rem;
+  opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 999; max-width: 90vw; text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast strong { color: var(--gold); }
+
+@media (max-width: 480px) {
+  .panel { padding: 2rem 1.4rem; }
+  .portal-title { font-size: 2.1rem; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   ESTILOS DA FICHA DE PERSONAGEM (escopados em #view-ficha)
+   ═══════════════════════════════════════════════════════ */
+
+
+/* @import já incluído globalmente no topo do documento unificado */
+
+#view-ficha, #view-ficha *, #view-ficha *::before, #view-ficha *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* :root mesclado no bloco global do documento unificado (topo da folha de estilos) */
+
+/* largura/padding de #view-ficha consolidados na seção "PONTE PORTAL ↔ FICHA" mais abaixo */
 
 /* TOAST BANNER */
 
-#toast {
+#ficha-toast {
 
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
 
@@ -72,7 +292,7 @@ body { background: #0f0c08; color: var(--ink); font-family: var(--body); min-hei
 
 }
 
-#toast.show { transform: translateY(0); }
+#ficha-toast.show { transform: translateY(0); }
 
 #toast-icon { font-size: 1rem; flex-shrink: 0; }
 
@@ -486,17 +706,450 @@ body { background: #0f0c08; color: var(--ink); font-family: var(--body); min-hei
 
   .sheet { box-shadow: none; border: 1px solid #ccc; max-width: 100%; margin: 0; }
 
-  .print-btn, #toast { display: none; }
+  .print-btn, #ficha-toast { display: none; }
 
 }
 
+
+
+/* ═══════════════════════════════════════════════════════
+   PONTE PORTAL ↔ FICHA
+   Nota: a visibilidade (display: none/block) desta view é
+   controlada só por .view / .view.active (ver topo do CSS),
+   para não criar conflito de especificidade com o seletor de ID.
+   ═══════════════════════════════════════════════════════ */
+#view-ficha {
+  max-width: 940px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+.ficha-voltar-btn {
+  display: block;
+  margin: 0 auto 1rem;
+  max-width: 940px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parchment);
+  background: rgba(240,232,213,0.08);
+  border: 1px solid rgba(240,232,213,0.25);
+  padding: 0.55rem 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+.ficha-voltar-btn:hover {
+  background: rgba(240,232,213,0.16);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+@media (max-width: 480px) {
+  .ficha-voltar-btn { margin-left: 0.5rem; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHAT / MESA DE RPG
+   Paleta própria, mais suave e orgânica que a ficha:
+   fundo "lareira" quente, bolhas arredondadas como seixos,
+   verde-musgo para as próprias falas, âmbar para as dos outros.
+   ═══════════════════════════════════════════════════════ */
+#view-chat {
+  width: 100%;
+  height: 100vh;
+  padding: 0;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.chat-shell {
+  width: 100%;
+  max-width: 760px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-bg);
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(201,162,39,0.06) 0%, transparent 60%);
+  box-shadow: 0 0 0 1px rgba(201,162,39,0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Topbar ─── */
+.chat-topbar {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--chat-bg-2);
+  border-bottom: 1px solid rgba(201,162,39,0.18);
+  flex-shrink: 0;
+  z-index: 20;
+}
+.chat-back-btn {
+  background: none; border: none; color: var(--parchment, #f0e8d5); font-size: 1.4rem;
+  cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 4px; line-height: 1;
+  transition: background 0.2s; font-family: var(--serif);
+}
+.chat-back-btn:hover { background: rgba(255,255,255,0.08); }
+.chat-topbar-info { flex: 1; min-width: 0; }
+.chat-topbar-title {
+  font-family: var(--serif); font-weight: 700; font-size: 1rem; color: var(--parchment, #f0e8d5);
+  letter-spacing: 0.02em;
+}
+.chat-topbar-sub {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--chat-online);
+  letter-spacing: 0.04em; display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem;
+}
+.chat-topbar-sub::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--chat-online);
+  box-shadow: 0 0 6px var(--chat-online); flex-shrink: 0;
+}
+.chat-topbar-actions { position: relative; flex-shrink: 0; }
+.chat-icon-btn {
+  background: none; border: none; color: var(--parchment, #f0e8d5); font-size: 1.3rem;
+  cursor: pointer; padding: 0.3rem 0.6rem; border-radius: 4px; transition: background 0.2s; line-height: 1;
+}
+.chat-icon-btn:hover { background: rgba(255,255,255,0.08); }
+
+.chat-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--chat-panel); border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  min-width: 220px; padding: 0.4rem; z-index: 50;
+  opacity: 0; transform: translateY(-6px) scale(0.97); pointer-events: none;
+  transition: all 0.16s ease;
+}
+.chat-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.chat-menu-item {
+  padding: 0.6rem 0.7rem; font-family: var(--body); font-size: 0.86rem; color: var(--chat-panel-ink);
+  border-radius: 6px; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 0.5rem;
+}
+.chat-menu-item:hover { background: rgba(111,140,90,0.12); }
+
+/* ─── Corpo: registro lateral + mensagens ─── */
+.chat-body { flex: 1; display: flex; min-height: 0; position: relative; }
+
+.actions-panel {
+  width: 0; flex-shrink: 0; overflow: hidden;
+  background: var(--chat-panel); color: var(--chat-panel-ink);
+  border-right: 1px solid rgba(0,0,0,0.08);
+  transition: width 0.28s ease;
+  display: flex; flex-direction: column;
+}
+.actions-panel.open { width: 280px; }
+.actions-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1rem 0.5rem; flex-shrink: 0;
+}
+.actions-panel-title { font-family: var(--serif); font-weight: 700; font-size: 0.92rem; white-space: nowrap; }
+.actions-panel-close {
+  background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--chat-muted);
+  padding: 0.2rem 0.4rem; border-radius: 4px; transition: all 0.15s; flex-shrink: 0;
+}
+.actions-panel-close:hover { background: rgba(0,0,0,0.06); color: var(--chat-panel-ink); }
+.actions-panel-sub {
+  padding: 0 1rem 0.8rem; font-family: var(--body); font-style: italic; font-size: 0.72rem;
+  color: var(--chat-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.actions-panel-list { flex: 1; overflow-y: auto; padding: 0 1rem 1rem; }
+.action-entry {
+  padding: 0.6rem 0; border-bottom: 1px dashed rgba(0,0,0,0.1); white-space: normal;
+}
+.action-entry:last-child { border-bottom: none; }
+.action-entry-meta {
+  font-family: var(--mono); font-size: 0.6rem; color: var(--chat-muted); letter-spacing: 0.04em;
+  display: flex; justify-content: space-between; margin-bottom: 0.2rem;
+}
+.action-entry-text {
+  font-family: var(--body); font-style: italic; font-size: 0.84rem; line-height: 1.5; color: var(--chat-panel-ink);
+}
+.actions-panel-empty {
+  font-family: var(--body); font-style: italic; font-size: 0.8rem; color: var(--chat-muted);
+  text-align: center; padding: 2rem 1rem;
+}
+
+.chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+
+/* ─── Mensagens ─── */
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 1.1rem 1rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(201,162,39,0.25); border-radius: 3px; }
+
+.chat-day-divider {
+  display: flex; align-items: center; justify-content: center; margin: 0.4rem 0 0.8rem;
+}
+.chat-day-divider span {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--chat-muted); background: rgba(255,255,255,0.04); padding: 0.25rem 0.8rem; border-radius: 20px;
+}
+
+.msg-row { display: flex; flex-direction: column; max-width: 78%; animation: msg-in 0.25s ease; }
+@keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.msg-row.mine { align-self: flex-end; align-items: flex-end; }
+.msg-row.theirs { align-self: flex-start; align-items: flex-start; }
+
+.msg-author {
+  font-family: var(--serif); font-weight: 600; font-size: 0.68rem; letter-spacing: 0.03em;
+  color: var(--chat-action); margin-bottom: 0.2rem; padding: 0 0.3rem;
+}
+
+.msg-bubble {
+  padding: 0.55rem 0.85rem; border-radius: 16px; font-family: var(--body); font-size: 0.92rem;
+  line-height: 1.45; word-wrap: break-word; white-space: pre-wrap; position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.msg-row.mine .msg-bubble {
+  background: var(--chat-bubble-mine); color: var(--chat-bubble-mine-text);
+  border-bottom-right-radius: 4px;
+}
+.msg-row.theirs .msg-bubble {
+  background: var(--chat-bubble-other); color: var(--chat-bubble-other-text);
+  border-bottom-left-radius: 4px;
+}
+
+/* Mensagem de AÇÃO (registrada, sem //) — visual de narrativa, sem bolha */
+.msg-row.action-msg { max-width: 92%; align-self: center; align-items: center; }
+.msg-row.action-msg .msg-bubble {
+  background: transparent; box-shadow: none; color: var(--chat-action);
+  font-style: italic; text-align: center; font-size: 0.85rem; padding: 0.3rem 1rem;
+  border-top: 1px solid rgba(201,162,39,0.15); border-bottom: 1px solid rgba(201,162,39,0.15);
+  border-radius: 0;
+}
+.msg-row.action-msg .msg-author { display: none; }
+
+/* Mensagem fora-de-personagem (//) — discreta, não entra no registro */
+.msg-row.ooc-msg { align-self: center; max-width: 85%; }
+.msg-row.ooc-msg .msg-bubble {
+  background: rgba(255,255,255,0.04); color: var(--chat-muted);
+  font-size: 0.78rem; border: 1px dashed rgba(255,255,255,0.12); border-radius: 10px;
+}
+.msg-row.ooc-msg .msg-author { color: var(--chat-muted); opacity: 0.7; }
+
+.msg-time {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--chat-muted);
+  margin-top: 0.15rem; padding: 0 0.3rem;
+}
+
+/* ─── Bolha de novas mensagens ─── */
+.new-messages-pill {
+  position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%) translateY(10px);
+  background: #3b6fd6; color: #fff; border: none; border-radius: 999px;
+  padding: 0.45rem 1rem; font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; box-shadow: 0 6px 18px rgba(59,111,214,0.45);
+  display: flex; align-items: center; gap: 0.4rem;
+  opacity: 0; pointer-events: none; transition: all 0.22s ease; z-index: 15;
+}
+.new-messages-pill.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.new-messages-pill #new-messages-count {
+  background: rgba(255,255,255,0.25); border-radius: 50%; width: 1.3rem; height: 1.3rem;
+  display: flex; align-items: center; justify-content: center; font-size: 0.65rem;
+}
+
+/* ─── Indicador de digitação ─── */
+.typing-indicator {
+  display: none; align-items: center; gap: 0.4rem; padding: 0 1.1rem 0.3rem;
+  font-family: var(--body); font-style: italic; font-size: 0.76rem; color: var(--chat-muted);
+}
+.typing-indicator.show { display: flex; }
+.typing-dots { display: flex; gap: 2px; align-items: center; }
+.typing-dots i {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--chat-muted);
+  display: inline-block; animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-dots i:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-3px); opacity: 1; } }
+
+/* ─── Compositor ─── */
+.chat-composer {
+  flex-shrink: 0; padding: 0.6rem 1rem 0.9rem; background: var(--chat-bg-2);
+  border-top: 1px solid rgba(201,162,39,0.15);
+}
+.composer-hint {
+  font-family: var(--mono); font-size: 0.6rem; color: var(--chat-muted); letter-spacing: 0.02em;
+  margin-bottom: 0.45rem; line-height: 1.4;
+}
+.composer-hint code {
+  background: rgba(201,162,39,0.15); color: var(--chat-action); padding: 0.05rem 0.3rem;
+  border-radius: 3px; font-family: var(--mono);
+}
+.composer-row { display: flex; align-items: flex-end; gap: 0.6rem; }
+.composer-input {
+  flex: 1; resize: none; max-height: 120px; min-height: 40px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 0.6rem 1rem; font-family: var(--body); font-size: 0.92rem;
+  color: var(--parchment, #f0e8d5); outline: none; transition: border-color 0.2s; line-height: 1.4;
+}
+.composer-input:focus { border-color: var(--chat-action); }
+.composer-input::placeholder { color: var(--chat-muted); }
+.composer-send {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: var(--chat-bubble-mine); color: #fff; font-size: 1.05rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all 0.18s;
+  box-shadow: 0 2px 8px rgba(111,140,90,0.4);
+}
+.composer-send:hover { background: #7c9d63; transform: scale(1.05); }
+.composer-send:active { transform: scale(0.95); }
+
+@media (max-width: 600px) {
+  .chat-shell { max-width: 100%; }
+  .actions-panel.open { width: 100%; position: absolute; inset: 0; z-index: 30; }
+  .msg-row { max-width: 88%; }
+}
+
 </style>
-
 </head>
-
 <body>
 
-<div id="toast">
+
+
+<div class="rune-field" id="rune-field"></div>
+
+<div class="stage">
+
+  <!-- ═══════════════════════════════════════════
+       VIEW 1 — PORTAL DE ENTRADA
+       ═══════════════════════════════════════════ -->
+  <div class="view active" id="view-portal">
+    <div class="panel">
+      <div class="portal-seal">H</div>
+      <div class="portal-eyebrow">Sistema de Jogo</div>
+      <div class="portal-title">Hármina</div>
+      <div class="portal-title-sub">RPG de Mesa · Portal de Acesso</div>
+
+      <div class="portal-phrase-box">
+        <div class="portal-phrase" id="portal-phrase">Vamos jogar?</div>
+      </div>
+
+      <div class="portal-actions">
+        <button class="btn btn-primary" id="btn-nova-sessao" onclick="irPara('cadastro')">Iniciar Nova Sessão</button>
+        <button class="btn btn-secondary btn-disabled" id="btn-entrar" onclick="tentarEntrar()">
+          Entrar
+          <span class="btn-note" id="entrar-note">Nenhum perfil encontrado neste dispositivo</span>
+        </button>
+      </div>
+
+      <div class="portal-footer-note">Hármina RPG · Edição de Mesa</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW 2 — CADASTRO (Nova Sessão)
+       ═══════════════════════════════════════════ -->
+  <div class="view" id="view-cadastro">
+    <div class="panel">
+      <div class="form-header">
+        <div class="form-eyebrow">Novo Perfil</div>
+        <div class="form-title">Criar Sessão</div>
+        <div class="form-sub">Cada jogador guarda sua própria ficha e progresso</div>
+      </div>
+
+      <div class="field-group">
+        <label>Nome de Usuário</label>
+        <input type="text" id="input-user" placeholder="Como deseja ser chamado?" maxlength="24" autocomplete="off">
+        <div class="field-hint">Visível para você ao entrar novamente</div>
+      </div>
+
+      <div class="field-group">
+        <label>Senha</label>
+        <input type="password" id="input-pass" placeholder="Mínimo de 4 caracteres" maxlength="40" autocomplete="off">
+        <div class="field-hint">Guardada apenas neste dispositivo</div>
+      </div>
+
+      <div class="field-error" id="cadastro-error"></div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="criarPerfil()">Confirmar e Entrar</button>
+      </div>
+
+      <div class="link-back" onclick="irPara('portal')">‹ Voltar ao Portal</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW 2B — ENTRAR (Login com perfil existente)
+       ═══════════════════════════════════════════ -->
+  <div class="view" id="view-login">
+    <div class="panel">
+      <div class="form-header">
+        <div class="form-eyebrow">Bem-vindo de volta</div>
+        <div class="form-title">Entrar</div>
+        <div class="form-sub" id="login-sub">Acesse seu perfil salvo</div>
+      </div>
+
+      <div class="field-group">
+        <label>Nome de Usuário</label>
+        <input type="text" id="login-user" placeholder="Seu nome de usuário" maxlength="24" autocomplete="off">
+      </div>
+
+      <div class="field-group">
+        <label>Senha</label>
+        <input type="password" id="login-pass" placeholder="Sua senha" maxlength="40" autocomplete="off">
+      </div>
+
+      <div class="field-error" id="login-error"></div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+      </div>
+
+      <div class="link-back" onclick="irPara('portal')">‹ Voltar ao Portal</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW 3 — BOAS-VINDAS
+       ═══════════════════════════════════════════ -->
+  <div class="view" id="view-boasvindas">
+    <div class="panel">
+      <div class="welcome-header">
+        <div class="welcome-eyebrow">Sessão Ativa</div>
+        <div class="welcome-name" id="welcome-name">Aventureiro</div>
+        <div class="welcome-sub" id="welcome-phrase">Que a sorte guie seus dados.</div>
+      </div>
+
+      <div class="welcome-cards">
+        <div class="welcome-card" onclick="abrirFicha()">
+          <div class="welcome-card-icon">📜</div>
+          <div class="welcome-card-text">
+            <div class="welcome-card-title">Criar Nova Ficha</div>
+            <div class="welcome-card-desc">Monte um personagem do zero</div>
+          </div>
+          <div class="welcome-card-arrow">›</div>
+        </div>
+
+        <div class="welcome-card" onclick="abrirChat()">
+          <div class="welcome-card-icon">💬</div>
+          <div class="welcome-card-text">
+            <div class="welcome-card-title">Chat</div>
+            <div class="welcome-card-desc">Converse com o Mestre ou outros jogadores</div>
+          </div>
+          <div class="welcome-card-arrow">›</div>
+        </div>
+      </div>
+
+      <div class="welcome-signout" onclick="sair()">Encerrar sessão</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     VIEW 4 — FICHA DE PERSONAGEM
+     ═══════════════════════════════════════════ -->
+<div class="view" id="view-ficha">
+  <button class="ficha-voltar-btn" onclick="voltarAoMenu()">‹ Voltar ao Menu</button>
+
+
+<div id="ficha-toast">
 
   <span id="toast-icon">⚙️</span>
 
@@ -1886,7 +2539,7 @@ let toastTimer = null;
 
 function showToast(icon, html, duration = 4000) {
 
-  const el = document.getElementById('toast');
+  const el = document.getElementById('ficha-toast');
 
   document.getElementById('toast-icon').textContent = icon;
 
@@ -2674,6 +3327,640 @@ renderPP();
 
 </script>
 
-</body>
 
-  </html>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     VIEW 5 — CHAT / MESA DE RPG
+     ═══════════════════════════════════════════ -->
+<div class="view view-flex" id="view-chat">
+  <div class="chat-shell">
+
+    <!-- Cabeçalho da mesa -->
+    <div class="chat-topbar">
+      <button class="chat-back-btn" onclick="voltarAoMenu()" title="Voltar ao Menu">‹</button>
+      <div class="chat-topbar-info">
+        <div class="chat-topbar-title">Mesa de Hármina</div>
+        <div class="chat-topbar-sub" id="chat-presence">3 aventureiros à mesa</div>
+      </div>
+      <div class="chat-topbar-actions">
+        <button class="chat-icon-btn" id="chat-menu-btn" onclick="toggleChatMenu(event)" title="Mais opções">⋮</button>
+        <div class="chat-menu" id="chat-menu">
+          <div class="chat-menu-item" onclick="abrirRegistroAcoes()">📜 Registro de Ações</div>
+          <div class="chat-menu-item" onclick="toggleSomAmbiente()">
+            <span id="som-ambiente-label">🔈 Som ambiente: desligado</span>
+          </div>
+          <div class="chat-menu-item" onclick="limparNotificacoes()">✓ Marcar tudo como lido</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-body">
+
+      <!-- Painel lateral: Registro de Ações -->
+      <div class="actions-panel" id="actions-panel">
+        <div class="actions-panel-header">
+          <div class="actions-panel-title">📜 Registro de Ações</div>
+          <button class="actions-panel-close" onclick="fecharRegistroAcoes()">✕</button>
+        </div>
+        <div class="actions-panel-sub">Tudo o que aconteceu na mesa, em ordem — sem conversa paralela.</div>
+        <div class="actions-panel-list" id="actions-panel-list"></div>
+      </div>
+
+      <!-- Área principal de mensagens -->
+      <div class="chat-main">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-day-divider"><span>Hoje</span></div>
+        </div>
+
+        <!-- Bolha flutuante de novas mensagens -->
+        <button class="new-messages-pill" id="new-messages-pill" onclick="rolarParaFinal()">
+          <span id="new-messages-count">0</span> nova mensagem ↓
+        </button>
+
+        <!-- Indicador de digitação -->
+        <div class="typing-indicator" id="typing-indicator">
+          <span id="typing-text"></span>
+          <span class="typing-dots"><i></i><i></i><i></i></span>
+        </div>
+
+        <!-- Barra de composição -->
+        <div class="chat-composer">
+          <div class="composer-hint" id="composer-hint">Escreva normalmente para narrar ou agir · use <code>//</code> no início para falar fora do personagem (não fica no registro)</div>
+          <div class="composer-row">
+            <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação ou fala…" rows="1"></textarea>
+            <button class="composer-send" id="composer-send" onclick="enviarMensagem()" title="Enviar">➤</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+
+
+
+<script>
+
+// ═══════════════════════════════════════════
+// FRASES ROTATIVAS DO PORTAL (40 variações)
+// ═══════════════════════════════════════════
+const frasesPortal = [
+  "Vamos jogar?",
+  "O que tem para hoje?",
+  "Hora do RPG!",
+  "Pronto para mais uma aventura?",
+  "Os dados já estão quentes.",
+  "Hármina espera por você.",
+  "Que história vamos contar hoje?",
+  "Sua lenda continua aqui.",
+  "Role os dados e descubra.",
+  "O mestre já preparou tudo.",
+  "Toda jornada começa com um passo.",
+  "A taverna está cheia de rumores.",
+  "Novos perigos, novas glórias.",
+  "Seu personagem aguarda.",
+  "O destino não se escreve sozinho.",
+  "Bora pra mesa?",
+  "As sombras de Hármina se movem.",
+  "Cada turno conta uma história.",
+  "Prepare seu inventário.",
+  "A campanha não espera.",
+  "Aventura é o nome do jogo.",
+  "Vista a armadura, pegue a espada.",
+  "O Grande Rei observa.",
+  "Mont-Krom ecoa em silêncio.",
+  "Os Silvestres sussurram segredos.",
+  "As Depressões guardam perigos.",
+  "Que comecem os combates!",
+  "Sua próxima rolagem pode mudar tudo.",
+  "O fogo da lareira já está aceso.",
+  "Hoje é dia de criar lendas.",
+  "Mantenha a guarda alta.",
+  "A energia está no limite?",
+  "Vitalidade cheia, coragem em alta.",
+  "A magia aguarda seu comando.",
+  "Reúna o grupo, a sessão vai começar.",
+  "Que os ventos de Hármina te guiem.",
+  "Hora de empunhar o destino.",
+  "O tabuleiro está pronto.",
+  "Conte sua história até o fim.",
+  "Bem-vindo de volta, viajante."
+];
+
+function frasePortalAleatoria() {
+  return frasesPortal[Math.floor(Math.random() * frasesPortal.length)];
+}
+
+// Efeito de "datilografar" para a frase do portal
+function digitarFrase(texto) {
+  const el = document.getElementById('portal-phrase');
+  el.textContent = '';
+  let i = 0;
+  const speed = 28;
+  function passo() {
+    if (i <= texto.length) {
+      el.textContent = texto.slice(0, i);
+      i++;
+      setTimeout(passo, speed);
+    }
+  }
+  passo();
+}
+
+// ═══════════════════════════════════════════
+// CAMPO DE RUNAS DECORATIVO (fundo)
+// ═══════════════════════════════════════════
+function gerarRunas() {
+  const runas = ['ᚱ','ᚦ','ᚨ','ᚹ','ᛟ','ᛗ','ᛉ','ᛒ','✦','✧'];
+  const field = document.getElementById('rune-field');
+  for (let i = 0; i < 14; i++) {
+    const r = document.createElement('div');
+    r.className = 'rune';
+    r.textContent = runas[Math.floor(Math.random() * runas.length)];
+    r.style.left = Math.random() * 100 + '%';
+    r.style.top = Math.random() * 100 + '%';
+    r.style.fontSize = (1 + Math.random() * 2) + 'rem';
+    r.style.animationDelay = (Math.random() * 8) + 's';
+    r.style.animationDuration = (6 + Math.random() * 6) + 's';
+    field.appendChild(r);
+  }
+}
+
+// ═══════════════════════════════════════════
+// ARMAZENAMENTO DE PERFIS (persistente entre sessões — localStorage)
+// Usamos localStorage em vez da API de Artifacts porque este arquivo
+// precisa funcionar sozinho, fora do preview do Claude (aberto direto
+// no navegador, hospedado, etc.)
+// ═══════════════════════════════════════════
+const STORAGE_KEY_PREFIX = 'harmina-perfil:';
+const STORAGE_LAST_USER = 'harmina-ultimo-usuario';
+
+async function salvarPerfil(usuario, senha) {
+  const dados = { usuario, senha, criadoEm: new Date().toISOString() };
+  localStorage.setItem(STORAGE_KEY_PREFIX + usuario.toLowerCase(), JSON.stringify(dados));
+  localStorage.setItem(STORAGE_LAST_USER, usuario);
+}
+
+async function buscarPerfil(usuario) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + usuario.toLowerCase());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function existeAlgumPerfil() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      if (localStorage.key(i).startsWith(STORAGE_KEY_PREFIX)) return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function buscarUltimoUsuario() {
+  try {
+    return localStorage.getItem(STORAGE_LAST_USER);
+  } catch (e) {
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════
+// NAVEGAÇÃO ENTRE TELAS
+// ═══════════════════════════════════════════
+function irPara(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const map = { portal: 'view-portal', cadastro: 'view-cadastro', login: 'view-login', boasvindas: 'view-boasvindas', ficha: 'view-ficha', chat: 'view-chat' };
+  document.getElementById(map[viewId]).classList.add('active');
+  if (viewId === 'cadastro') {
+    setTimeout(() => document.getElementById('input-user').focus(), 350);
+  }
+  if (viewId === 'login') {
+    setTimeout(() => document.getElementById('login-user').focus(), 350);
+  }
+}
+
+function mostrarToast(msg, ms) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), ms || 3000);
+}
+
+// ═══════════════════════════════════════════
+// AÇÕES — CRIAR PERFIL
+// ═══════════════════════════════════════════
+async function criarPerfil() {
+  const usuario = document.getElementById('input-user').value.trim();
+  const senha = document.getElementById('input-pass').value;
+  const erroEl = document.getElementById('cadastro-error');
+  erroEl.textContent = '';
+
+  if (usuario.length < 2) { erroEl.textContent = 'O nome de usuário precisa de ao menos 2 caracteres.'; return; }
+  if (senha.length < 4) { erroEl.textContent = 'A senha precisa de ao menos 4 caracteres.'; return; }
+
+  const existente = await buscarPerfil(usuario);
+  if (existente) { erroEl.textContent = 'Já existe um perfil com esse nome neste dispositivo. Tente "Entrar".'; return; }
+
+  await salvarPerfil(usuario, senha);
+  entrarComSessao(usuario);
+}
+
+// ═══════════════════════════════════════════
+// AÇÕES — ENTRAR (login)
+// ═══════════════════════════════════════════
+async function tentarEntrar() {
+  const btn = document.getElementById('btn-entrar');
+  if (btn.classList.contains('btn-disabled')) return; // ainda sem perfis
+  const ultimo = await buscarUltimoUsuario();
+  document.getElementById('login-sub').textContent = ultimo ? `Último acesso: ${ultimo}` : 'Acesse seu perfil salvo';
+  if (ultimo) document.getElementById('login-user').value = ultimo;
+  irPara('login');
+}
+
+async function fazerLogin() {
+  const usuario = document.getElementById('login-user').value.trim();
+  const senha = document.getElementById('login-pass').value;
+  const erroEl = document.getElementById('login-error');
+  erroEl.textContent = '';
+
+  const perfil = await buscarPerfil(usuario);
+  if (!perfil) { erroEl.textContent = 'Nenhum perfil encontrado com esse nome.'; return; }
+  if (perfil.senha !== senha) { erroEl.textContent = 'Senha incorreta.'; return; }
+
+  localStorage.setItem(STORAGE_LAST_USER, usuario);
+  entrarComSessao(usuario);
+}
+
+// ═══════════════════════════════════════════
+// SESSÃO ATIVA → TELA DE BOAS-VINDAS
+// ═══════════════════════════════════════════
+const fraseBoasVindas = [
+  "Que a sorte guie seus dados.",
+  "Sua aventura espera por você.",
+  "Hármina lembra de você.",
+  "Pronto para continuar a história?",
+  "O mestre já está de olho em você."
+];
+
+function entrarComSessao(usuario) {
+  document.getElementById('welcome-name').textContent = usuario;
+  document.getElementById('welcome-phrase').textContent = fraseBoasVindas[Math.floor(Math.random() * fraseBoasVindas.length)];
+  irPara('boasvindas');
+  mostrarToast(`Bem-vindo, <strong>${usuario}</strong>!`);
+}
+
+function sair() {
+  irPara('portal');
+  digitarFrase(frasePortalAleatoria());
+  document.getElementById('input-user').value = '';
+  document.getElementById('input-pass').value = '';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  atualizarBotaoEntrar();
+}
+
+// ═══════════════════════════════════════════
+// AÇÕES DA TELA DE BOAS-VINDAS
+// ═══════════════════════════════════════════
+function abrirFicha() {
+  irPara('ficha');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function abrirChat() {
+  irPara('chat');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  initChatSeDronar();
+}
+
+function voltarAoMenu() {
+  irPara('boasvindas');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// ═══════════════════════════════════════════
+// ESTADO DO BOTÃO "ENTRAR"
+// ═══════════════════════════════════════════
+async function atualizarBotaoEntrar() {
+  const temPerfil = await existeAlgumPerfil();
+  const btnEntrar = document.getElementById('btn-entrar');
+  const note = document.getElementById('entrar-note');
+
+  if (temPerfil) {
+    btnEntrar.classList.remove('btn-disabled');
+    if (note) note.remove();
+  } else {
+    btnEntrar.classList.add('btn-disabled');
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+(async function init() {
+  gerarRunas();
+  digitarFrase(frasePortalAleatoria());
+  await atualizarBotaoEntrar();
+})();
+
+// Enter para confirmar nos formulários
+document.getElementById('input-pass').addEventListener('keydown', e => { if (e.key === 'Enter') criarPerfil(); });
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+
+// ═══════════════════════════════════════════════════════
+// CHAT / MESA DE RPG
+// ═══════════════════════════════════════════════════════
+
+// ─── Estado do chat ───
+const chatState = {
+  mensagens: [],      // { id, autor, texto, tipo: 'normal'|'ooc', mine, timestamp }
+  proximoId: 1,
+  novasNaoLidas: 0,
+  estaNoFinal: true,  // se o usuário está rolado até o fim (controla a bolinha de "novas mensagens")
+  inicializado: false
+};
+
+const NOME_JOGADOR = 'Você'; // nome usado nas mensagens "mine" (substitua pelo usuário logado quando integrar)
+
+// Elenco de NPCs/jogadores simulados só para a demonstração funcionar sozinha.
+// Ao integrar com um backend real, troque simularRespostaEAmigos() pela
+// recepção de mensagens reais de outros jogadores.
+const elencoDemo = ['Mestre', 'Sila', 'Kael'];
+
+function initChatSeDronar() {
+  if (chatState.inicializado) return;
+  chatState.inicializado = true;
+
+  const input = document.getElementById('chat-input');
+
+  // Auto-resize do textarea conforme o texto cresce
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    sinalizarDigitando();
+  });
+
+  // Enter envia, Shift+Enter quebra linha
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensagem();
+    }
+  });
+
+  // Detecta quando o usuário rola pra cima (sai do final) ou volta pro final
+  const msgArea = document.getElementById('chat-messages');
+  msgArea.addEventListener('scroll', () => {
+    const distanciaDoFim = msgArea.scrollHeight - msgArea.scrollTop - msgArea.clientHeight;
+    chatState.estaNoFinal = distanciaDoFim < 60;
+    if (chatState.estaNoFinal) {
+      chatState.novasNaoLidas = 0;
+      atualizarPillNovasMensagens();
+    }
+  });
+
+  // Fecha o menu de 3 pontinhos ao clicar fora
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('chat-menu');
+    const btn = document.getElementById('chat-menu-btn');
+    if (menu.classList.contains('open') && !menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('open');
+    }
+  });
+
+  // Mensagens de exemplo para a mesa não nascer vazia
+  semearMensagensDemo();
+}
+
+// ─── Envio de mensagens ───
+function enviarMensagem() {
+  const input = document.getElementById('chat-input');
+  const texto = input.value;
+  if (!texto.trim()) return;
+
+  const ehForaDePersonagem = texto.trimStart().startsWith('//');
+  const textoLimpo = ehForaDePersonagem ? texto.trimStart().slice(2).trim() : texto.trim();
+  if (!textoLimpo) { input.value = ''; return; }
+
+  adicionarMensagem({
+    autor: NOME_JOGADOR,
+    texto: textoLimpo,
+    tipo: ehForaDePersonagem ? 'ooc' : 'normal',
+    mine: true
+  });
+
+  input.value = '';
+  input.style.height = 'auto';
+  pararDeDigitar();
+
+  // Simula a mesa reagindo (apenas para fins de demonstração da interface)
+  simularRespostaEAmigos();
+}
+
+function adicionarMensagem({ autor, texto, tipo, mine }) {
+  const msg = {
+    id: chatState.proximoId++,
+    autor, texto, tipo, mine,
+    timestamp: new Date()
+  };
+  chatState.mensagens.push(msg);
+  renderizarMensagem(msg);
+
+  // Ações (tudo que não é // ) entram no registro lateral
+  if (tipo === 'normal') {
+    adicionarAoRegistro(msg);
+  }
+
+  if (chatState.estaNoFinal) {
+    rolarParaFinal();
+  } else if (!mine) {
+    chatState.novasNaoLidas++;
+    atualizarPillNovasMensagens();
+  }
+}
+
+function formatarHora(date) {
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function escaparHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderizarMensagem(msg) {
+  const container = document.getElementById('chat-messages');
+  const row = document.createElement('div');
+
+  let classes = 'msg-row ' + (msg.mine ? 'mine' : 'theirs');
+  if (msg.tipo === 'ooc') classes += ' ooc-msg';
+
+  row.className = classes;
+  row.innerHTML = `
+    <div class="msg-author">${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}</div>
+    <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
+    <div class="msg-time">${formatarHora(msg.timestamp)}</div>
+  `;
+  container.appendChild(row);
+}
+
+// ─── Registro de Ações (painel lateral) ───
+function adicionarAoRegistro(msg) {
+  const list = document.getElementById('actions-panel-list');
+  const empty = list.querySelector('.actions-panel-empty');
+  if (empty) empty.remove();
+
+  const entry = document.createElement('div');
+  entry.className = 'action-entry';
+  entry.innerHTML = `
+    <div class="action-entry-meta"><span>${escaparHtml(msg.autor)}</span><span>${formatarHora(msg.timestamp)}</span></div>
+    <div class="action-entry-text">${escaparHtml(msg.texto)}</div>
+  `;
+  list.appendChild(entry);
+}
+
+function abrirRegistroAcoes() {
+  document.getElementById('actions-panel').classList.add('open');
+  document.getElementById('chat-menu').classList.remove('open');
+}
+function fecharRegistroAcoes() {
+  document.getElementById('actions-panel').classList.remove('open');
+}
+
+// ─── Menu de 3 pontinhos ───
+function toggleChatMenu(event) {
+  event.stopPropagation();
+  document.getElementById('chat-menu').classList.toggle('open');
+}
+
+function toggleSomAmbiente() {
+  const label = document.getElementById('som-ambiente-label');
+  const ligado = label.textContent.includes('ligado');
+  label.textContent = ligado ? '🔈 Som ambiente: desligado' : '🔊 Som ambiente: ligado';
+  mostrarToast(ligado ? 'Som ambiente desligado.' : 'Som ambiente ligado.');
+}
+
+function limparNotificacoes() {
+  chatState.novasNaoLidas = 0;
+  atualizarPillNovasMensagens();
+  document.getElementById('chat-menu').classList.remove('open');
+}
+
+// ─── Bolinha de novas mensagens ───
+function atualizarPillNovasMensagens() {
+  const pill = document.getElementById('new-messages-pill');
+  const countEl = document.getElementById('new-messages-count');
+  if (chatState.novasNaoLidas > 0) {
+    countEl.textContent = chatState.novasNaoLidas;
+    pill.classList.add('show');
+    pill.querySelector('#new-messages-count').nextSibling.textContent =
+      ' ' + (chatState.novasNaoLidas === 1 ? 'nova mensagem' : 'novas mensagens') + ' ↓';
+  } else {
+    pill.classList.remove('show');
+  }
+}
+
+function rolarParaFinal() {
+  const msgArea = document.getElementById('chat-messages');
+  msgArea.scrollTop = msgArea.scrollHeight;
+  chatState.estaNoFinal = true;
+  chatState.novasNaoLidas = 0;
+  atualizarPillNovasMensagens();
+}
+
+// ─── Indicador "Fulano está digitando..." ───
+let digitandoTimer = null;
+function sinalizarDigitando() {
+  // No protótipo local isso só demonstra a UI; numa integração real,
+  // isso dispararia um evento de presença para os outros jogadores verem.
+  clearTimeout(digitandoTimer);
+  digitandoTimer = setTimeout(() => {}, 1200);
+}
+function mostrarDigitando(nome) {
+  const ind = document.getElementById('typing-indicator');
+  document.getElementById('typing-text').textContent = `${nome} está escrevendo`;
+  ind.classList.add('show');
+}
+function pararDeDigitar() {
+  document.getElementById('typing-indicator').classList.remove('show');
+}
+
+// ─── Demonstração da mesa (substituível por integração real) ───
+function semearMensagensDemo() {
+  adicionarMensagem({ autor: 'Mestre', texto: 'A taverna está silenciosa essa noite. Apenas o crepitar da lareira quebra o silêncio.', tipo: 'normal', mine: false });
+  adicionarMensagem({ autor: 'Sila', texto: 'Confere se a porta está trancada antes de se sentar perto do fogo.', tipo: 'normal', mine: false });
+  adicionarMensagem({ autor: 'Kael', texto: 'alguém pegou meu personagem da última sessão? kkkk', tipo: 'ooc', mine: false });
+  setTimeout(() => rolarParaFinal(), 50);
+}
+
+function simularRespostaEAmigos() {
+  const nome = elencoDemo[Math.floor(Math.random() * elencoDemo.length)];
+  mostrarDigitando(nome);
+  const respostas = [
+    'observa atentamente a movimentação ao redor.',
+    'acena com a cabeça, concordando em silêncio.',
+    'puxa a espada na bainha, alerta.',
+    '"Interessante…" — murmura, pensativo.',
+    'se aproxima devagar, tentando não fazer barulho.'
+  ];
+  const tempoDigitando = 900 + Math.random() * 1400;
+  setTimeout(() => {
+    pararDeDigitar();
+    adicionarMensagem({
+      autor: nome,
+      texto: respostas[Math.floor(Math.random() * respostas.length)],
+      tipo: 'normal',
+      mine: false
+    });
+  }, tempoDigitando);
+}
+
+</script>
+<!-- Coloque isso no final do seu body -->
+<div id="area-chat" style="margin-top: 20px; border-top: 1px solid #ccc;">
+    <h3>Chat da Mesa</h3>
+    <div id="chat-container" style="height: 150px; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 5px; padding: 5px;">
+        <div id="mensagens-chat"></div>
+    </div>
+    <input type="text" id="chat-input" placeholder="Escreva algo...">
+    <button onclick="enviarMensagem()">Enviar</button>
+</div>
+// Função para enviar
+function enviarMensagem() {
+    const input = document.getElementById('chat-input');
+    const texto = input.value;
+    const usuarioLogado = localStorage.getItem('harmina_user') || "Desconhecido";
+
+    if (texto.trim() !== "") {
+        // Envia para o servidor
+        socket.emit('chat-mensagem', { nome: usuarioLogado, texto: texto });
+        input.value = ""; // Limpa o campo
+    }
+}
+
+// Ouvinte: Recebe mensagens dos outros jogadores
+socket.on('chat-mensagem', (dados) => {
+    const chat = document.getElementById('mensagens-chat');
+    const novaMsg = document.createElement('div');
+    novaMsg.innerHTML = `<strong>${dados.nome}:</strong> ${dados.texto}`;
+    chat.appendChild(novaMsg);
+    
+    // Rola o chat para baixo automaticamente
+    const container = document.getElementById('chat-container');
+    container.scrollTop = container.scrollHeight;
+});
+
+</body>
+</html>
