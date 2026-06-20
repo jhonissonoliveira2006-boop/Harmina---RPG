@@ -12,6 +12,13 @@ let bancoDeDadosFichas = {};
 // Quando alguém abre o site, o servidor inicia uma conexão em tempo real (Socket)
 io.on('connection', (socket) => {
   console.log('⚔️ Um jogador se conectou ao Hármina RPG!');
+// Dentro do io.on('connection', (socket) => { ... })
+
+// Recebe a mensagem de um cliente
+socket.on('chat-mensagem', (dados) => {
+    // Reenvia para todos os jogadores conectados (inclusive quem enviou)
+    io.emit('chat-mensagem', dados);
+});
 
   // Ouvinte: Quando o jogador faz login e pede a ficha dele
   socket.on('entrar-na-campanha', (dadosLogin) => {
