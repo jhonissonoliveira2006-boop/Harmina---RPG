@@ -2301,6 +2301,7 @@ body::before {
 
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
 
 // ═══════════════════════════════════════════
@@ -3573,6 +3574,7 @@ async function criarPerfil() {
   if (existente) { erroEl.textContent = 'Já existe um perfil com esse nome neste dispositivo. Tente "Entrar".'; return; }
 
   await salvarPerfil(usuario, senha);
+  socket.emit('entrar-na-campanha', { usuario, senha }); // registra a sessão no servidor (necessário para liberar o chat)
   entrarComSessao(usuario);
 }
 
@@ -3599,6 +3601,7 @@ async function fazerLogin() {
   if (perfil.senha !== senha) { erroEl.textContent = 'Senha incorreta.'; return; }
 
   localStorage.setItem(STORAGE_LAST_USER, usuario);
+  socket.emit('entrar-na-campanha', { usuario, senha }); // registra a sessão no servidor (necessário para liberar o chat)
   entrarComSessao(usuario);
 }
 
@@ -3614,6 +3617,7 @@ const fraseBoasVindas = [
 ];
 
 function entrarComSessao(usuario) {
+  usuarioAtual = usuario; // guarda quem está logado nesta aba para identificar mensagens "minhas" no chat
   document.getElementById('welcome-name').textContent = usuario;
   document.getElementById('welcome-phrase').textContent = fraseBoasVindas[Math.floor(Math.random() * fraseBoasVindas.length)];
   irPara('boasvindas');
@@ -3621,6 +3625,7 @@ function entrarComSessao(usuario) {
 }
 
 function sair() {
+  usuarioAtual = null;
   irPara('portal');
   digitarFrase(frasePortalAleatoria());
   document.getElementById('input-user').value = '';
@@ -3682,6 +3687,10 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 // CHAT / MESA DE RPG
 // ═══════════════════════════════════════════════════════
 
+// ─── Conexão em tempo real com o servidor ───
+const socket = io();
+let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz login/cadastro
+
 // ─── Estado do chat ───
 const chatState = {
   mensagens: [],      // { id, autor, texto, tipo: 'normal'|'ooc', mine, timestamp }
@@ -3690,13 +3699,6 @@ const chatState = {
   estaNoFinal: true,  // se o usuário está rolado até o fim (controla a bolinha de "novas mensagens")
   inicializado: false
 };
-
-const NOME_JOGADOR = 'Você'; // nome usado nas mensagens "mine" (substitua pelo usuário logado quando integrar)
-
-// Elenco de NPCs/jogadores simulados só para a demonstração funcionar sozinha.
-// Ao integrar com um backend real, troque simularRespostaEAmigos() pela
-// recepção de mensagens reais de outros jogadores.
-const elencoDemo = ['Mestre', 'Sila', 'Kael'];
 
 function initChatSeDronar() {
   if (chatState.inicializado) return;
@@ -3739,33 +3741,34 @@ function initChatSeDronar() {
     }
   });
 
-  // Mensagens de exemplo para a mesa não nascer vazia
-  semearMensagensDemo();
+  // O histórico real chega do servidor via evento 'historico-chat' (ver abaixo)
 }
 
-// ─── Envio de mensagens ───
+// ─── Envio de mensagens (vai para o servidor; a renderização acontece quando ele ecoa de volta) ───
 function enviarMensagem() {
   const input = document.getElementById('chat-input');
   const texto = input.value;
   if (!texto.trim()) return;
 
+  if (!usuarioAtual) {
+    mostrarToast('Você precisa estar logado para falar na mesa.');
+    return;
+  }
+
   const ehForaDePersonagem = texto.trimStart().startsWith('//');
   const textoLimpo = ehForaDePersonagem ? texto.trimStart().slice(2).trim() : texto.trim();
   if (!textoLimpo) { input.value = ''; return; }
 
-  adicionarMensagem({
-    autor: NOME_JOGADOR,
+  socket.emit('chat-mensagem', {
+    nome: usuarioAtual,
     texto: textoLimpo,
-    tipo: ehForaDePersonagem ? 'ooc' : 'normal',
-    mine: true
+    tipo: ehForaDePersonagem ? 'ooc' : 'normal'
   });
 
   input.value = '';
   input.style.height = 'auto';
   pararDeDigitar();
-
-  // Simula a mesa reagindo (apenas para fins de demonstração da interface)
-  simularRespostaEAmigos();
+  socket.emit('parou-de-digitar', { nome: usuarioAtual });
 }
 
 function adicionarMensagem({ autor, texto, tipo, mine }) {
@@ -3883,10 +3886,17 @@ function rolarParaFinal() {
 // ─── Indicador "Fulano está digitando..." ───
 let digitandoTimer = null;
 function sinalizarDigitando() {
-  // No protótipo local isso só demonstra a UI; numa integração real,
-  // isso dispararia um evento de presença para os outros jogadores verem.
+  if (!usuarioAtual) return;
+  // Avisa o servidor que estou digitando; outros jogadores recebem isso em tempo real.
+  // O timeout evita inundar o servidor com um evento a cada tecla: só reemite após o anterior expirar.
+  if (!digitandoTimer) {
+    socket.emit('digitando', { nome: usuarioAtual });
+  }
   clearTimeout(digitandoTimer);
-  digitandoTimer = setTimeout(() => {}, 1200);
+  digitandoTimer = setTimeout(() => {
+    digitandoTimer = null;
+    socket.emit('parou-de-digitar', { nome: usuarioAtual });
+  }, 1200);
 }
 function mostrarDigitando(nome) {
   const ind = document.getElementById('typing-indicator');
@@ -3897,70 +3907,48 @@ function pararDeDigitar() {
   document.getElementById('typing-indicator').classList.remove('show');
 }
 
-// ─── Demonstração da mesa (substituível por integração real) ───
-function semearMensagensDemo() {
-  adicionarMensagem({ autor: 'Mestre', texto: 'A taverna está silenciosa essa noite. Apenas o crepitar da lareira quebra o silêncio.', tipo: 'normal', mine: false });
-  adicionarMensagem({ autor: 'Sila', texto: 'Confere se a porta está trancada antes de se sentar perto do fogo.', tipo: 'normal', mine: false });
-  adicionarMensagem({ autor: 'Kael', texto: 'alguém pegou meu personagem da última sessão? kkkk', tipo: 'ooc', mine: false });
-  setTimeout(() => rolarParaFinal(), 50);
-}
+// ─── Histórico e mensagens em tempo real (integração real via Socket.IO) ───
+// Avisa o jogador se o servidor recusar a sessão (ex.: nome já registrado no
+// servidor com outra senha) — sem isso, o chat falhava em silêncio.
+socket.on('login-erro', (msg) => {
+  mostrarToast(msg);
+});
 
-function simularRespostaEAmigos() {
-  const nome = elencoDemo[Math.floor(Math.random() * elencoDemo.length)];
-  mostrarDigitando(nome);
-  const respostas = [
-    'observa atentamente a movimentação ao redor.',
-    'acena com a cabeça, concordando em silêncio.',
-    'puxa a espada na bainha, alerta.',
-    '"Interessante…" — murmura, pensativo.',
-    'se aproxima devagar, tentando não fazer barulho.'
-  ];
-  const tempoDigitando = 900 + Math.random() * 1400;
-  setTimeout(() => {
-    pararDeDigitar();
-    adicionarMensagem({
-      autor: nome,
-      texto: respostas[Math.floor(Math.random() * respostas.length)],
-      tipo: 'normal',
-      mine: false
-    });
-  }, tempoDigitando);
-}
+socket.on('historico-chat', (mensagens) => {
+  mensagens.forEach(m => {
+    adicionarMensagem({ autor: m.nome, texto: m.texto, tipo: m.tipo, mine: m.nome === usuarioAtual });
+  });
+  setTimeout(() => rolarParaFinal(), 50);
+});
+
+socket.on('chat-mensagem', (dados) => {
+  pararDeDigitar();
+  adicionarMensagem({
+    autor: dados.nome,
+    texto: dados.texto,
+    tipo: dados.tipo === 'ooc' ? 'ooc' : 'normal',
+    mine: dados.nome === usuarioAtual
+  });
+});
+
+socket.on('chat-sistema', (dados) => {
+  adicionarMensagem({ autor: 'Mestre', texto: dados.texto, tipo: 'normal', mine: false });
+});
+
+socket.on('presenca-atualizada', ({ total }) => {
+  const el = document.getElementById('chat-presence');
+  if (el) el.textContent = total === 1 ? '1 aventureiro à mesa' : `${total} aventureiros à mesa`;
+});
+
+socket.on('digitando', (dados) => {
+  if (dados.nome !== usuarioAtual) mostrarDigitando(dados.nome);
+});
+
+socket.on('parou-de-digitar', (dados) => {
+  if (dados.nome !== usuarioAtual) pararDeDigitar();
+});
 
 </script>
-<!-- Coloque isso no final do seu body -->
-<div id="area-chat" style="margin-top: 20px; border-top: 1px solid #ccc;">
-    <h3>Chat da Mesa</h3>
-    <div id="chat-container" style="height: 150px; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 5px; padding: 5px;">
-        <div id="mensagens-chat"></div>
-    </div>
-    <input type="text" id="chat-input" placeholder="Escreva algo...">
-    <button onclick="enviarMensagem()">Enviar</button>
-</div>
-// Função para enviar
-function enviarMensagem() {
-    const input = document.getElementById('chat-input');
-    const texto = input.value;
-    const usuarioLogado = localStorage.getItem('harmina_user') || "Desconhecido";
-
-    if (texto.trim() !== "") {
-        // Envia para o servidor
-        socket.emit('chat-mensagem', { nome: usuarioLogado, texto: texto });
-        input.value = ""; // Limpa o campo
-    }
-}
-
-// Ouvinte: Recebe mensagens dos outros jogadores
-socket.on('chat-mensagem', (dados) => {
-    const chat = document.getElementById('mensagens-chat');
-    const novaMsg = document.createElement('div');
-    novaMsg.innerHTML = `<strong>${dados.nome}:</strong> ${dados.texto}`;
-    chat.appendChild(novaMsg);
-    
-    // Rola o chat para baixo automaticamente
-    const container = document.getElementById('chat-container');
-    container.scrollTop = container.scrollHeight;
-});
 
 </body>
 </html>
