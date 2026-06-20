@@ -1,0 +1,2679 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Hármina RPG 3.1 · Ficha de Personagem</title>
+
+<style>
+
+@import url('https://fonts.googleapis.com/css?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+
+  --ink: #1a1410;
+
+  --parchment: #f0e8d5;
+
+  --aged: #d9cdb4;
+
+  --burnish: #8b6914;
+
+  --gold: #c9941a;
+
+  --rust: #7a2e12;
+
+  --vita-color: #ef4444;
+
+  --guard-color: #4ade80;
+
+  --energy-color: #f59e0b;
+
+  --mana-color: #8b5cf6;
+
+  --pp-color: #818cf8;
+
+  --serif: 'Cinzel', serif;
+
+  --body: 'Crimson Pro', Georgia, serif;
+
+  --mono: 'JetBrains Mono', monospace;
+
+}
+
+html { font-size: 14px; }
+
+body { background: #0f0c08; color: var(--ink); font-family: var(--body); min-height: 100vh; padding: 2rem 1rem; }
+
+/* TOAST BANNER */
+
+#toast {
+
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+
+  padding: 0.5rem 1.2rem; background: linear-gradient(135deg, #1a1410 0%, #2a1f0a 100%);
+
+  border-bottom: 2px solid var(--gold); font-family: var(--mono); font-size: 0.65rem;
+
+  letter-spacing: 0.08em; color: var(--parchment); transform: translateY(-100%);
+
+  transition: transform 0.35s cubic-bezier(.22,.68,0,1.2); box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+
+  min-height: 36px;
+
+}
+
+#toast.show { transform: translateY(0); }
+
+#toast-icon { font-size: 1rem; flex-shrink: 0; }
+
+#toast-text { line-height: 1.4; }
+
+#toast-text strong { color: var(--gold); font-weight: 600; }
+
+/* SHEET */
+
+.sheet {
+
+  max-width: 940px; margin: 0 auto; background: var(--parchment); overflow-x: hidden;
+
+  background-image: radial-gradient(ellipse at 20% 10%, rgba(139,105,20,0.08) 0%, transparent 50%),
+
+                    radial-gradient(ellipse at 80% 90%, rgba(90,30,18,0.07) 0%, transparent 50%);
+
+  border: 1px solid var(--burnish);
+
+  box-shadow: 0 0 0 4px rgba(139,105,20,0.15), 0 0 0 8px rgba(0,0,0,0.4), 0 20px 80px rgba(0,0,0,0.6);
+
+  padding: 2.5rem 2.5rem 3rem; position: relative;
+
+}
+
+.sheet::before { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(139,105,20,0.25); pointer-events: none; }
+
+/* corners */
+
+.corner { position: absolute; width: 28px; height: 28px; }
+
+.corner svg { width: 100%; height: 100%; }
+
+.corner--tl { top: 8px; left: 8px; }
+
+.corner--tr { top: 8px; right: 8px; transform: scaleX(-1); }
+
+.corner--bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+
+.corner--br { bottom: 8px; right: 8px; transform: scale(-1,-1); }
+
+/* HEADER */
+
+.header { text-align: center; border-bottom: 2px solid var(--burnish); padding-bottom: 1.2rem; margin-bottom: 1.8rem; position: relative; }
+
+.header::after { content: ''; position: absolute; bottom: -0.6em; left: 50%; transform: translateX(-50%); background: var(--parchment); padding: 0 0.5rem; color: var(--burnish); font-size: 0.75rem; }
+
+.title-eyebrow { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.35em; color: var(--burnish); text-transform: uppercase; margin-bottom: 0.25rem; }
+
+.title-main { font-family: var(--serif); font-size: 2.1rem; font-weight: 900; color: var(--rust); letter-spacing: 0.05em; line-height: 1; text-shadow: 1px 1px 0 rgba(90,30,18,0.2); }
+
+.title-sub { font-family: var(--serif); font-size: 0.7rem; color: var(--burnish); letter-spacing: 0.25em; text-transform: uppercase; margin-top: 0.2rem; }
+
+/* SECTION LABEL */
+
+.section-label { font-family: var(--serif); font-size: 0.55rem; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: var(--burnish); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+
+.section-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--burnish), transparent); }
+
+.divider { border: none; border-top: 1px solid rgba(139,105,20,0.3); margin: 1.4rem 0; }
+
+/* IDENTITY */
+
+.identity-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 1.6rem; }
+
+.field { display: flex; flex-direction: column; gap: 2px; }
+
+.field label { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.2em; color: var(--burnish); text-transform: uppercase; }
+
+.field input, .field textarea { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.4); font-family: var(--body); font-size: 0.95rem; color: var(--ink); padding: 2px 0; outline: none; width: 100%; }
+
+.field textarea { resize: none; line-height: 1.5; }
+
+.chess-selector { display: flex; gap: 0.8rem; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(139,105,20,0.4); }
+
+.chess-piece { font-size: 1.25rem; cursor: pointer; opacity: 0.4; transition: all 0.2s; filter: grayscale(100%); }
+
+.chess-piece:hover { opacity: 0.8; transform: scale(1.1); }
+
+.chess-piece.active { opacity: 1; filter: none; transform: scale(1.25); text-shadow: 0 0 8px rgba(139,105,20,0.6); }
+
+/* DUAL-SCALE BAR */
+
+.scale-hint { font-family: var(--body); font-style: italic; font-size: 0.68rem; color: #777; margin-bottom: 0.8rem; }
+
+.dual-scale { background: rgba(0,0,0,0.03); border: 1px solid rgba(139,105,20,0.3); border-radius: 3px; padding: 1rem 1.1rem 0.9rem; margin-bottom: 1.2rem; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+
+.scale-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem; }
+
+.scale-side-group { display: flex; align-items: center; gap: 1rem; }
+
+.scale-side-group.right { flex-direction: row-reverse; }
+
+.stat-plus {
+
+  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(139,105,20,0.4);
+
+  background: rgba(0,0,0,0.05); color: var(--burnish); font-family: var(--mono);
+
+  font-size: 0.9rem; font-weight: bold; cursor: pointer; display: flex;
+
+  align-items: center; justify-content: center; transition: all 0.2s;
+
+  line-height: 1; padding-bottom: 2px; flex-shrink: 0;
+
+}
+
+.stat-plus:hover { border-color: var(--gold); background: rgba(139,105,20,0.15); transform: scale(1.15); color: var(--gold); }
+
+.stat-plus:active { transform: scale(0.95); }
+
+.scale-side-label { display: flex; flex-direction: column; gap: 1px; }
+
+.scale-side-label.right { text-align: right; align-items: flex-end; }
+
+.scale-side-name { font-family: var(--serif); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.scale-side-icon { font-size: 1.1rem; }
+
+.scale-side-current { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.1em; color: #999; text-transform: uppercase; }
+
+.scale-side-val { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; line-height: 1; }
+
+/* EMOTICON PIPS REPLACEMENT */
+
+.pip-bar {
+
+  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-items: center;
+
+  margin: 0.6rem 0; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden;
+
+}
+
+.pip-bar-cell, .pp-pip {
+
+  width: clamp(16px, 6vw, 28px); height: clamp(16px, 6vw, 28px); cursor: pointer; transition: all 0.15s;
+
+  display: flex; align-items: center; justify-content: center;
+
+  font-size: clamp(0.75rem, 4vw, 1.25rem); border: none; background: transparent;
+
+  filter: none; opacity: 1; /* Emojis sempre renderizam com cor normal, igual aos preenchidos */
+
+  flex-shrink: 1; min-width: 0; box-sizing: border-box;
+
+}
+
+.pip-bar-cell:not(.filled), .pp-pip:not(.filled) { filter: grayscale(85%) opacity(0.35); } /* Vazio/Gasto — aplicado só via classe, nunca por padrão */
+
+.pip-bar-cell:hover, .pp-pip:hover { transform: scale(1.15); filter: grayscale(40%) opacity(0.65); }
+
+/* Preenchido/Atual */
+
+.pip-bar-cell.filled, .pp-pip.filled { filter: none !important; opacity: 1 !important; text-shadow: 0 0 8px rgba(255,255,255,0.4); }
+
+.pip-bar-divider { width: 3px; height: 22px; background: var(--burnish); flex-shrink: 0; border-radius: 1px; box-shadow: 0 0 0 1px rgba(139,105,20,0.2); }
+
+.pip-bar-separator {
+
+  font-family: var(--mono); font-weight: 700; font-size: clamp(0.65rem, 3vw, 0.95rem); color: var(--burnish);
+
+  margin: 0 2px; user-select: none; flex-shrink: 0; opacity: 0.7;
+
+}
+
+.scale-rule { font-family: var(--body); font-style: italic; font-size: 0.65rem; color: #888; text-align: center; margin-top: 0.2rem; }
+
+/* PONTOS DE PODER */
+
+.pp-section { border: 1px solid rgba(129,140,248,0.3); border-radius: 3px; padding: 0.9rem 1.1rem; background: rgba(26,26,58,0.04); margin-bottom: 1.6rem; }
+
+.pp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+
+.pp-title { font-family: var(--serif); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pp-color); display: flex; align-items: center; gap: 0.4rem; }
+
+.pp-controls { display: flex; align-items: center; gap: 0.6em; }
+
+.pp-max-label { font-family: var(--mono); font-size: 0.5rem; color: #aaa; letter-spacing: 0.1em; }
+
+.pp-max-input { width: 38px; background: transparent; border: none; border-bottom: 1px solid rgba(129,140,248,0.4); font-family: var(--mono); font-size: 0.8rem; color: var(--ink); text-align: center; outline: none; }
+
+.pp-pip-row { display: flex; gap: 4px; flex-wrap: wrap; width: 100%; max-width: 100%; box-sizing: border-box; }
+
+.pp-note { font-family: var(--body); font-style: italic; font-size: 0.65rem; color: #888; margin-top: 0.4rem; }
+
+/* derived stats strip */
+
+.derived-strip { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid rgba(139,105,20,0.2); }
+
+.derived-chip { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 20px; border: 1px solid rgba(139,105,20,0.3); color: #666; background: rgba(0,0,0,0.03); }
+
+.derived-chip span { font-weight: 600; color: var(--ink); }
+
+/* DONS & VOCAÇÕES */
+
+.dons-grid, .voc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.4rem; }
+
+.don-slot, .voc-slot { border: 1px dashed rgba(139,105,20,0.35); padding: 0.65rem 0.8rem; border-radius: 2px; }
+
+.don-slot label, .voc-slot label { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.2em; color: var(--burnish); text-transform: uppercase; display: block; margin-bottom: 3px; }
+
+.don-slot input, .voc-slot input { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.3); font-family: var(--body); font-size: 0.9rem; color: var(--ink); outline: none; width: 100%; padding: 2px 0; }
+
+.don-slot textarea, .voc-slot textarea { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.3); font-family: var(--body); font-size: 0.8rem; color: var(--ink); outline: none; width: 100%; padding: 2px 0; resize: none; margin-top: 3px; height: 36px; }
+
+/* PODER */
+
+.poder-block { border: 1px solid rgba(139,105,20,0.35); border-radius: 2px; padding: 1rem 1.1rem; margin-bottom: 1.4rem; background: rgba(58,31,92,0.04); }
+
+.poder-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem; }
+
+.poder-full { margin-bottom: 0.6rem; }
+
+.poder-full label { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.2em; color: var(--mana-color); text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+.poder-full input, .poder-full textarea { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.35); font-family: var(--body); font-size: 0.9rem; color: var(--ink); outline: none; width: 100%; padding: 2px 0; }
+
+.poder-full textarea { resize: none; height: 42px; font-size: 0.8rem; }
+
+.habilidades-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-top: 0.6rem; }
+
+.hab-slot { border-left: 2px solid rgba(139,105,20,0.25); padding-left: 0.5rem; margin-bottom: 0.5rem; }
+
+.hab-slot label { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.15em; color: var(--mana-color); text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+.hab-slot input { background: transparent; border: none; border-bottom: 1px solid rgba(58,31,92,0.3); font-family: var(--body); font-size: 0.85rem; color: var(--ink); outline: none; width: 100%; padding: 2px 0; }
+
+.hab-slot textarea { background: transparent; border: none; border-bottom: 1px solid rgba(58,31,92,0.25); font-family: var(--body); font-size: 0.75rem; color: #444; font-style: italic; outline: none; width: 100%; padding: 2px 0; resize: none; height: 32px; }
+
+.btn-add-hab { grid-column: 1/-1; background: transparent; border: 2px dashed rgba(139,92,246,0.4); border-radius: 4px; color: var(--mana-color); padding: 0.8rem; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
+
+.btn-add-hab:hover:not(:disabled) { background: rgba(139,92,246,0.08); border-color: var(--mana-color); }
+
+.btn-add-hab:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.saturacao-block { background: rgba(13,13,20,0.05); border: 1px solid rgba(58,31,92,0.3); border-radius: 2px; padding: 0.8rem 1rem; margin-top: 0.8rem; }
+
+.saturacao-label { font-family: var(--serif); font-size: 0.58rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--mana-color); margin-bottom: 0.5rem; }
+
+.sat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7rem; }
+
+.sat-field label { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.15em; color: var(--pp-color); text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+.sat-field input, .sat-field textarea { background: transparent; border: none; border-bottom: 1px solid rgba(58,31,92,0.3); font-family: var(--body); font-size: 0.85rem; color: var(--ink); outline: none; width: 100%; padding: 2px 0; resize: none; }
+
+.sat-field textarea { height: 36px; font-size: 0.75rem; }
+
+/* EQUIPAMENTOS, INVENTÁRIO, MOEDAS ETC... */
+
+.equip-table { width: 100%; border-collapse: collapse; margin-bottom: 1.2rem; font-size: 0.82rem; }
+
+.equip-table th { font-family: var(--mono); font-size: 0.48rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--burnish); border-bottom: 1px solid rgba(139,105,20,0.4); padding: 0.3rem 0.4rem; text-align: left; font-weight: 400; }
+
+.equip-table td { padding: 0.25rem 0.4rem; border-bottom: 1px solid rgba(139,105,20,0.15); }
+
+.equip-table td input { background: transparent; border: none; font-family: var(--body); font-size: 0.82rem; color: var(--ink); outline: none; width: 100%; padding: 0; }
+
+.equip-table td.center input { text-align: center; font-family: var(--mono); font-size: 0.75rem; }
+
+.add-row-btn { background: transparent; border: 1px dashed rgba(139,105,20,0.4); color: var(--burnish); font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.3rem 0.8rem; cursor: pointer; border-radius: 2px; margin-bottom: 1.2rem; }
+
+.inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; margin-bottom: 1.2rem; }
+
+.inv-slot { border: 1px solid rgba(139,105,20,0.3); border-radius: 2px; padding: 0.45rem 0.3rem; text-align: center; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 2px; background: rgba(0,0,0,0.02); transition: all 0.3s; }
+
+.inv-slot.empty { background: rgba(0,0,0,0.015); border-style: dashed; opacity: 0.3; pointer-events: none; }
+
+.inv-slot input { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.25); font-family: var(--body); font-size: 0.7rem; color: var(--ink); outline: none; width: 100%; text-align: center; padding: 1px 0; }
+
+.inv-slot-num { font-family: var(--mono); font-size: 0.45rem; color: #bbb; letter-spacing: 0.1em; }
+
+.inv-qty { font-family: var(--mono); font-size: 0.48rem; color: var(--burnish); }
+
+.inv-qty input { width: 28px !important; font-size: 0.48rem !important; }
+
+.moedas-row { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem; }
+
+.moeda-item { display: flex; align-items: center; gap: 0.4rem; }
+
+.moeda-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-family: var(--mono); font-weight: 600; flex-shrink: 0; }
+
+.moeda-prata { background: rgba(192,192,192,0.3); border: 1.5px solid #aaa; color: #555; }
+
+.moeda-ouro { background: rgba(201,148,26,0.2); border: 1.5px solid var(--gold); color: var(--burnish); }
+
+.moeda-crist { background: rgba(139,92,246,0.15); border: 1.5px solid var(--mana-color); color: var(--mana-color); }
+
+.moeda-item input { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.35); font-family: var(--mono); font-size: 0.85rem; color: var(--ink); outline: none; width: 52px; text-align: center; padding: 1px 0; }
+
+.moeda-label { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.12em; color: #999; text-transform: uppercase; }
+
+.notes-area { width: 100%; background: transparent; border: 1px solid rgba(139,105,20,0.25); font-family: var(--body); font-size: 0.88rem; color: var(--ink); line-height: 2; padding: 0.6rem 0.8rem; outline: none; resize: vertical; min-height: 80px; background-image: repeating-linear-gradient(transparent, transparent calc(2em - 1px), rgba(139,105,20,0.1) calc(2em - 1px), rgba(139,105,20,0.1) 2em); background-size: 100% 2em; }
+
+.evol-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.4rem; }
+
+.evol-pip { width: 22px; height: 22px; border: 1.5px solid rgba(139,105,20,0.4); border-radius: 50%; cursor: pointer; transition: all 0.15s; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; font-family: var(--mono); color: transparent; }
+
+.evol-pip.filled { background: var(--gold); border-color: var(--gold); color: var(--parchment); box-shadow: 0 0 5px var(--gold); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; }
+
+.mb08 { margin-bottom: 0.8rem; }
+
+.mb14 { margin-bottom: 1.4rem; }
+
+.print-btn { display: block; margin: 1.5rem auto 0; background: var(--rust); color: var(--parchment); border: none; padding: 0.6rem 2rem; font-family: var(--serif); font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer; border-radius: 2px; }
+
+.print-btn:hover { background: #9a3a18; }
+
+/* ---------------------------------
+
+   ESTILOS DO MODAL DE DONS 
+
+--------------------------------- */
+
+.modal-overlay {
+
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000;
+
+  display: none; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(2px);
+
+}
+
+.modal-content {
+
+  background: var(--parchment); border: 2px solid var(--burnish); border-radius: 4px;
+
+  width: 100%; max-width: 800px; height: 85vh; display: flex; flex-direction: column;
+
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+
+}
+
+.modal-header {
+
+  padding: 1rem 1.5rem; border-bottom: 1px solid rgba(139,105,20,0.3); display: flex; justify-content: space-between; align-items: center;
+
+}
+
+.modal-body { display: flex; flex: 1; overflow: hidden; }
+
+.modal-sidebar {
+
+  width: 200px; border-right: 1px solid rgba(139,105,20,0.3); overflow-y: auto;
+
+  padding: 0.5rem; background: rgba(0,0,0,0.02);
+
+}
+
+.modal-main { flex: 1; overflow-y: auto; padding: 1rem; }
+
+.cat-btn {
+
+  display: block; width: 100%; padding: 0.7rem 0.5rem; text-align: left; background: transparent; border: none;
+
+  font-family: var(--mono); font-size: 0.65rem; color: var(--ink); cursor: pointer; border-radius: 3px;
+
+  transition: 0.2s; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
+
+}
+
+.cat-btn:hover { background: rgba(139,105,20,0.1); }
+
+.cat-btn.active { background: var(--burnish); color: var(--parchment); font-weight: bold; }
+
+.don-card {
+
+  border: 1px solid rgba(139,105,20,0.3); border-radius: 3px; padding: 1rem; margin-bottom: 0.8rem;
+
+  cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.4); position: relative;
+
+}
+
+.don-card:hover { border-color: var(--gold); }
+
+.don-card.selected { border-color: var(--rust); box-shadow: 0 0 0 2px rgba(122,46,18,0.2); background: rgba(139,105,20,0.05); }
+
+.confirm-btn {
+
+  display: none; margin-top: 1rem; background: var(--rust); color: var(--parchment); border: none; padding: 0.5rem 1rem;
+
+  font-family: var(--serif); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; border-radius: 2px;
+
+}
+
+.confirm-btn:hover { background: #9a3a18; }
+
+.don-card.selected .confirm-btn { display: inline-block; }
+
+@media (max-width: 620px) {
+
+  .sheet { padding: 1.5rem 1.2rem 2rem; }
+
+  .identity-grid, .dons-grid, .voc-grid, .poder-meta, .habilidades-grid, .sat-grid, .two-col, .three-col { grid-template-columns: 1fr; }
+
+  .inv-grid { grid-template-columns: repeat(3,1fr); }
+
+  .moedas-row { flex-wrap: wrap; }
+
+  .modal-body { flex-direction: column; }
+
+  .modal-sidebar { width: 100%; border-right: none; border-bottom: 1px solid rgba(139,105,20,0.3); max-height: 150px; }
+
+}
+
+@media print {
+
+  body { background: white; padding: 0; }
+
+  .sheet { box-shadow: none; border: 1px solid #ccc; max-width: 100%; margin: 0; }
+
+  .print-btn, #toast { display: none; }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="toast">
+
+  <span id="toast-icon">⚙️</span>
+
+  <span id="toast-text"></span>
+
+</div>
+
+<div class="sheet">
+
+  <div class="corner corner--tl"><svg viewBox="0 0 28 28" fill="none"><path d="M2 26 L2 2 L26 2" stroke="#8b6914" stroke-width="1.5"/><circle cx="2" cy="2" r="1.5" fill="#8b6914"/></svg></div>
+
+  <div class="corner corner--tr"><svg viewBox="0 0 28 28" fill="none"><path d="M2 26 L2 2 L26 2" stroke="#8b6914" stroke-width="1.5"/><circle cx="2" cy="2" r="1.5" fill="#8b6914"/></svg></div>
+
+  <div class="corner corner--bl"><svg viewBox="0 0 28 28" fill="none"><path d="M2 26 L2 2 L26 2" stroke="#8b6914" stroke-width="1.5"/><circle cx="2" cy="2" r="1.5" fill="#8b6914"/></svg></div>
+
+  <div class="corner corner--br"><svg viewBox="0 0 28 28" fill="none"><path d="M2 26 L2 2 L26 2" stroke="#8b6914" stroke-width="1.5"/><circle cx="2" cy="2" r="1.5" fill="#8b6914"/></svg></div>
+
+  <div class="header">
+
+    <div class="title-eyebrow">Sistema de Jogo</div>
+
+    <div class="title-main">Hármina</div>
+
+    <div class="title-sub">Ficha de Personagem · Versão 3.1 Otimizada</div>
+
+  </div>
+
+  <div class="section-label">Identidade</div>
+
+  <div class="identity-grid mb14">
+
+    <div class="field">
+
+      <label>Nome do Personagem</label>
+
+      <input type="text" id="id-nome" placeholder="—">
+
+    </div>
+
+    <div class="field">
+
+      <label>Raça / Origem</label>
+
+      <input type="text" id="id-raca" placeholder="—">
+
+    </div>
+
+    <div class="field">
+
+      <label>Entidade Dedicada</label>
+
+      <input type="text" id="entidade-input" placeholder="Definida no Poder Único" readonly style="background: rgba(0,0,0,0.02); cursor: not-allowed; font-style: italic; color: #666;">
+
+    </div>
+
+    <div class="field">
+
+      <label>Vocação Principal</label>
+
+      <input type="text" id="id-vocacao" placeholder="—">
+
+    </div>
+
+    <div class="field" style="grid-column: span 2;">
+
+      <label>Região de Origem</label>
+
+      <select id="id-regiao" onchange="onRegiaoChange()" style="background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.4); font-family: var(--body); font-size: 0.95rem; color: var(--ink); padding: 2px 0; outline: none; width: 100%; cursor: pointer;">
+
+        <option value="">— Selecione —</option>
+
+        <option value="Hármina">Reino de Hármina</option>
+
+        <option value="Mont-Krom">Mont-Krom</option>
+
+        <option value="Vila das Éguas">Vila das Éguas</option>
+
+        <option value="Silvestres">Os Silvestres</option>
+
+        <option value="Depressões">As Depressões</option>
+
+        <option value="Outra">Outra (país de fora)</option>
+
+      </select>
+
+      <div id="regiao-info-box" style="display:none; margin-top:0.5rem; padding:0.6rem 0.8rem; background: rgba(139,105,20,0.05); border: 1px dashed var(--burnish); border-radius: 2px; font-family: var(--body); font-size: 0.78rem; line-height: 1.5; color: var(--ink);"></div>
+
+      <input type="text" id="regiao-outra-input" placeholder="Descreva o país de origem do personagem..." style="display:none; margin-top:0.5rem; background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.4); font-family: var(--body); font-size: 0.9rem; color: var(--ink); padding: 2px 0; outline: none; width: 100%;">
+
+    </div>
+
+    <div class="field">
+
+      <label>Jogador</label>
+
+      <input type="text" id="id-jogador" placeholder="—">
+
+    </div>
+
+  </div>
+
+  <div class="section-label">Escala 1 — Vitalidade &amp; Guarda <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · mín. 2 em cada · Clique nos ícones para uso</span></div>
+
+  
+
+  <div class="dual-scale scale-section">
+
+    <div class="scale-header">
+
+      <div class="scale-side-group">
+
+        <div class="scale-side-label">
+
+          <div class="scale-side-icon">❤️</div>
+
+          <div class="scale-side-name" style="color:var(--vita-color);">Vitalidade</div>
+
+          <div class="scale-side-current">Máx. <span id="vita-max-display" style="font-size:0.72rem; color:var(--ink); font-weight:600;">6</span> · Atual <span id="vita-cur-display" style="font-weight:600;">6</span></div>
+
+        </div>
+
+        <button class="stat-plus" title="Aumentar Vitalidade Máxima" onclick="increaseVita()">+</button>
+
+      </div>
+
+      <div class="scale-side-group right">
+
+        <button class="stat-plus" title="Aumentar Guarda Máxima" onclick="increaseGuard()">+</button>
+
+        <div class="scale-side-label right">
+
+          <div class="scale-side-icon">🔰</div>
+
+          <div class="scale-side-name" style="color:var(--guard-color);">Guarda</div>
+
+          <div class="scale-side-current">Máx. <span id="guard-max-display" style="font-size:0.72rem; color:var(--ink); font-weight:600;">4</span> · Atual <span id="guard-cur-display" style="font-weight:600;">4</span></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="pip-bar" id="scale1-bar"></div>
+
+    <div class="scale-rule" id="scale1-rule">❤️ <strong id="s1-vita">6</strong> · 🔰 <strong id="s1-guard">4</strong> — Total 10</div>
+
+    <div class="derived-strip" id="scale1-derived"></div>
+
+  </div>
+
+  <div class="section-label">Escala 2 — Energia &amp; Magia <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · Energia mín. 2 · Clique nos ícones para uso</span></div>
+
+  
+
+  <div class="dual-scale scale-section">
+
+    <div class="scale-header">
+
+      <div class="scale-side-group">
+
+        <div class="scale-side-label">
+
+          <div class="scale-side-icon">⚡</div>
+
+          <div class="scale-side-name" style="color:var(--energy-color);">Energia</div>
+
+          <div class="scale-side-current">Máx. <span id="energy-max-display" style="font-size:0.72rem; color:var(--ink); font-weight:600;">8</span> · Atual <span id="energy-cur-display" style="font-weight:600;">8</span></div>
+
+        </div>
+
+        <button class="stat-plus" title="Aumentar Energia Máxima" onclick="increaseEnergy()">+</button>
+
+      </div>
+
+      <div class="scale-side-group right">
+
+        <button class="stat-plus" title="Aumentar Magia Máxima" onclick="increaseMana()">+</button>
+
+        <div class="scale-side-label right">
+
+          <div class="scale-side-icon">🔮</div>
+
+          <div class="scale-side-name" style="color:var(--mana-color);">Magia</div>
+
+          <div class="scale-side-current">Máx. <span id="mana-max-display" style="font-size:0.72rem; color:var(--ink); font-weight:600;">2</span> · Atual <span id="mana-cur-display" style="font-weight:600;">2</span></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="pip-bar" id="scale2-bar"></div>
+
+    <div class="scale-rule" id="scale2-rule">⚡ <strong id="s2-energy">8</strong> · 🔮 <strong id="s2-mana">2</strong> — Total 10</div>
+
+    <div class="derived-strip" id="scale2-derived"></div>
+
+  </div>
+
+  <div class="pp-section mb14">
+
+    <div class="pp-header">
+
+      <div class="pp-title">💠 Pontos de Poder (PP)</div>
+
+      <div class="pp-controls">
+
+        <span class="pp-max-label">Máx.</span>
+
+        <input class="pp-max-input" id="pp-max" type="number" min="5" max="12" value="12" oninput="renderPP()">
+
+      </div>
+
+    </div>
+
+    <div class="pp-pip-row" id="pp-bar"></div>
+
+    <div class="pp-note">Regenera 1/turno · ao zerar: 2 turnos sem recuperar · Custo base por uso: 1 PP (máx. 2) · Mín. 5 PP livres na criação · Poderes Rei/Rainha: –3 PP máx. permanentes</div>
+
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">Dons (máx. 2 iniciais)</div>
+
+  <div class="dons-grid mb14">
+
+    <div class="don-slot" onclick="abrirModalDons(1)" style="cursor: pointer; background: rgba(139,105,20,0.02);">
+
+      <label>Don 1 · (Clique para selecionar)</label>
+
+      <input type="text" id="don1-nome" placeholder="Escolher Dom 1..." readonly style="cursor: pointer; font-weight: bold; color: var(--rust);">
+
+      <textarea id="don1-efeito" placeholder="Efeito mecânico…" readonly style="cursor: pointer;"></textarea>
+
+    </div>
+
+    <div class="don-slot" onclick="abrirModalDons(2)" style="cursor: pointer; background: rgba(139,105,20,0.02);">
+
+      <label>Don 2 · (Clique para selecionar)</label>
+
+      <input type="text" id="don2-nome" placeholder="Escolher Dom 2..." readonly style="cursor: pointer; font-weight: bold; color: var(--rust);">
+
+      <textarea id="don2-efeito" placeholder="Efeito mecânico…" readonly style="cursor: pointer;"></textarea>
+
+    </div>
+
+  </div>
+
+  <div class="section-label">Vocações (máx. 2 iniciais)</div>
+
+  <div class="voc-grid mb14">
+
+    <div class="voc-slot" onclick="abrirModalVocacoes(1)" style="cursor: pointer; background: rgba(139,105,20,0.02);">
+
+      <label>Vocação 1 · (Clique para selecionar)</label>
+
+      <input type="text" id="voc1-nome" placeholder="Escolher Vocação 1..." readonly style="cursor: pointer; font-weight: bold; color: var(--rust);">
+
+      <textarea id="voc1-efeito" placeholder="Habilidades e bônus…" readonly style="cursor: pointer;"></textarea>
+
+    </div>
+
+    <div class="voc-slot" onclick="abrirModalVocacoes(2)" style="cursor: pointer; background: rgba(139,105,20,0.02);">
+
+      <label>Vocação 2 · (Clique para selecionar)</label>
+
+      <input type="text" id="voc2-nome" placeholder="Escolher Vocação 2..." readonly style="cursor: pointer; font-weight: bold; color: var(--rust);">
+
+      <textarea id="voc2-efeito" placeholder="Habilidades e bônus…" readonly style="cursor: pointer;"></textarea>
+
+    </div>
+
+  </div>
+
+  <div class="modal-overlay" id="modal-vocacoes">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+
+        <h2 style="font-family: var(--serif); color: var(--rust); font-size: 1.2rem; margin:0;">Registro de Vocações</h2>
+
+        <button onclick="fecharModalVocacoes()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--burnish); line-height: 1;">&times;</button>
+
+      </div>
+
+      <div class="modal-body">
+
+        <div class="modal-sidebar" id="modal-cat-list-voc"></div>
+
+        <div class="modal-main" id="modal-voc-list"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <style>
+
+    /* Estilos do Acordeão de Vocações */
+
+    .voc-card {
+
+      border: 1px solid rgba(139,105,20,0.3); border-radius: 3px; padding: 1rem;
+
+      margin-bottom: 0.8rem; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.4); position: relative;
+
+    }
+
+    .voc-card:hover { border-color: var(--gold); }
+
+    .voc-card-header { display: flex; justify-content: space-between; align-items: center; }
+
+    .voc-card-title { font-weight: 900; font-family: var(--serif); color: var(--rust); font-size: 0.95rem; }
+
+    .voc-card-indicator { font-family: var(--mono); font-size: 1rem; color: var(--burnish); transition: transform 0.2s; }
+
+    
+
+    .voc-card-details { display: none; margin-top: 0.8rem; border-top: 1px dashed rgba(139,105,20,0.3); padding-top: 0.8rem; }
+
+    .voc-card.expanded .voc-card-details { display: block; }
+
+    .voc-card.expanded .voc-card-indicator { transform: rotate(45deg); color: var(--gold); }
+
+    .voc-card.expanded { border-color: var(--gold); background: rgba(139,105,20,0.05); }
+
+    
+
+    .voc-info-line { font-size: 0.85rem; color: #444; line-height: 1.4; margin-bottom: 0.4rem; }
+
+    .voc-info-line strong { color: var(--ink); }
+
+  </style>
+
+  <script>
+
+    const vocacoesDB = [
+
+      {
+
+        nome: "Médico",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Kit médico (15 usos).",
+
+        salario: "4 ouros",
+
+        desc: "• Centralizado: Focado, não perde a concentração.\n• Ponto de Pressão: Adormece parte do corpo inimigo.",
+
+        itens: [ { nome: "Kit Médico", tipo: "item", usos: 15, efeito: "Tratamento de campo" } ]
+
+      },
+
+      {
+
+        nome: "Mercador",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Maleta Reforçada (10 usos, +2 carga, 2 dano).",
+
+        salario: "4 ouros",
+
+        desc: "• Barganha: Reduz preços temporariamente.\n• Segurança particular: Guarda-costas com +1 em atributos.",
+
+        itens: [ { nome: "Maleta Reforçada", tipo: "arma", dano: 2, usos: 10, efeito: "+2 carga" } ]
+
+      },
+
+      {
+
+        nome: "Alquimista",
+
+        cat: "Funcionários Estatais",
+
+        equip: "5 tubos de ensaio.",
+
+        salario: "3 ouros e 5 pratas",
+
+        desc: "• Receita secreta: Poções ganham +1 dano/efeito.\n• Reação em Cadeia: Efeito atinge área próxima.",
+
+        itens: [ { nome: "Tubo de Ensaio", tipo: "inventario", qtd: 5, efeito: "Para preparo de poções" } ]
+
+      },
+
+      {
+
+        nome: "Engenheiro",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Kit ferramentas, massarico, máquina gratuita.",
+
+        salario: "4 ouros",
+
+        desc: "• Inventor: Cria máquinas de suporte/combate.\n• Demolidor: Analisa e reduz guarda/vitalidade inimiga.",
+
+        itens: [
+
+          { nome: "Kit de Ferramentas", tipo: "item", efeito: "Reparo e construção" },
+
+          { nome: "Massarico", tipo: "item", efeito: "Soldagem" },
+
+          { nome: "Máquina (gratuita)", tipo: "arma", dano: 3, usos: 5, efeito: "5 ❤️ de vitalidade" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Soldado",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Espada, armadura e escudo de ferro.",
+
+        salario: "4 ouros",
+
+        desc: "• Alerta: Guarda máxima +4 fora de combate.\n• Mestre de esgrima: Guarda regenera +1 passivamente.",
+
+        itens: [
+
+          { nome: "Espada de Ferro", tipo: "arma", dano: 2, usos: 20, efeito: "+2 Guarda" },
+
+          { nome: "Armadura de Ferro (Elmo+Peitoral+Botas)", tipo: "armadura", dano: "", usos: 4, efeito: "+3 Defesa, +1 Energia" },
+
+          { nome: "Escudo de Ferro", tipo: "armadura", dano: "", usos: 4, efeito: "+2 Defesa" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Bibliotecário",
+
+        cat: "Funcionários Estatais",
+
+        equip: "2 grimórios (renovados semanalmente).",
+
+        salario: "4 ouros",
+
+        desc: "• Planejamento: Aumenta guarda ao preparar plano.\n• Leitura de combate: Aumenta atributos ao focar e não atacar.",
+
+        itens: [ { nome: "Grimório Comum", tipo: "item", usos: 4, efeito: "2 feitiços armazenados (x2)" } ]
+
+      },
+
+      {
+
+        nome: "Sacerdote",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Terço com runa e dois grimórios avançados.",
+
+        salario: "4 ouros",
+
+        desc: "• Oração: Altera atributos em +1/-1 temporariamente.\n• Milagre: Intervenção divina de 5 pontos.",
+
+        itens: [
+
+          { nome: "Terço com Runa", tipo: "item", efeito: "Foco ritualístico" },
+
+          { nome: "Grimório Avançado", tipo: "item", usos: 12, efeito: "4 feitiços armazenados (x2)" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Explorador",
+
+        cat: "Funcionários Estatais",
+
+        equip: "Bastão de caminhada e mochila.",
+
+        salario: "4 ouros",
+
+        desc: "• Atalho: Reduz tempo de viagem pela metade.\n• Analítico: Cria mapa mental e regenera guarda passivamente.",
+
+        itens: [
+
+          { nome: "Bastão de Caminhada", tipo: "arma", dano: 1, usos: 5, efeito: "Apoio de viagem" },
+
+          { nome: "Mochila", tipo: "inventario", qtd: 1, efeito: "Transporte" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Ferreiro",
+
+        cat: "Manufatura",
+
+        equip: "Arsenal completo, martelo.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Resiliência: -1 de dano ambiental.\n• Impacto bigorna: Ignora defesas provenientes de armaduras/estruturas.",
+
+        itens: [ { nome: "Martelo de Forja", tipo: "arma", dano: 4, usos: 20, efeito: "Forja/repara equipamentos" } ]
+
+      },
+
+      {
+
+        nome: "Caçador",
+
+        cat: "Manufatura",
+
+        equip: "1 arco (20 flechas) e faca.",
+
+        salario: "Média 3 ouros",
+
+        desc: "• Preza inferior: +2 dano em criaturas selvagens.\n• Camuflagem tática: +4 Guarda em furtividade.",
+
+        itens: [
+
+          { nome: "Arco", tipo: "arma", dano: 2, usos: 20, efeito: "Ataca a 1 turno de distância" },
+
+          { nome: "Faca", tipo: "arma", dano: 1, usos: 5, efeito: "Contra-ataque" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Músico",
+
+        cat: "Manufatura",
+
+        equip: "Instrumento musical e chapéu.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Inspirador: +2 energia para o grupo.\n• Epifânia sonora: Concede +1 nos atributos por turno tocando.",
+
+        itens: [ { nome: "Instrumento Musical", tipo: "item", efeito: "+2 Energia ao grupo (1 turno tocando)" } ]
+
+      },
+
+      {
+
+        nome: "Lenhador",
+
+        cat: "Manufatura",
+
+        equip: "Machado e carroça.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Vigor Efetivo: Coleta de recursos em dobro.\n• Golpe profundo: Causa hemorragia e perda de vida ao longo do tempo.",
+
+        itens: [ { nome: "Machado", tipo: "arma", dano: 3, usos: 20, efeito: "+3 dano em estruturas de madeira" } ]
+
+      },
+
+      {
+
+        nome: "Carpinteiro",
+
+        cat: "Manufatura",
+
+        equip: "Martelo, pregos, ferramentas básicas.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Reciclagem: Reutiliza materiais destruídos funcionalmente.\n• Montagem: Combina dois itens em um objeto (Ex: Corda + Madeira).",
+
+        itens: [ { nome: "Martelo e Pregos", tipo: "item", efeito: "Construção de barricadas/estruturas" } ]
+
+      },
+
+      {
+
+        nome: "Minerador",
+
+        cat: "Manufatura",
+
+        equip: "Picareta.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Ombros largos: Carrega +2 itens no inventário.\n• Extrator ferrenho: Extrai projéteis do ambiente ou barricadas.",
+
+        itens: [ { nome: "Picareta", tipo: "arma", dano: 2, usos: 20, efeito: "+2 dano a coisas paradas / extração de minério" } ]
+
+      },
+
+      {
+
+        nome: "Pescador",
+
+        cat: "Manufatura",
+
+        equip: "Rede (imobiliza), vara de pesca e barco.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Subsistência Marinha: Coleta sistemática de peixes com PA.\n• Postura de navegador: Imobiliza os pés para penalizar ataques inimigos.",
+
+        itens: [
+
+          { nome: "Rede de Pesca", tipo: "item", usos: 4, efeito: "Imobiliza inimigos por 1 turno" },
+
+          { nome: "Vara de Pesca", tipo: "item", efeito: "Coleta de peixes" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Cozinheiro",
+
+        cat: "Manufatura",
+
+        equip: "Faca, panelas e talheres.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Tempero do chefe: Refeições recuperam +2.\n• Pura Proteína: Permite consumo de alimento como ação em combate.",
+
+        itens: [ { nome: "Faca de Cozinha", tipo: "arma", dano: 1, usos: 5, efeito: "Preparo de carnes" } ]
+
+      },
+
+      {
+
+        nome: "Fazendeiro",
+
+        cat: "Manufatura",
+
+        equip: "Enxada, foice, forquilha.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Conhecimento rural: Cultivo antecipado em 1 dia.\n• Força Funcional: Agarra e arremessa oponentes ou objetos pesados.",
+
+        itens: [ { nome: "Enxada e Foice", tipo: "item", efeito: "Cultivo e colheita" } ]
+
+      },
+
+      {
+
+        nome: "Domador",
+
+        cat: "Manufatura",
+
+        equip: "1 pet.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Sintonia: Restituição de atributos recebe +1 quando unidos.\n• Uma só alma: Sacrifica atributo para conceder bônus ao parceiro.",
+
+        itens: [ { nome: "Pet (aleatório)", tipo: "item", efeito: "Companheiro" } ]
+
+      },
+
+      {
+
+        nome: "Ladrão",
+
+        cat: "Manufatura",
+
+        equip: "1 saco vazio e capa longa.",
+
+        salario: "De acordo com as vendas",
+
+        desc: "• Fugitivo: Rompe aprisionamentos se furtivo.\n• Roubo: Subtrai 2 itens diretamente das mãos ou bolsos em combate.",
+
+        itens: [
+
+          { nome: "Saco Vazio", tipo: "inventario", qtd: 1, efeito: "Armazenamento de itens roubados" },
+
+          { nome: "Capa Longa", tipo: "item", efeito: "Disfarce / furtividade" }
+
+        ]
+
+      },
+
+      {
+
+        nome: "Escravo",
+
+        cat: "Outros",
+
+        equip: "Nenhum",
+
+        salario: "Totalmente convertido em pagamento da dívida",
+
+        desc: "• Condição de aprisionamento: Recupera apenas 1 de vitalidade e 1 de Energia durante descansos.",
+
+        itens: []
+
+      }
+
+    ];
+
+    let slotVocAtual = 1;
+
+    function abrirModalVocacoes(slot) {
+
+      slotVocAtual = slot;
+
+      document.getElementById('modal-vocacoes').style.display = 'flex';
+
+      renderizarCategoriasVoc();
+
+      renderizarVocacoesDaCategoria('Todos');
+
+    }
+
+    function fecharModalVocacoes() {
+
+      document.getElementById('modal-vocacoes').style.display = 'none';
+
+    }
+
+    function renderizarCategoriasVoc() {
+
+      const catsUnicas = ['Todos'];
+
+      vocacoesDB.forEach(v => { if(!catsUnicas.includes(v.cat)) catsUnicas.push(v.cat); });
+
+      catsUnicas.sort();
+
+      
+
+      const sidebar = document.getElementById('modal-cat-list-voc');
+
+      sidebar.innerHTML = '';
+
+      
+
+      catsUnicas.forEach(cat => {
+
+        const btn = document.createElement('button');
+
+        btn.className = 'cat-btn';
+
+        btn.textContent = cat;
+
+        btn.onclick = () => {
+
+          document.querySelectorAll('#modal-cat-list-voc .cat-btn').forEach(b => b.classList.remove('active'));
+
+          btn.classList.add('active');
+
+          renderizarVocacoesDaCategoria(cat);
+
+        };
+
+        if(cat === 'Todos') btn.classList.add('active');
+
+        sidebar.appendChild(btn);
+
+      });
+
+    }
+
+    function toggleVocacao(cardEl) {
+
+      const isExpanded = cardEl.classList.contains('expanded');
+
+      document.querySelectorAll('.voc-card').forEach(c => c.classList.remove('expanded'));
+
+      if(!isExpanded) cardEl.classList.add('expanded');
+
+    }
+
+    function renderizarVocacoesDaCategoria(cat) {
+
+      const main = document.getElementById('modal-voc-list');
+
+      main.innerHTML = '';
+
+      const filtrados = cat === 'Todos' ? vocacoesDB : vocacoesDB.filter(v => v.cat === cat);
+
+      
+
+      filtrados.forEach(v => {
+
+        const card = document.createElement('div');
+
+        card.className = 'voc-card';
+
+        card.innerHTML = `
+
+          <div class="voc-card-header">
+
+            <div class="voc-card-title">${v.nome}</div>
+
+            <div class="voc-card-indicator">+</div>
+
+          </div>
+
+          <div class="voc-card-details">
+
+            <div class="voc-info-line"><strong>Salário:</strong> ${v.salario}</div>
+
+            <div class="voc-info-line"><strong>Equipamento Inicial:</strong> ${v.equip}</div>
+
+            <div class="voc-info-line" style="margin-top:0.6rem;"><strong>Habilidades da Vocação:</strong><br>${v.desc.replace(/\n/g, '<br>')}</div>
+
+            <button class="confirm-btn" style="display: block; margin-top: 1rem; width: 100%;" onclick="confirmarVocacao('${v.nome}')">✔ Confirmar no Slot ${slotVocAtual}</button>
+
+          </div>
+
+        `;
+
+        card.onclick = (e) => {
+
+          if(e.target.tagName === 'BUTTON') return;
+
+          toggleVocacao(card);
+
+        };
+
+        main.appendChild(card);
+
+      });
+
+    }
+
+    function confirmarVocacao(nome) {
+
+      const voc = vocacoesDB.find(v => v.nome === nome);
+
+      if(voc) {
+
+        // Limpa itens da vocação anterior neste slot (caso o jogador troque de vocação)
+
+        limparItensDaVocacao(slotVocAtual);
+
+        document.getElementById(`voc${slotVocAtual}-nome`).value = voc.nome;
+
+        document.getElementById(`voc${slotVocAtual}-efeito`).value = voc.desc;
+
+        // Recalcula slots de inventário ANTES de preencher (Minerador pode liberar +2 slots)
+
+        updateInventorySlots(state.vita.max);
+
+        // Preenche automaticamente armas/armaduras e itens de inventário da vocação
+
+        aplicarItensVocacao(voc, slotVocAtual);
+
+        const itensTxt = (voc.itens && voc.itens.length > 0) ? ` Equipamento adicionado automaticamente.` : '';
+
+        showToast('⚒️', `Vocação <strong>${voc.nome}</strong> definida no Slot ${slotVocAtual}!${itensTxt}`);
+
+      }
+
+      fecharModalVocacoes();
+
+    }
+
+  </script>
+
+  <hr class="divider">
+
+  <div class="section-label">Poder Único</div>
+
+  <button id="btn-unlock-poder" class="btn-add-hab" style="margin-bottom: 1.4rem;" onclick="desbloquearPoderUnico()">⚡ Desbloquear Poder Único (Custo: 1 PP Máx)</button>
+
+  
+
+  <div id="poder-unico-block" class="poder-block mb14" style="display: none;">
+
+    <div class="poder-meta">
+
+      <div class="poder-full" style="margin-bottom:0">
+
+        <label>Nome do Poder</label>
+
+        <input type="text" id="poder-nome" placeholder="—">
+
+      </div>
+
+      <div class="poder-full" style="margin-bottom:0">
+
+        <label>Categoria (Entidade Dedicada)</label>
+
+        <div class="chess-selector" id="entidade-selector-poder" style="margin-top: 2px;">
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Peão')" title="Peão (Biológico)">♟️</span>
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Torre')" title="Torre (Natural)">♜</span>
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Cavalo')" title="Cavalo (Mente)">♞</span>
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Bispo')" title="Bispo (Espiritual)">♝</span>
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Rainha')" title="Rainha (Caos Ordenado)">♛</span>
+
+          <span class="chess-piece" onclick="selectEntidadePoder(this,'Rei')" title="Rei (Absoluto)">♚</span>
+
+        </div>
+
+        <input type="hidden" id="poder-categoria" value="">
+
+      </div>
+
+      <div class="poder-full" style="margin-bottom:0">
+
+        <label>Custo (PP) · Gatilho Sensorial</label>
+
+        <input type="text" id="poder-custo-gatilho" placeholder="1–2 PP · tato / visão / audição…">
+
+      </div>
+
+    </div>
+
+    
+
+    <div id="entidade-info-box" style="display: none; margin: 0.8rem 0; padding: 0.8rem 1rem; background: rgba(139,105,20,0.05); border: 1px dashed var(--burnish); border-radius: 2px; font-family: var(--body); font-size: 0.85rem; line-height: 1.5; color: var(--ink);"></div>
+
+    
+
+    <div class="poder-full">
+
+      <label>Origem — Por que é a sua essência? Como foi adquirido?</label>
+
+      <textarea id="poder-origem" placeholder="Ex: Eco de Aço. Veio de uma queda na bigorna quando criança…"></textarea>
+
+    </div>
+
+    <div class="poder-full">
+
+      <label>Manifestação — Matéria / Aparência visual</label>
+
+      <textarea id="poder-manifestacao" placeholder="Como parece no mundo físico?"></textarea>
+
+    </div>
+
+    <div class="poder-full">
+
+      <label>Efeito Central — A regra que quebra</label>
+
+      <textarea id="poder-efeito" placeholder="O que permite fazer?"></textarea>
+
+    </div>
+
+    <div class="poder-full">
+
+      <label>Modificador Circunstancial (1 apenas)</label>
+
+      <input type="text" id="poder-modificador" placeholder="Ex: +2 de dano ao lutar contra criaturas malignas">
+
+    </div>
+
+    <div class="section-label" style="margin-top:0.8rem;">Habilidades Extras do Poder</div>
+
+    <div class="habilidades-grid" id="habilidades-grid">
+
+      <div class="hab-slot">
+
+        <label>Habilidade 1 · Nome</label>
+
+        <input type="text" placeholder="—">
+
+        <textarea placeholder="Efeito / escala / custo adicional…"></textarea>
+
+      </div>
+
+      <div class="hab-slot">
+
+        <label>Habilidade 2 · Nome</label>
+
+        <input type="text" placeholder="—">
+
+        <textarea placeholder="Efeito / escala / custo adicional…"></textarea>
+
+      </div>
+
+    </div>
+
+    <button id="add-hab-btn" class="btn-add-hab" onclick="adicionarHabilidade()">+ Adicionar Habilidade Extra</button>
+
+    
+
+    <div class="saturacao-block">
+
+      <div class="saturacao-label">⬡ Saturação</div>
+
+      <div class="sat-grid">
+
+        <div class="sat-field">
+
+          <label>Gatilho da Saturação</label>
+
+          <input type="text" id="sat-gatilho" placeholder="Desespero Absoluto · Completude">
+
+        </div>
+
+        <div class="sat-field">
+
+          <label>Habilidade Saturação 1</label>
+
+          <textarea id="sat-hab1" placeholder="Nome e efeito…"></textarea>
+
+        </div>
+
+        <div class="sat-field">
+
+          <label>Habilidade Saturação 2</label>
+
+          <textarea id="sat-hab2" placeholder="Nome e efeito…"></textarea>
+
+        </div>
+
+      </div>
+
+      <div style="font-family:var(--body);font-style:italic;font-size:0.65rem;color:#888;margin-top:0.4rem;">Ao saturar: +5 PP temporários · as 2 habilidades de saturação ficam disponíveis imediatamente</div>
+
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">Armas e Armaduras</div>
+
+  <table class="equip-table mb08">
+
+    <thead>
+
+      <tr>
+
+        <th style="width:35%">Nome / Material</th>
+
+        <th style="width:18%">Tipo</th>
+
+        <th class="center" style="width:12%">Dano</th>
+
+        <th class="center" style="width:12%">Usos</th>
+
+        <th style="width:23%">Efeito Especial</th>
+
+      </tr>
+
+    </thead>
+
+    <tbody id="equip-body"></tbody>
+
+  </table>
+
+  <button class="add-row-btn" onclick="addEquipRow()">+ Adicionar linha</button>
+
+  <div class="section-label" style="justify-content: flex-start;">Inventário</div>
+
+  <div id="inv-info-bar" style="display:flex; justify-content:space-between; align-items:center; margin: -0.3rem 0 0.6rem; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.05em; color: var(--burnish);">
+
+    <span style="color:#999; font-style:italic; font-family:var(--body); font-size:0.68rem;">Capacidade de carga determinada pela Vitalidade</span>
+
+    <span id="inv-label-detail" style="text-align:right; font-weight:600;">— 5 slots padrão</span>
+
+  </div>
+
+  <div class="inv-grid mb08" id="inventario-grid"></div>
+
+  <div class="section-label">Moedas</div>
+
+  <div class="moedas-row mb14">
+
+    <div class="moeda-item"><div class="moeda-icon moeda-prata">Ag</div><div><input type="number" min="0" value="0"><div class="moeda-label">Pratas</div></div></div>
+
+    <div class="moeda-item"><div class="moeda-icon moeda-ouro">Au</div><div><input type="number" min="0" value="0"><div class="moeda-label">Ouros</div></div></div>
+
+    <div class="moeda-item"><div class="moeda-icon moeda-crist">✦</div><div><input type="number" min="0" value="0"><div class="moeda-label">Cristais</div></div></div>
+
+    <div style="flex:1;border-left:1px solid rgba(139,105,20,0.2);padding-left:1rem;">
+
+      <div style="font-family:var(--mono);font-size:0.48rem;letter-spacing:0.15em;color:#aaa;text-transform:uppercase;margin-bottom:3px;">Câmbio oficial</div>
+
+      <div style="font-size:0.72rem;color:#666;line-height:1.8;">1 Ouro = 10 Pratas &nbsp;·&nbsp; 1 Cristal = 10 Ouros</div>
+
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">Evolução <span style="font-family:var(--mono);font-size:0.5rem;font-weight:400;letter-spacing:0.1em;">— 1 ponto a cada 10 batalhas · máx. 10</span></div>
+
+  <div class="evol-grid" id="evol-pips"></div>
+
+  <div style="font-family:var(--body);font-style:italic;font-size:0.7rem;color:#888;margin-bottom:1.2rem;">Ponto investido em: ❤️ Vida · 🔰 Guarda · ⚡ Energia · 🔮 Magia · 💠 Poder</div>
+
+  <div class="two-col mb14">
+
+    <div class="field"><label>Batalhas Concluídas</label><input type="number" min="0" value="0" style="font-family:var(--mono);width:80px;"></div>
+
+    <div class="field"><label>Pontos de Conhecimento</label><input type="number" min="0" value="0" style="font-family:var(--mono);width:80px;"></div>
+
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">Condições Ativas &amp; Anotações de Combate</div>
+
+  <textarea class="notes-area mb14" id="notes-condicoes" rows="4" placeholder="Envenenado · Atordoado · Imobilizado · Furtivo · Em exaustão · Defesa extra-muscular · …"></textarea>
+
+  <div class="section-label">História &amp; Traços de Personalidade</div>
+
+  <textarea class="notes-area" id="notes-historia" rows="5" placeholder="Origem, motivações, segredos, juramentos do poder, vínculos…"></textarea>
+
+  <button class="print-btn" onclick="exportarEImprimir()">⬡ Imprimir Ficha</button>
+
+</div>
+
+<div class="modal-overlay" id="modal-dons">
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+
+      <h2 style="font-family: var(--serif); color: var(--rust); font-size: 1.2rem; margin:0;">Tomo de Dons</h2>
+
+      <button onclick="fecharModalDons()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--burnish); line-height: 1;">&times;</button>
+
+    </div>
+
+    <div class="modal-body">
+
+      <div class="modal-sidebar" id="modal-cat-list">
+
+         </div>
+
+      <div class="modal-main" id="modal-don-list">
+
+         </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+// ═══════════════════════════════════════════
+
+// BANCO DE DADOS DE DONS (DOCX)
+
+// ═══════════════════════════════════════════
+
+const donsDB = [
+
+  // Defensivos
+
+  { nome: "Resiliente", desc: "Reduz automaticamente 1 de dano de todos os ataques recebidos.", cats: ["Resistência", "Sobrevivência"] },
+
+  { nome: "Sereno", desc: "Recupera 2 de Guarda ao não atacar em um turno.", cats: ["Recuperação"] },
+
+  { nome: "Ladino", desc: "Se terminar um turno sem sofrer dano, ganhe +1 de Guarda. Aumenta em 1 a cada turno sem redução de status.", cats: ["Resistência", "Recuperação"] },
+
+  { nome: "Eremita", desc: "Após permanecer 2 turnos consecutivos sem atacar, conjurar magias ou usar habilidades, recupere totalmente sua Energia ou Magia. Dano à vida reinicia a contagem.", cats: ["Recuperação"] },
+
+  { nome: "Adaptável", desc: "Em um combate, ao receber dano do mesmo ataque, reduza-o em 1 (Max de redução: 2).", cats: ["Resistência"] },
+
+  { nome: "Passo Fantasma", desc: "Se move tão rápido a ponto de deixar uma ilusão. Ao desviar (acertam a sombra), inimigos perdem guarda proporcional ao dano.", cats: ["Controle", "Utilidade"] },
+
+  { nome: "Ágil", desc: "Pode usar por turno 1 ponto de Guarda no lugar de Energia.", cats: ["Flexibilidade"] },
+
+  { nome: "Oportunista", desc: "Caso não sofra dano na vitalidade, poupe 1 de energia na próxima Ação.", cats: ["Flexibilidade"] },
+
+  { nome: "Protetor", desc: "Uma vez por rodada, pode gastar sua própria Guarda para reduzir dano recebido por um aliado.", cats: ["Suporte", "Proteção"] },
+
+  { nome: "Coração de Medusa", desc: "Reserve 1 turno para petrificar um coração (recebe dano 2x para destruir). O 1º racha, o 2º destrói. Máximo 1 por turno.", cats: ["Resistência", "Sobrevivência"] },
+
+  { nome: "Inabalável", desc: "Imune a atordoamentos. Ataques que ultrapassem a Guarda não afetam a Vitalidade ao zera-la pela primeira vez.", cats: ["Resistência", "Sobrevivência"] },
+
+  { nome: "Sábio", desc: "Ao não atacar em um turno estando com Energia e Guarda cheias, recupera 2 de Vida.", cats: ["Recuperação"] },
+
+  { nome: "Coração Bestial", desc: "Uma vez por turno, pode gastar 1 de Energia para recuperar 1 de Vida.", cats: ["Recuperação"] },
+
+  { nome: "Intimidador", desc: "Inimigos não podem recuperar Guarda ao recuar pela primeira vez.", cats: ["Controle"] },
+
+  { nome: "Duelista", desc: "Caso o seu dano seja igual ao do adversário, ambos os danos são anulados.", cats: ["Defesa"] },
+
+  { nome: "Economista", desc: "Uma vez por combate, pode refazer mesma ação sem custos.", cats: ["Flexibilidade"] },
+
+  { nome: "Ruptura", desc: "Uma vez por combate, ignore custos de Energia/Magia, mas zera a Guarda (se 1ª vez zerada, atordoa).", cats: ["Agressividade", "Risco"] },
+
+  { nome: "Masoquista", desc: "Ao zerar Magia ou Energia, pode passar a usar os próprios pontos de Vida.", cats: ["Sacrifício", "Risco"] },
+
+  { nome: "Alma Vampírica", desc: "Causar dano aumenta sua Vida pela metade do dano causado.", cats: ["Recuperação", "Dano"] },
+
+  { nome: "Zumbi", desc: "Ao morrer, transforma-se num zumbi inconsciente com metade de todos os atributos antigos.", cats: ["Sobrevivência", "Sacrifício"] },
+
+  { nome: "Alma de Combate", desc: "Permite agir com Vida zerada. Recupera Energia e Magia, mas sofrer dano reduz suas capacidades máximas.", cats: ["Sacrifício", "Sobrevivência"] },
+
+  { nome: "Último Suspiro", desc: "Ao receber golpe fatal, realiza uma última ação completa usando valor de perícia como dano total.", cats: ["Sacrifício", "Execução"] },
+
+  { nome: "Mártir", desc: "Ao ser derrubado, aliados recebem +2 em Magia, Energia e Guarda.", cats: ["Suporte", "Sacrifício"] },
+
+  { nome: "Legado do Aço", desc: "Ao sofrer Nocaute Definitivo, funde a alma à arma. Próximo aliado ganha metade de seus stats na arma.", cats: ["Suporte", "Sacrifício"] },
+
+  
+
+  // Ofensivos
+
+  { nome: "Predador", desc: "Atingir um alvo sem Guarda causa +1 de dano adicional.", cats: ["Dano", "Execução"] },
+
+  { nome: "Determinado", desc: "Enquanto estiver com menos Vida que o inimigo, cause +1 de dano.", cats: ["Dano", "Risco"] },
+
+  { nome: "Ritualista", desc: "Passar turnos sem atacar aumenta 1 ponto ao próximo ataque. Máximo 2.", cats: ["Dano"] },
+
+  { nome: "Caçador", desc: "Inimigos imobilizados recebem +1 de dano.", cats: ["Dano", "Execução"] },
+
+  { nome: "Impulsivo", desc: "Cada ação de ataque em sequência aumenta o modificador de dano em 1. Máximo +2.", cats: ["Dano", "Pressão"] },
+
+  { nome: "Frenético", desc: "Reduzir status de inimigo aumenta proporcionalmente sua Energia (metade do dano).", cats: ["Recuperação", "Dano"] },
+
+  { nome: "Retaliador", desc: "Uma vez por combate, pode desferir um ataque extra a qualquer inimigo que o ataque.", cats: ["Vingança", "Dano"] },
+
+  { nome: "Vingador", desc: "Cada dano sofrido pode ser armazenado pela metade e liberado no próximo golpe.", cats: ["Vingança", "Dano"] },
+
+  { nome: "Executor", desc: "Uma vez por combate, seu ataque pode ignorar a Guarda do oponente.", cats: ["Execução"] },
+
+  { nome: "Extravagante", desc: "Realizar um ataque com o status usado (Magia/Energia) cheio causa +2 de dano.", cats: ["Dano"] },
+
+  { nome: "Condutor", desc: "Uma vez por combate, pode aplicar um ataque em área.", cats: ["Dano", "Utilidade"] },
+
+  { nome: "Instinto Assassino", desc: "Matar um inimigo lhe dá um turno extra.", cats: ["Execução", "Pressão"] },
+
+  { nome: "Letal", desc: "Pode causar +2 de dano uma vez por luta.", cats: ["Dano"] },
+
+  { nome: "Retalhador", desc: "Ao sofrer ataques corpo a corpo com guarda zerada (>1 dano), devolve 1 de dano ao agressor e reduz 1 do recebido.", cats: ["Vingança", "Resistência"] },
+
+  { nome: "Abatedor de Gigantes", desc: "Inimigo com +do dobro de vida: Ao zerar a Guarda dele, gaste 2 de magia p/ impedi-la de regenerar.", cats: ["Controle", "Execução"] },
+
+  { nome: "Valente", desc: "Imune a intimidação/efeitos psicológicos. Inimigos que tentam perdem guarda na proporção.", cats: ["Resistência", "Controle"] },
+
+  { nome: "Obsecado", desc: "Escolhe alvo (+ p/ proteção: +2 Defesa; - p/ destruição: +2 Dano). Morto o alvo, transfere pra quem matou.", cats: ["Proteção", "Dano"] },
+
+  { nome: "Sanguinário", desc: "Sacrifica Magia pelo combate. Feitiços consomem Vida. Recupera 1 ❤️/turno, mas itens de cura não funcionam mais.", cats: ["Sacrifício", "Dano"] }
+
+];
+
+let slotDonsAtual = 1;
+
+function abrirModalDons(slot) {
+
+  slotDonsAtual = slot;
+
+  document.getElementById('modal-dons').style.display = 'flex';
+
+  renderizarCategorias();
+
+  renderizarDonsDaCategoria('Todos');
+
+}
+
+function fecharModalDons() {
+
+  document.getElementById('modal-dons').style.display = 'none';
+
+}
+
+function renderizarCategorias() {
+
+  const catsUnicas = ['Todos'];
+
+  donsDB.forEach(d => d.cats.forEach(c => { if(!catsUnicas.includes(c)) catsUnicas.push(c); }));
+
+  catsUnicas.sort();
+
+  
+
+  const sidebar = document.getElementById('modal-cat-list');
+
+  sidebar.innerHTML = '';
+
+  
+
+  catsUnicas.forEach(cat => {
+
+    const btn = document.createElement('button');
+
+    btn.className = 'cat-btn';
+
+    btn.textContent = cat;
+
+    btn.onclick = () => {
+
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+
+      btn.classList.add('active');
+
+      renderizarDonsDaCategoria(cat);
+
+    };
+
+    if(cat === 'Todos') btn.classList.add('active');
+
+    sidebar.appendChild(btn);
+
+  });
+
+}
+
+function renderizarDonsDaCategoria(cat) {
+
+  const main = document.getElementById('modal-don-list');
+
+  main.innerHTML = '';
+
+  
+
+  const filtrados = cat === 'Todos' ? donsDB : donsDB.filter(d => d.cats.includes(cat));
+
+  
+
+  filtrados.forEach(d => {
+
+    const card = document.createElement('div');
+
+    card.className = 'don-card';
+
+    card.innerHTML = `
+
+      <div style="font-weight: 900; font-family: var(--serif); color: var(--rust); margin-bottom: 0.4rem; font-size: 0.95rem;">${d.nome}</div>
+
+      <div style="font-size: 0.85rem; color: #444; line-height: 1.4;">${d.desc}</div>
+
+      <div style="font-size: 0.65rem; color: var(--burnish); margin-top: 0.6rem; font-family: var(--mono);">Tags: ${d.cats.join(', ')}</div>
+
+      <button class="confirm-btn" onclick="confirmarDom('${d.nome}')">✔ Confirmar Escolha no Slot ${slotDonsAtual}</button>
+
+    `;
+
+    card.onclick = (e) => {
+
+      if(e.target.tagName === 'BUTTON') return;
+
+      document.querySelectorAll('.don-card').forEach(c => c.classList.remove('selected'));
+
+      card.classList.add('selected');
+
+    };
+
+    main.appendChild(card);
+
+  });
+
+}
+
+function confirmarDom(nome) {
+
+  const dom = donsDB.find(d => d.nome === nome);
+
+  if(dom) {
+
+    document.getElementById(`don${slotDonsAtual}-nome`).value = dom.nome;
+
+    document.getElementById(`don${slotDonsAtual}-efeito`).value = dom.desc;
+
+    showToast('📜', `Dom <strong>${dom.nome}</strong> equipado no Slot ${slotDonsAtual}!`);
+
+  }
+
+  fecharModalDons();
+
+}
+
+// ═══════════════════════════════════════════
+
+// TOAST SYSTEM & STATE
+
+// ═══════════════════════════════════════════
+
+let toastTimer = null;
+
+function showToast(icon, html, duration = 4000) {
+
+  const el = document.getElementById('toast');
+
+  document.getElementById('toast-icon').textContent = icon;
+
+  document.getElementById('toast-text').innerHTML = html;
+
+  el.classList.add('show');
+
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+
+}
+
+const state = {
+
+  vita: { max: 6, cur: 6 },
+
+  guard: { max: 4, cur: 4 },
+
+  energy: { max: 8, cur: 8 },
+
+  mana: { max: 2, cur: 2 },
+
+  pp: { max: 12, cur: 12 },
+
+  _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 4 energia = +2 guarda)
+
+  _manаVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 4 magia = -1 vita)
+
+};
+
+function toggleCur(scale, stat, idx) {
+
+  state[stat].cur = (state[stat].cur === idx) ? idx - 1 : idx;
+
+  if (scale === 1) renderScale1();
+
+  if (scale === 2) renderScale2();
+
+}
+
+// ═══════════════════════════════════════════
+
+// ESCALA 1 — Vitalidade vs Guarda (EMOJIS)
+
+// ═══════════════════════════════════════════
+
+function renderScale1() {
+
+  const v = state.vita.max; const g = state.guard.max;
+
+  const bar = document.getElementById('scale1-bar'); bar.innerHTML = '';
+
+  
+
+  for (let i = 1; i <= v; i++) {
+
+    const cell = document.createElement('div');
+
+    cell.className = 'pip-bar-cell' + (i <= state.vita.cur ? ' filled' : '');
+
+    cell.title = `Vitalidade Atual: ${i}`;
+
+    cell.textContent = '❤️'; // Substituição do pip pelo Emoji
+
+    cell.onclick = () => toggleCur(1, 'vita', i);
+
+    bar.appendChild(cell);
+
+  }
+
+  
+
+  if (v > 0 && g > 0) {
+
+    const sep = document.createElement('div');
+
+    sep.className = 'pip-bar-separator'; sep.textContent = '||'; bar.appendChild(sep);
+
+  }
+
+  
+
+  for (let i = 1; i <= g; i++) {
+
+    const cell = document.createElement('div');
+
+    cell.className = 'pip-bar-cell' + (i <= state.guard.cur ? ' filled' : '');
+
+    cell.title = `Guarda Atual: ${i}`;
+
+    cell.textContent = '🔰'; // Substituição do pip pelo Emoji
+
+    cell.onclick = () => toggleCur(1, 'guard', i);
+
+    bar.appendChild(cell);
+
+  }
+
+  
+
+  document.getElementById('s1-vita').textContent = v;
+
+  document.getElementById('s1-guard').textContent = g;
+
+  document.getElementById('vita-max-display').textContent = v;
+
+  document.getElementById('guard-max-display').textContent = g;
+
+  document.getElementById('vita-cur-display').textContent = state.vita.cur;
+
+  document.getElementById('guard-cur-display').textContent = state.guard.cur;
+
+  
+
+  renderDerivedS1(v, g); updateInventorySlots(v);
+
+}
+
+function increaseVita() {
+
+  if (state.vita.max >= 8) return;
+
+  if (state.guard.max <= 2) { showToast('⚠️', `Guarda mínima é <strong>2</strong>. Não é possível aumentar Vita mais.`, 4000); return; }
+
+  state.vita.max++; state.guard.max--;
+
+  state.vita.cur++; // Garante que o novo ponto já venha preenchido
+
+  state.vita.cur = Math.min(state.vita.cur, state.vita.max);
+
+  state.guard.cur = Math.min(state.guard.cur, state.guard.max);
+
+  // REGRA: cada 4 vita consome 2 de energia máxima obrigatoriamente
+  applyVitaEnergyConstraint(state.vita.max);
+
+  // REGRA: energia pode ter bônus de guarda → re-renderizar
+  applyEnergyGuardBonus();
+
+  renderScale1();
+
+  showToast('❤️', `Vida Máxima <strong>${state.vita.max}</strong> / Guarda <strong>${state.guard.max}</strong>.`);
+
+}
+
+function increaseGuard() {
+
+  if (state.guard.max >= 8) return;
+
+  if (state.vita.max <= 2) { showToast('⚠️', `Vitalidade mínima é <strong>2</strong>. Não é possível aumentar Guarda mais.`, 4000); return; }
+
+  state.guard.max++; state.vita.max--;
+
+  state.guard.cur++; // Garante que o novo ponto já venha preenchido
+
+  state.vita.cur = Math.min(state.vita.cur, state.vita.max);
+
+  state.guard.cur = Math.min(state.guard.cur, state.guard.max);
+
+  // Ao reduzir vita, penalidade de energia pode diminuir
+  applyVitaEnergyConstraint(state.vita.max);
+
+  applyEnergyGuardBonus();
+
+  renderScale1();
+
+  showToast('🔰', `Guarda Máxima <strong>${state.guard.max}</strong> / Vida <strong>${state.vita.max}</strong>.`);
+
+}
+
+function renderDerivedS1(v, g) {
+
+  const container = document.getElementById('scale1-derived'); container.innerHTML = '';
+
+  const dmgBonus = Math.floor(v / 4);
+
+  if (dmgBonus > 0) container.innerHTML += `<div class="derived-chip">❤️ +<span>${dmgBonus}</span> dano C.A.C</div>`;
+
+  const energyCost = Math.floor(v / 4) * 2;
+
+  if (energyCost > 0) container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️→⚡ –<span>${energyCost}</span> Energia Máx. (obrigatório)</div>`;
+
+}
+
+function applyVitaEnergyConstraint(v) {
+
+  // REGRA: cada 4 pontos de vitalidade consomem obrigatoriamente 2 de energia máxima.
+  // Isso REDUZ o teto disponível da Escala 2. Ex: vita=4 → energia só pode ir até 8; vita=8 → até 6.
+
+  const penalty = Math.floor(v / 4) * 2;
+
+  const energyCeiling = 10 - penalty; // Energia máxima permitida (teto)
+
+  const energyMin = 2; // Energia mínima sempre 2
+
+  if (state.energy.max > energyCeiling) {
+
+    // Reduz energia para o novo teto, realoca excesso para magia
+
+    const diff = state.energy.max - energyCeiling;
+
+    state.energy.max = energyCeiling;
+
+    state.mana.max = Math.min(state.mana.max + diff, 10 - energyCeiling);
+
+    state.energy.cur = Math.min(state.energy.cur, state.energy.max);
+
+    state.mana.cur = Math.min(state.mana.cur, state.mana.max);
+
+    renderScale2Silent();
+
+    showToast('⚠️', `Vitalidade ${v} obriga –<strong>${penalty} de Energia máx.</strong> (regra: cada 4 Vita = –2 Energia máx.)`, 5000);
+
+  }
+
+}
+
+// ═══════════════════════════════════════════
+
+// ESCALA 2 — Energia vs Magia (EMOJIS)
+
+// ═══════════════════════════════════════════
+
+function renderScale2() {
+
+  const e = state.energy.max; const m = state.mana.max;
+
+  const bar = document.getElementById('scale2-bar'); bar.innerHTML = '';
+
+  
+
+  for (let i = 1; i <= e; i++) {
+
+    const cell = document.createElement('div');
+
+    cell.className = 'pip-bar-cell' + (i <= state.energy.cur ? ' filled' : '');
+
+    cell.title = `Energia Atual: ${i}`;
+
+    cell.textContent = '⚡';
+
+    cell.onclick = () => toggleCur(2, 'energy', i);
+
+    bar.appendChild(cell);
+
+  }
+
+  if (e > 0 && m > 0) { const sep = document.createElement('div'); sep.className = 'pip-bar-separator'; sep.textContent = '||'; bar.appendChild(sep); }
+
+  for (let i = 1; i <= m; i++) {
+
+    const cell = document.createElement('div');
+
+    cell.className = 'pip-bar-cell' + (i <= state.mana.cur ? ' filled' : '');
+
+    cell.title = `Magia Atual: ${i}`;
+
+    cell.textContent = '🔮';
+
+    cell.onclick = () => toggleCur(2, 'mana', i);
+
+    bar.appendChild(cell);
+
+  }
+
+  document.getElementById('s2-energy').textContent = e; document.getElementById('s2-mana').textContent = m;
+
+  document.getElementById('energy-max-display').textContent = e; document.getElementById('mana-max-display').textContent = m;
+
+  document.getElementById('energy-cur-display').textContent = state.energy.cur; document.getElementById('mana-cur-display').textContent = state.mana.cur;
+
+  renderDerivedS2(e, m);
+
+}
+
+function renderScale2Silent() { renderScale2(); }
+
+function increaseEnergy() {
+
+  // Teto de energia: limitado pela penalidade da vita (cada 4 vita = -2 energia máx)
+  const energyPenalty = Math.floor(state.vita.max / 4) * 2;
+  const energyCeiling = 10 - energyPenalty;
+
+  if (state.energy.max >= energyCeiling) {
+    showToast('⚠️', `Energia limitada a <strong>${energyCeiling}</strong> pela Vitalidade ${state.vita.max} (penalidade –${energyPenalty}).`, 4500);
+    return;
+  }
+
+  if (state.mana.max <= 0) return; // Não pode reduzir magia abaixo de 0
+
+  state.energy.max++; state.mana.max--;
+
+  state.energy.cur++; // Garante que o novo ponto já venha preenchido
+
+  state.energy.cur = Math.min(state.energy.cur, state.energy.max);
+
+  state.mana.cur = Math.min(state.mana.cur, state.mana.max);
+
+  // Aplicar bônus de guarda por energia
+  applyEnergyGuardBonus();
+
+  renderScale2();
+
+  showToast('⚡', `Energia Máxima <strong>${state.energy.max}</strong> / Magia <strong>${state.mana.max}</strong>.`);
+
+}
+
+function increaseMana() {
+
+  // Energia mínima é 2 (regra base)
+  if ((state.energy.max - 1) < 2) {
+    showToast('⚠️', `Energia mínima é <strong>2</strong>. Não é possível reduzir mais.`, 4500);
+    return;
+  }
+
+  if (state.mana.max >= 8) return; // Magia máxima 8 (energia mínima 2)
+
+  state.mana.max++; state.energy.max--;
+
+  state.mana.cur++; // Garante que o novo ponto já venha preenchido
+
+  state.mana.cur = Math.min(state.mana.cur, state.mana.max);
+
+  state.energy.cur = Math.min(state.energy.cur, state.energy.max);
+
+  // Aplicar penalidade da magia sobre vita e bônus de guarda por energia
+  applyManaVitaPenalty();
+  applyEnergyGuardBonus();
+
+  renderScale2(); showToast('🔮', `Magia Máxima <strong>${state.mana.max}</strong> / Energia <strong>${state.energy.max}</strong>.`);
+
+}
+
+function renderDerivedS2(e, m) {
+
+  const container = document.getElementById('scale2-derived'); container.innerHTML = '';
+
+  const energyTiers = Math.floor(e / 4);
+
+  if (energyTiers > 0) {
+    container.innerHTML += `<div class="derived-chip">⚡ +<span>${energyTiers}</span> reg. energia/turno</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡→🔰 +<span>${energyTiers * 2}</span> Guarda máx. (aplicado)</div>`;
+  }
+
+  const manaTiers = Math.floor(m / 4);
+
+  if (manaTiers > 0) {
+    container.innerHTML += `<div class="derived-chip">🔮 +<span>${manaTiers}</span> dano mágico</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(239,68,68,0.5);color:#b91c1c;">🔮→❤️ –<span>${manaTiers}</span> Vita máx. (aplicado)</div>`;
+  }
+
+}
+
+// ═══════════════════════════════════════════
+
+// REGRAS DERIVADAS: Energia→Guarda e Magia→Vita
+
+// ═══════════════════════════════════════════
+
+function applyEnergyGuardBonus() {
+
+  // REGRA: Para cada 4 de energia, +2 de Guarda máxima.
+  // Calculamos o bônus BASE de energia (sem contar bônus anteriores de energia)
+  // A guarda base é o que está em state.guard.max MENOS qualquer bônus atual de energia.
+  // Para simplificar: recalculamos guard.max = base_guard + energyBonus
+  // Base guard = 10 - vita.max (distribuição original da Escala 1)
+  // Mas guard.max pode ter sido alterado pelo usuário, então usamos uma abordagem incremental:
+  // Guardamos o bônus anterior e atualizamos.
+
+  const energyTiers = Math.floor(state.energy.max / 4);
+  const prevBonus = state._energyGuardBonus || 0;
+  const newBonus = energyTiers * 2;
+
+  if (newBonus !== prevBonus) {
+
+    state.guard.max = state.guard.max - prevBonus + newBonus;
+
+    state.guard.max = Math.max(2, state.guard.max); // Guarda mínima 2
+
+    state.guard.cur = Math.min(state.guard.cur, state.guard.max);
+
+    state._energyGuardBonus = newBonus;
+
+    renderScale1();
+
+    if (newBonus > prevBonus) {
+
+      showToast('🔰', `Energia ${state.energy.max} → +<strong>${newBonus} Guarda máx.</strong> (bônus de energia)`, 4000);
+
+    }
+
+  }
+
+}
+
+function applyManaVitaPenalty() {
+
+  // REGRA: cada 4 pontos de Magia consomem obrigatoriamente 1 de vitalidade máxima.
+
+  const manaTiers = Math.floor(state.mana.max / 4);
+
+  const prevPenalty = state._manаVitaPenalty || 0;
+
+  const newPenalty = manaTiers;
+
+  if (newPenalty !== prevPenalty) {
+
+    // A penalidade de mana reduz vita.max
+    state.vita.max = state.vita.max + prevPenalty - newPenalty;
+
+    state.vita.max = Math.max(2, state.vita.max); // Vita mínima 2
+
+    state.vita.cur = Math.min(state.vita.cur, state.vita.max);
+
+    // Recalcular guarda baseada na nova vita (Escala 1 total = 10)
+    const guardBase = 10 - state.vita.max;
+
+    const energyBonus = state._energyGuardBonus || 0;
+
+    state.guard.max = Math.max(2, guardBase + energyBonus);
+
+    state.guard.cur = Math.min(state.guard.cur, state.guard.max);
+
+    state._manаVitaPenalty = newPenalty;
+
+    renderScale1();
+
+    if (newPenalty > prevPenalty) {
+
+      showToast('⚠️', `Magia ${state.mana.max} → –<strong>${newPenalty} Vita máx.</strong> (penalidade obrigatória)`, 5000);
+
+    }
+
+  }
+
+}
+
+// ═══════════════════════════════════════════
+
+// PP BAR (EMOJIS)
+
+// ═══════════════════════════════════════════
+
+let ppCur = 12;
+
+function renderPP() {
+
+  const max = parseInt(document.getElementById('pp-max').value) || 12;
+
+  ppCur = Math.min(ppCur, max);
+
+  const bar = document.getElementById('pp-bar'); bar.innerHTML = '';
+
+  
+
+  for (let i = 1; i <= max; i++) {
+
+    const pip = document.createElement('div');
+
+    pip.className = 'pp-pip' + (i <= ppCur ? ' filled' : '');
+
+    pip.textContent = '💠';
+
+    const idx = i;
+
+    pip.onclick = () => { ppCur = (ppCur === idx) ? idx - 1 : idx; renderPP(); };
+
+    bar.appendChild(pip);
+
+  }
+
+  state.pp.max = max; state.pp.cur = ppCur;
+
+}
+
+// ═══════════════════════════════════════════
+
+// INVENTÁRIO, PODERES & UTILITÁRIOS MANTIDOS
+
+// ═══════════════════════════════════════════
+
+const INV_SLOTS_TOTAL = 8; // 6 slots base máximos + 2 de bônus possíveis (ex: Minerador)
+
+function buildInventory() {
+
+  const grid = document.getElementById('inventario-grid'); grid.innerHTML = '';
+
+  for (let i = 1; i <= INV_SLOTS_TOTAL; i++) {
+
+    const slot = document.createElement('div'); slot.className = 'inv-slot'; slot.id = 'inv-slot-' + i;
+
+    const isBonusSlot = i > 6;
+
+    slot.innerHTML = `<div class="inv-slot-num">SLOT ${i}${i === 6 ? ' ★' : ''}${isBonusSlot ? ' ⛏️' : ''}</div><input type="text" placeholder="—" style="margin-top:2px;"><div class="inv-qty"><input type="number" min="0" placeholder="qtd"> un.</div>`;
+
+    grid.appendChild(slot);
+
+  }
+
+}
+
+function getVocBonusSlots() {
+
+  // Minerador: "Ombros largos: Carrega +2 itens no inventário."
+
+  const voc1 = (document.getElementById('voc1-nome') || {}).value || '';
+
+  const voc2 = (document.getElementById('voc2-nome') || {}).value || '';
+
+  return (voc1 === 'Minerador' || voc2 === 'Minerador') ? 2 : 0;
+
+}
+
+function updateInventorySlots(v) {
+
+  v = (typeof v === 'number') ? v : state.vita.max;
+
+  let baseSlots = 5; let vitaNote = 'padrão (Vita 4–6)';
+
+  if (v >= 7) { baseSlots = 6; vitaNote = 'Vita ≥ 7 (porte grande)'; }
+
+  if (v <= 3) { baseSlots = 4; vitaNote = 'Vita ≤ 3 (porte pequeno)'; }
+
+  const bonusSlots = getVocBonusSlots();
+
+  const maxSlots = Math.min(INV_SLOTS_TOTAL, baseSlots + bonusSlots);
+
+  for (let i = 1; i <= INV_SLOTS_TOTAL; i++) {
+
+    const slot = document.getElementById('inv-slot-' + i); if (!slot) continue;
+
+    if (i <= maxSlots) { slot.classList.remove('empty'); } else { slot.classList.add('empty'); slot.querySelectorAll('input').forEach(inp => inp.value = ''); }
+
+  }
+
+  let detail = `— ${maxSlots} slots · ${vitaNote}`;
+
+  if (bonusSlots > 0) detail += ` + ${bonusSlots} (Minerador: Ombros largos)`;
+
+  document.getElementById('inv-label-detail').textContent = detail;
+
+}
+
+function addEquipRow(dados) {
+
+  const tbody = document.getElementById('equip-body'); const tr = document.createElement('tr');
+
+  const nome = dados && dados.nome ? dados.nome : '';
+
+  const tipo = dados && dados.tipo ? dados.tipo : '';
+
+  const dano = dados && dados.dano !== undefined ? dados.dano : '';
+
+  const usos = dados && dados.usos !== undefined ? dados.usos : '';
+
+  const efeito = dados && dados.efeito ? dados.efeito : '';
+
+  tr.innerHTML = `<td><input type="text" placeholder="—" value="${nome}"></td><td><input type="text" placeholder="arma/armadura" value="${tipo}"></td><td class="center"><input type="text" placeholder="—" value="${dano}"></td><td class="center"><input type="number" min="0" placeholder="—" value="${usos}"></td><td><input type="text" placeholder="—" value="${efeito}"></td>`;
+
+  if (dados) tr.style.background = 'rgba(139,105,20,0.07)'; // destaca linhas vindas da vocação
+
+  tbody.appendChild(tr);
+
+  return tr;
+
+}
+
+for (let i = 0; i < 5; i++) addEquipRow();
+
+// ═══════════════════════════════════════════
+// AUTO-PREENCHIMENTO DE EQUIPAMENTO POR VOCAÇÃO
+// ═══════════════════════════════════════════
+function limparItensDaVocacao(slot) {
+
+  // Remove linhas de equipamento e itens de inventário marcados com a tag do slot
+
+  document.querySelectorAll(`#equip-body tr[data-voc-slot="${slot}"]`).forEach(tr => tr.remove());
+
+  document.querySelectorAll(`.inv-slot[data-voc-slot="${slot}"]`).forEach(slotEl => {
+
+    slotEl.removeAttribute('data-voc-slot');
+
+    slotEl.querySelectorAll('input').forEach(inp => inp.value = '');
+
+  });
+
+}
+
+function aplicarItensVocacao(voc, slot) {
+
+  if (!voc || !voc.itens || voc.itens.length === 0) return;
+
+  voc.itens.forEach(item => {
+
+    if (item.tipo === 'arma' || item.tipo === 'armadura') {
+
+      const tr = addEquipRow({
+
+        nome: item.nome,
+
+        tipo: item.tipo === 'arma' ? 'Arma' : 'Armadura',
+
+        dano: item.dano !== undefined ? item.dano : '',
+
+        usos: item.usos !== undefined ? item.usos : '',
+
+        efeito: item.efeito || ''
+
+      });
+
+      tr.setAttribute('data-voc-slot', slot);
+
+      tr.setAttribute('data-voc-origem', voc.nome);
+
+    } else {
+
+      // item ou inventario → tenta colocar num slot vazio do inventário
+
+      const inv = document.querySelectorAll('.inv-slot:not(.empty)');
+
+      for (const slotEl of inv) {
+
+        const nomeInput = slotEl.querySelector('input[type="text"]');
+
+        if (nomeInput && !nomeInput.value && !slotEl.hasAttribute('data-voc-slot')) {
+
+          nomeInput.value = item.nome;
+
+          const qtdInput = slotEl.querySelector('input[type="number"]');
+
+          if (qtdInput) qtdInput.value = item.qtd || (item.usos !== undefined ? item.usos : 1);
+
+          slotEl.setAttribute('data-voc-slot', slot);
+
+          slotEl.title = item.efeito || '';
+
+          break;
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+let evolFilled = 0;
+
+function buildEvol() {
+
+  const container = document.getElementById('evol-pips');
+
+  for (let i = 1; i <= 10; i++) {
+
+    const pip = document.createElement('div'); pip.className = 'evol-pip'; pip.textContent = i; pip.dataset.i = i;
+
+    pip.onclick = () => {
+
+      evolFilled = (evolFilled === i) ? i - 1 : i;
+
+      document.querySelectorAll('.evol-pip').forEach(p => p.classList.toggle('filled', parseInt(p.dataset.i) <= evolFilled));
+
+    };
+
+    container.appendChild(pip);
+
+  }
+
+}
+
+function selectEntidadePoder(el, value) {
+
+  document.querySelectorAll('#entidade-selector-poder .chess-piece').forEach(p => p.classList.remove('active')); el.classList.add('active');
+
+  document.getElementById('poder-categoria').value = value; document.getElementById('entidade-input').value = value;
+
+  const infoBox = document.getElementById('entidade-info-box');
+
+  const descricoes = {
+
+    'Peão': '<strong>Domínio Somático</strong>: Foco biológico, regeneração, mutações corporais e vitalidade.',
+
+    'Torre': '<strong>Domínio Telúrico</strong>: Defesa natural, força gravitacional inabalável, manipulações estruturais.',
+
+    'Cavalo': '<strong>Domínio Noético</strong>: Estratégias mentais, ilusões, projeção cognitiva de ataques e defesas.',
+
+    'Bispo': '<strong>Domínio Taumatúrgico</strong>: Domínio puramente místico e purificação etérea.',
+
+    'Rainha': '<strong>Domínio Entrópico</strong>: O caos ordenado. Manipulação de probabilidade e falhas alheias.',
+
+    'Rei': '<strong>Domínio Hegemônico</strong>: Dominância de ambiente, supressão, anulação de ações.'
+
+  };
+
+  infoBox.innerHTML = descricoes[value] || ''; infoBox.style.display = 'block';
+
+}
+
+function adicionarHabilidade() {
+
+  const cat = (document.getElementById('poder-categoria').value || '').toLowerCase();
+
+  const custo = (cat.includes('rei') || cat.includes('rainha')) ? 2 : 1;
+
+  const ppMaxInput = document.getElementById('pp-max'); let cur = parseInt(ppMaxInput.value) || 0;
+
+  if (cur - custo < 5) { showToast('🚫', `PP insuficiente. Mín. de <strong>5 PP livres</strong> exigido.`); return; }
+
+  cur -= custo; ppMaxInput.value = cur; state.pp.max = cur; ppCur = Math.min(ppCur, cur); renderPP();
+
+  
+
+  const grid = document.getElementById('habilidades-grid'); const count = grid.querySelectorAll('.hab-slot').length + 1;
+
+  const slot = document.createElement('div'); slot.className = 'hab-slot';
+
+  slot.innerHTML = `<label>Habilidade ${count} · Nome</label><input type="text" placeholder="—"><textarea placeholder="Efeito / escala / custo..."></textarea>`;
+
+  grid.appendChild(slot); showToast('💠', `Habilidade ${count} adicionada. –<strong>${custo} PP máx.</strong>`);
+
+}
+
+function desbloquearPoderUnico() {
+
+  const ppMaxInput = document.getElementById('pp-max'); let cur = parseInt(ppMaxInput.value) || 0;
+
+  if (cur - 1 < 5) { showToast('🚫', `PP insuficiente para o Poder. Mín. de 5 livres.`); return; }
+
+  cur -= 1; ppMaxInput.value = cur; state.pp.max = cur; ppCur = Math.min(ppCur, cur); renderPP();
+
+  document.getElementById('poder-unico-block').style.display = 'block'; document.getElementById('btn-unlock-poder').style.display = 'none';
+
+}
+
+function exportarEImprimir() { window.print(); }
+
+// ═══════════════════════════════════════════
+// REGIÃO DE ORIGEM — Descrições e seleção
+// ═══════════════════════════════════════════
+const regioesDB = {
+  "Hármina": "O coração teocrático-absolutista do Norte. Igreja e Estado unidos sob o Grande Rei. Capital movimenta comércio, missões e fé; quem passa 3 dias sem se banhar recebe o status \"Repulsivo\". Economia em ouro/prata/cristais, custo de vida médio de 3 ouros/dia.",
+  "Mont-Krom": "Reino subterrâneo dos anões (≈70cm), décadas à frente em tecnologia a vapor e engenharia hidráulica. Cidade labiríntica de tetos baixos, defesas automatizadas e um brutal Setor de Extração movido a mão de obra escrava vinda de Hármina. Não aceita residentes de fora, exceto escravos.",
+  "Vila das Éguas": "Comunidade rural simpática nas planícies, entre o Reino e a floresta. Preços baixos, produtos artesanais de qualidade inferior mas acessíveis. Sem imposto diário — \"aqui todos são família\". Punição por crime: exílio.",
+  "Silvestres": "Sociedade reclusa de pele pálida e orelhas longas que habita o coração da floresta, vivendo em moradias suspensas integradas às árvores. Comunicação por gestos, sem moedas (comércio por troca), cuidados médicos gratuitos. Possuem +5 de Guarda racial (Ouvido Aguçado) e +2 de Guarda extra sob cobertura de árvores.",
+  "Depressões": "Ravina insalubre e perigosa cercada por deserto árido, lar de uma população pobre e marginalizada que sobrevive de favores e suprimentos enviados (e desviados) de Hármina. Alto índice de criminalidade, mercado negro ativo. Punições incluem humilhação pública, extorsão e caça."
+};
+
+function onRegiaoChange() {
+  const sel = document.getElementById('id-regiao');
+  const infoBox = document.getElementById('regiao-info-box');
+  const outraInput = document.getElementById('regiao-outra-input');
+  const valor = sel.value;
+
+  if (!valor) {
+    infoBox.style.display = 'none';
+    outraInput.style.display = 'none';
+    return;
+  }
+
+  if (valor === 'Outra') {
+    infoBox.style.display = 'none';
+    outraInput.style.display = 'block';
+    outraInput.focus();
+    return;
+  }
+
+  outraInput.style.display = 'none';
+  infoBox.style.display = 'block';
+  infoBox.innerHTML = `<strong style="color:var(--rust);">${valor}</strong> — ${regioesDB[valor] || ''}`;
+}
+
+// INIT
+
+buildInventory();
+
+buildEvol();
+
+renderScale1();
+
+renderScale2();
+
+renderPP();
+
+</script>
+
+</body>
+
+  </html>
