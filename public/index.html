@@ -50,7 +50,7 @@ html { font-size: 14px; }
 * { box-sizing: border-box; }
 
 html, body {
-  margin: 0; padding: 0; min-height: 100vh;
+  margin: 0; padding: 0; min-height: 100dvh;
   background: var(--void);
   font-family: var(--body);
   color: var(--parchment);
@@ -62,8 +62,8 @@ body {
     radial-gradient(ellipse at 50% 0%, rgba(139,105,20,0.12) 0%, transparent 55%),
     radial-gradient(ellipse at 15% 90%, rgba(122,46,18,0.10) 0%, transparent 50%),
     radial-gradient(ellipse at 90% 80%, rgba(139,105,20,0.08) 0%, transparent 50%);
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem 1rem;
+  display: flex; flex-direction: column;
+  padding: 0; margin: 0; min-height: 100dvh;
   position: relative;
 }
 
@@ -84,7 +84,8 @@ body::before {
 }
 @keyframes rune-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 0.18; } }
 
-.stage { position: relative; z-index: 1; width: 100%; max-width: 480px; }
+.stage { position: relative; z-index: 1; width: 100%; max-width: 480px; margin: auto; }
+.stage > .view { padding: 1rem; }
 
 /* ═══════════════════════════════════════════
    VIEW SWITCHING
@@ -761,7 +762,7 @@ body::before {
    ═══════════════════════════════════════════════════════ */
 #view-chat {
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   padding: 0;
   align-items: stretch;
   justify-content: center;
@@ -770,7 +771,7 @@ body::before {
 .chat-shell {
   width: 100%;
   max-width: 760px;
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--chat-bg);
@@ -1015,9 +1016,6 @@ body::before {
 
 <div class="stage">
 
-  <!-- ═══════════════════════════════════════════
-       VIEW 1 — PORTAL DE ENTRADA
-       ═══════════════════════════════════════════ -->
   <div class="view active" id="view-portal">
     <div class="panel">
       <div class="portal-seal">H</div>
@@ -1041,9 +1039,6 @@ body::before {
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       VIEW 2 — CADASTRO (Nova Sessão)
-       ═══════════════════════════════════════════ -->
   <div class="view" id="view-cadastro">
     <div class="panel">
       <div class="form-header">
@@ -1074,9 +1069,6 @@ body::before {
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       VIEW 2B — ENTRAR (Login com perfil existente)
-       ═══════════════════════════════════════════ -->
   <div class="view" id="view-login">
     <div class="panel">
       <div class="form-header">
@@ -1105,9 +1097,6 @@ body::before {
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       VIEW 3 — BOAS-VINDAS
-       ═══════════════════════════════════════════ -->
   <div class="view" id="view-boasvindas">
     <div class="panel">
       <div class="welcome-header">
@@ -1142,9 +1131,6 @@ body::before {
 
 </div>
 
-<!-- ═══════════════════════════════════════════
-     VIEW 4 — FICHA DE PERSONAGEM
-     ═══════════════════════════════════════════ -->
 <div class="view" id="view-ficha">
   <button class="ficha-voltar-btn" onclick="voltarAoMenu()">‹ Voltar ao Menu</button>
 
@@ -3331,13 +3317,9 @@ renderPP();
 
 </div>
 
-<!-- ═══════════════════════════════════════════
-     VIEW 5 — CHAT / MESA DE RPG
-     ═══════════════════════════════════════════ -->
 <div class="view view-flex" id="view-chat">
   <div class="chat-shell">
 
-    <!-- Cabeçalho da mesa -->
     <div class="chat-topbar">
       <button class="chat-back-btn" onclick="voltarAoMenu()" title="Voltar ao Menu">‹</button>
       <div class="chat-topbar-info">
@@ -3358,7 +3340,6 @@ renderPP();
 
     <div class="chat-body">
 
-      <!-- Painel lateral: Registro de Ações -->
       <div class="actions-panel" id="actions-panel">
         <div class="actions-panel-header">
           <div class="actions-panel-title">📜 Registro de Ações</div>
@@ -3368,24 +3349,20 @@ renderPP();
         <div class="actions-panel-list" id="actions-panel-list"></div>
       </div>
 
-      <!-- Área principal de mensagens -->
       <div class="chat-main">
         <div class="chat-messages" id="chat-messages">
           <div class="chat-day-divider"><span>Hoje</span></div>
         </div>
 
-        <!-- Bolha flutuante de novas mensagens -->
         <button class="new-messages-pill" id="new-messages-pill" onclick="rolarParaFinal()">
           <span id="new-messages-count">0</span> nova mensagem ↓
         </button>
 
-        <!-- Indicador de digitação -->
         <div class="typing-indicator" id="typing-indicator">
           <span id="typing-text"></span>
           <span class="typing-dots"><i></i><i></i><i></i></span>
         </div>
 
-        <!-- Barra de composição -->
         <div class="chat-composer">
           <div class="composer-hint" id="composer-hint">Escreva normalmente para narrar ou agir · use <code>//</code> no início para falar fora do personagem (não fica no registro)</div>
           <div class="composer-row">
