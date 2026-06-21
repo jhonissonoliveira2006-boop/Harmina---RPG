@@ -569,22 +569,6 @@ body::before {
 
 .inv-qty input { width: 28px !important; font-size: 0.48rem !important; }
 
-.moedas-row { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem; }
-
-.moeda-item { display: flex; align-items: center; gap: 0.4rem; }
-
-.moeda-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-family: var(--mono); font-weight: 600; flex-shrink: 0; }
-
-.moeda-prata { background: rgba(192,192,192,0.3); border: 1.5px solid #aaa; color: #555; }
-
-.moeda-ouro { background: rgba(201,148,26,0.2); border: 1.5px solid var(--gold); color: var(--burnish); }
-
-.moeda-crist { background: rgba(139,92,246,0.15); border: 1.5px solid var(--mana-color); color: var(--mana-color); }
-
-.moeda-item input { background: transparent; border: none; border-bottom: 1px solid rgba(139,105,20,0.35); font-family: var(--mono); font-size: 0.85rem; color: var(--ink); outline: none; width: 52px; text-align: center; padding: 1px 0; }
-
-.moeda-label { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.12em; color: #999; text-transform: uppercase; }
-
 .notes-area { width: 100%; background: transparent; border: 1px solid rgba(139,105,20,0.25); font-family: var(--body); font-size: 0.88rem; color: var(--ink); line-height: 2; padding: 0.6rem 0.8rem; outline: none; resize: vertical; min-height: 80px; background-image: repeating-linear-gradient(transparent, transparent calc(2em - 1px), rgba(139,105,20,0.1) calc(2em - 1px), rgba(139,105,20,0.1) 2em); background-size: 100% 2em; }
 
 .evol-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.4rem; }
@@ -700,8 +684,6 @@ body::before {
   .identity-grid, .dons-grid, .voc-grid, .poder-meta, .habilidades-grid, .sat-grid, .two-col, .three-col { grid-template-columns: 1fr; }
 
   .inv-grid { grid-template-columns: repeat(3,1fr); }
-
-  .moedas-row { flex-wrap: wrap; }
 
   .modal-body { flex-direction: column; }
 
@@ -1312,7 +1294,7 @@ body::before {
 
   </div>
 
-  <div class="section-label">Escala 1 — Vitalidade &amp; Guarda <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · mín. 2 em cada · Clique nos ícones para uso</span></div>
+  <div class="section-label">Escala 1 — Vitalidade &amp; Guarda <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · mín. 3 em cada · Clique nos ícones para uso</span></div>
 
   
 
@@ -1362,7 +1344,7 @@ body::before {
 
   </div>
 
-  <div class="section-label">Escala 2 — Energia &amp; Magia <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · Energia mín. 2 · Clique nos ícones para uso</span></div>
+  <div class="section-label">Escala 2 — Energia &amp; Magia <span style="font-family:var(--mono);font-size:0.48rem;font-weight:400;letter-spacing:0.08em;color:#999;">10 pontos · Energia mín. 3 · Clique nos ícones para uso</span></div>
 
   
 
@@ -2283,26 +2265,6 @@ body::before {
   </div>
 
   <div class="inv-grid mb08" id="inventario-grid"></div>
-
-  <div class="section-label">Moedas</div>
-
-  <div class="moedas-row mb14">
-
-    <div class="moeda-item"><div class="moeda-icon moeda-prata">Ag</div><div><input type="number" min="0" value="0"><div class="moeda-label">Pratas</div></div></div>
-
-    <div class="moeda-item"><div class="moeda-icon moeda-ouro">Au</div><div><input type="number" min="0" value="0"><div class="moeda-label">Ouros</div></div></div>
-
-    <div class="moeda-item"><div class="moeda-icon moeda-crist">✦</div><div><input type="number" min="0" value="0"><div class="moeda-label">Cristais</div></div></div>
-
-    <div style="flex:1;border-left:1px solid rgba(139,105,20,0.2);padding-left:1rem;">
-
-      <div style="font-family:var(--mono);font-size:0.48rem;letter-spacing:0.15em;color:#aaa;text-transform:uppercase;margin-bottom:3px;">Câmbio oficial</div>
-
-      <div style="font-size:0.72rem;color:#666;line-height:1.8;">1 Ouro = 10 Pratas &nbsp;·&nbsp; 1 Cristal = 10 Ouros</div>
-
-    </div>
-
-  </div>
 
   <hr class="divider">
 
@@ -3412,6 +3374,7 @@ renderPP();
             <span id="som-ambiente-label">🔈 Som ambiente: desligado</span>
           </div>
           <div class="chat-menu-item" onclick="limparNotificacoes()">✓ Marcar tudo como lido</div>
+          <div class="chat-menu-item" onclick="resetarBonecoDeTreino()">🪵 Remontar Boneco de Treino</div>
         </div>
       </div>
     </div>
@@ -3445,7 +3408,7 @@ renderPP();
           <div class="composer-toolbar">
             <button class="ficha-picker-btn" id="ficha-picker-btn" onclick="abrirSeletorFicha()">🗂️ <span id="ficha-picker-label">Escolher Ficha</span></button>
           </div>
-          <div class="composer-hint" id="composer-hint">Escreva normalmente para narrar ou agir · use <code>//</code> no início para falar fora do personagem (não fica no registro)</div>
+          <div class="composer-hint" id="composer-hint">Use <code>//</code> para falar fora do personagem · ações com <code>"N de dano"</code> ou <code>"N de cura"</code> mirando um nome ou "inimigo/adversário" são reconhecidas automaticamente · fale com o <strong>Boneco de Treino</strong> pra testar sozinho</div>
           <div class="composer-row">
             <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação ou fala…" rows="1"></textarea>
             <button class="composer-send" id="composer-send" onclick="enviarMensagem()" title="Enviar">➤</button>
@@ -3745,7 +3708,7 @@ function selecionarFichaChat(nome) {
 
   // Mensagens que já tinham chegado (histórico) antes de eu escolher a ficha
   // não tiveram chance de mostrar o prompt de dano — reavalia todas agora.
-  chatState.mensagens.forEach(tentarAdicionarPromptDeDano);
+  chatState.mensagens.forEach(tentarAdicionarPromptDeMecanica);
 
   fecharSeletorFicha();
   mostrarToast(`🗂️ Agora narrando como <strong>${escaparHtml(ficha.nome)}</strong>. Seus status aparecerão acima das suas ações.`, 3500);
@@ -4084,62 +4047,105 @@ function renderizarMensagem(msg) {
   `;
   container.appendChild(row);
 
-  tentarAdicionarPromptDeDano(msg);
+  tentarAdicionarPromptDeMecanica(msg);
 }
 
-// ─── Reconhecimento de mecânicas: detecta "N de dano" em ações de outros
-// jogadores e oferece aplicar o desconto automaticamente na MINHA ficha
-// ativa (Guarda primeiro, depois Vitalidade). Nunca aplica sozinho —
-// sempre pede uma confirmação de um toque, porque só quem lê sabe se a
-// ação era mesmo contra o próprio personagem.
+// ─── Reconhecimento de mecânicas: detecta "N de dano" / "N de cura" em ações
+// de outros jogadores (ou do Boneco de Treino) e oferece aplicar o efeito
+// automaticamente na MINHA ficha ativa. Nunca aplica sozinho — sempre pede
+// uma confirmação de um toque, porque só quem lê sabe se a ação era mesmo
+// contra o próprio personagem.
 // Reaproveitável: chamada tanto ao renderizar uma mensagem nova quanto ao
 // reavaliar o histórico inteiro depois que o jogador escolhe uma ficha
 // (mensagens antigas, recebidas antes da escolha, também precisam ganhar
 // o prompt retroativamente).
-function tentarAdicionarPromptDeDano(msg) {
-  if (msg.mine || msg.tipo !== 'normal' || !fichaAtivaChat) return;
-  if (document.getElementById(`dano-prompt-${msg.id}`)) return; // já existe
 
-  const m = msg.texto.match(/(\d+)\s*de\s*dano/i);
-  if (!m) return;
+// Termos genéricos que, em uma ação de combate, indicam que o autor está se
+// referindo ao oponente sem citar um nome específico.
+const TERMOS_OPONENTE_GENERICOS = ['inimigo', 'inimiga', 'adversário', 'adversária', 'oponente', 'opositor', 'opositora', 'alvo'];
+
+// Tenta identificar dano ou cura numa frase de ação. Retorna { tipo, valor } ou null.
+function detectarMecanica(texto) {
+  let m = texto.match(/(\d+)\s*de\s*dano/i);
+  if (m) return { tipo: 'dano', valor: parseInt(m[1], 10) };
+
+  m = texto.match(/(\d+)\s*de\s*cura/i)
+    || texto.match(/cur[ao]u?\s+(\d+)/i)
+    || texto.match(/recuper[ao]u?\s+(\d+)/i)
+    || texto.match(/restaur[ao]u?\s+(\d+)/i);
+  if (m) return { tipo: 'cura', valor: parseInt(m[1], 10) };
+
+  return null;
+}
+
+// A ação me menciona como alvo? Considera o nome da minha ficha ativa OU
+// termos genéricos de oponente ("inimigo", "adversário"...). Sem um desses
+// dois sinais, a ação não parece endereçada a mim e o prompt não aparece —
+// isso evita prompts para toda e qualquer menção solta de números no chat.
+function mensagemMeAlveja(texto) {
+  if (!fichaAtivaChat) return false;
+  const textoLower = texto.toLowerCase();
+  if (textoLower.includes(fichaAtivaChat.toLowerCase())) return true;
+  return TERMOS_OPONENTE_GENERICOS.some(termo => textoLower.includes(termo));
+}
+
+function tentarAdicionarPromptDeMecanica(msg) {
+  if (msg.mine || msg.tipo !== 'normal' || !fichaAtivaChat) return;
+  if (document.getElementById(`mec-prompt-${msg.id}`)) return; // já existe
+
+  const mecanica = detectarMecanica(msg.texto);
+  if (!mecanica) return;
+  if (!mensagemMeAlveja(msg.texto)) return;
 
   const row = document.getElementById(`msg-row-${msg.id}`);
   if (!row) return;
 
-  const dano = parseInt(m[1], 10);
+  const ehDano = mecanica.tipo === 'dano';
   const prompt = document.createElement('div');
   prompt.className = 'msg-dano-prompt';
-  prompt.id = `dano-prompt-${msg.id}`;
-  prompt.innerHTML = `⚔️ Ação de <strong>${escaparHtml(msg.autor)}</strong> indica <strong>${dano}</strong> de dano.
-    <button class="aplicar" onclick="aplicarDanoDoChat(${msg.id}, ${dano}, '${msg.autor.replace(/'/g, "\\'")}')">Sofri esse dano</button>
-    <button class="ignorar" onclick="document.getElementById('dano-prompt-${msg.id}').remove()">Ignorar</button>`;
+  prompt.id = `mec-prompt-${msg.id}`;
+  const rotuloAcao = ehDano ? 'Sofri esse dano' : 'Recebi essa cura';
+  const rotuloDetectado = ehDano ? `<strong>${mecanica.valor}</strong> de dano` : `<strong>${mecanica.valor}</strong> de cura`;
+  prompt.innerHTML = `${ehDano ? '⚔️' : '✨'} Ação de <strong>${escaparHtml(msg.autor)}</strong> indica ${rotuloDetectado}.
+    <button class="aplicar" onclick="aplicarMecanicaDoChat(${msg.id}, '${mecanica.tipo}', ${mecanica.valor}, '${msg.autor.replace(/'/g, "\\'")}')">${rotuloAcao}</button>
+    <button class="ignorar" onclick="document.getElementById('mec-prompt-${msg.id}').remove()">Ignorar</button>`;
   row.appendChild(prompt);
 }
 
-// Aplica o dano detectado na ficha ativa: desconta primeiro da Guarda, e o
-// excedente (se houver) é descontado da Vitalidade — seguindo a regra de
-// que a Guarda absorve o dano antes da Vitalidade ser afetada.
-function aplicarDanoDoChat(msgId, dano, autorOrigem) {
+// Aplica dano ou cura detectados na ficha ativa.
+// Dano: desconta primeiro da Guarda, e o excedente (se houver) é descontado
+// da Vitalidade — a Guarda absorve o dano antes da Vitalidade ser afetada.
+// Cura: restaura Vitalidade, até o máximo.
+function aplicarMecanicaDoChat(msgId, tipo, valor, autorOrigem) {
   if (!fichaAtivaChat) return;
 
-  const consumidoGuarda = Math.min(state.guard.cur, dano);
-  state.guard.cur -= consumidoGuarda;
-  const restante = dano - consumidoGuarda;
-  const consumidoVita = Math.min(state.vita.cur, restante);
-  state.vita.cur -= consumidoVita;
+  let mensagemToast;
+
+  if (tipo === 'cura') {
+    const antes = state.vita.cur;
+    state.vita.cur = Math.min(state.vita.max, state.vita.cur + valor);
+    const efetivo = state.vita.cur - antes;
+    mensagemToast = `✨ ${valor} de cura de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ❤️ +${efetivo} Vitalidade.`;
+  } else {
+    const consumidoGuarda = Math.min(state.guard.cur, valor);
+    state.guard.cur -= consumidoGuarda;
+    const restante = valor - consumidoGuarda;
+    const consumidoVita = Math.min(state.vita.cur, restante);
+    state.vita.cur -= consumidoVita;
+
+    let resumo = `🔰 −${consumidoGuarda} Guarda`;
+    if (consumidoVita > 0) resumo += ` · ❤️ −${consumidoVita} Vitalidade`;
+    mensagemToast = `⚔️ ${valor} de dano de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ${resumo}.`;
+    if (state.vita.cur <= 0) {
+      mensagemToast += ` 💀 <strong>${escaparHtml(fichaAtivaChat)}</strong> está com a Vitalidade zerada!`;
+    }
+  }
 
   renderScale1();
   salvarFichaSilenciosa();
-
-  let resumo = `🔰 −${consumidoGuarda} Guarda`;
-  if (consumidoVita > 0) resumo += ` · ❤️ −${consumidoVita} Vitalidade`;
-  let mensagemToast = `⚔️ ${dano} de dano de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ${resumo}.`;
-  if (state.vita.cur <= 0) {
-    mensagemToast += ` 💀 <strong>${escaparHtml(fichaAtivaChat)}</strong> está com a Vitalidade zerada!`;
-  }
   mostrarToast(mensagemToast, 6000);
 
-  const prompt = document.getElementById(`dano-prompt-${msgId}`);
+  const prompt = document.getElementById(`mec-prompt-${msgId}`);
   if (prompt) prompt.remove();
 }
 
@@ -4184,6 +4190,17 @@ function limparNotificacoes() {
   chatState.novasNaoLidas = 0;
   atualizarPillNovasMensagens();
   document.getElementById('chat-menu').classList.remove('open');
+}
+
+// Atalho do menu — equivale a escrever "// resetar boneco" no chat,
+// só que com um clique. O Boneco de Treino responde confirmando.
+function resetarBonecoDeTreino() {
+  document.getElementById('chat-menu').classList.remove('open');
+  if (!usuarioAtual) {
+    mostrarToast('⚠️ Você precisa estar logado para isso.', 3500);
+    return;
+  }
+  socket.emit('chat-mensagem', { nome: usuarioAtual, texto: 'resetar boneco', tipo: 'ooc' });
 }
 
 // ─── Bolinha de novas mensagens ───
