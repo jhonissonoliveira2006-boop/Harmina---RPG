@@ -605,6 +605,14 @@ body::before {
 
 .print-btn:hover { background: #9a3a18; }
 
+.sheet-actions { display: flex; gap: 0.6rem; justify-content: center; margin: 1.5rem auto 0; flex-wrap: wrap; }
+
+.sheet-actions .print-btn { margin: 0; }
+
+.save-btn { display: block; background: #2f6b4f; color: var(--parchment); border: none; padding: 0.6rem 2rem; font-family: var(--serif); font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer; border-radius: 2px; }
+
+.save-btn:hover { background: #245a41; }
+
 /* ---------------------------------
 
    ESTILOS DO MODAL DE DONS 
@@ -707,7 +715,7 @@ body::before {
 
   .sheet { box-shadow: none; border: 1px solid #ccc; max-width: 100%; margin: 0; }
 
-  .print-btn, #ficha-toast { display: none; }
+  .print-btn, .save-btn, .sheet-actions, #ficha-toast { display: none; }
 
 }
 
@@ -999,6 +1007,73 @@ body::before {
 }
 .composer-send:hover { background: #7c9d63; transform: scale(1.05); }
 .composer-send:active { transform: scale(0.95); }
+
+/* ─── Seletor de Ficha no chat ─── */
+.composer-toolbar { display: flex; justify-content: flex-start; margin-bottom: 0.5rem; }
+.ficha-picker-btn {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.03em;
+  background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);
+  color: var(--chat-action); padding: 0.35rem 0.7rem; border-radius: 6px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.15s;
+}
+.ficha-picker-btn:hover { background: rgba(201,162,39,0.22); }
+.ficha-picker-btn.is-active { background: var(--chat-bubble-mine); border-color: var(--chat-bubble-mine); color: #fff; }
+
+.ficha-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000;
+  display: none; justify-content: center; align-items: center; padding: 1.2rem; backdrop-filter: blur(2px);
+}
+.ficha-modal-overlay.open { display: flex; }
+.ficha-modal-box {
+  background: var(--chat-bg-2); border: 1px solid rgba(201,162,39,0.3); border-radius: 10px;
+  width: 100%; max-width: 420px; max-height: 75vh; display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6); overflow: hidden;
+}
+.ficha-modal-header {
+  padding: 0.9rem 1.1rem; border-bottom: 1px solid rgba(201,162,39,0.2);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ficha-modal-header h3 { font-family: var(--serif); font-size: 0.95rem; color: var(--chat-action); margin: 0; }
+.ficha-modal-close { background: none; border: none; color: var(--chat-muted); font-size: 1.2rem; cursor: pointer; line-height: 1; }
+.ficha-modal-list { overflow-y: auto; padding: 0.6rem; flex: 1; }
+.ficha-modal-empty { font-family: var(--body); font-size: 0.85rem; color: var(--chat-muted); text-align: center; padding: 1.5rem 1rem; line-height: 1.6; }
+.ficha-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;
+  padding: 0.65rem 0.8rem; border-radius: 8px; cursor: pointer; margin-bottom: 0.4rem;
+  background: rgba(255,255,255,0.04); border: 1px solid transparent; transition: background 0.15s;
+}
+.ficha-item:hover { background: rgba(255,255,255,0.08); }
+.ficha-item.selected { border-color: var(--chat-action); background: rgba(201,162,39,0.12); }
+.ficha-item-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.ficha-item-nome { font-family: var(--body); font-size: 0.92rem; color: var(--parchment, #f0e8d5); font-weight: 600; }
+.ficha-item-meta { font-family: var(--mono); font-size: 0.65rem; color: var(--chat-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ficha-item-stats { font-family: var(--mono); font-size: 0.62rem; color: var(--chat-muted); flex-shrink: 0; }
+.ficha-item-remover { background: none; border: none; color: var(--chat-muted); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.4rem; flex-shrink: 0; }
+.ficha-item-remover:hover { color: #d9534f; }
+.ficha-modal-footer { padding: 0.7rem 1.1rem; border-top: 1px solid rgba(201,162,39,0.2); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.ficha-limpar-selecao { font-family: var(--mono); font-size: 0.62rem; color: var(--chat-muted); background: none; border: 1px solid rgba(255,255,255,0.12); padding: 0.4rem 0.7rem; border-radius: 6px; cursor: pointer; }
+.ficha-limpar-selecao:hover { color: var(--parchment, #f0e8d5); border-color: rgba(255,255,255,0.3); }
+
+/* ─── Status de combate acima da ação (só o próprio jogador vê) ─── */
+.msg-status-bar {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.02em; color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.18); border-radius: 8px; padding: 0.25rem 0.55rem; margin-bottom: 0.3rem;
+  display: flex; gap: 0.6rem; flex-wrap: wrap;
+}
+.msg-status-bar span { white-space: nowrap; }
+
+.msg-dano-prompt {
+  font-family: var(--mono); font-size: 0.68rem; color: #f3d4d0;
+  background: rgba(180,40,30,0.18); border: 1px solid rgba(217,83,79,0.4); border-radius: 8px;
+  padding: 0.4rem 0.6rem; margin-top: 0.3rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+}
+.msg-dano-prompt button {
+  font-family: var(--mono); font-size: 0.62rem; border-radius: 5px; padding: 0.25rem 0.55rem;
+  cursor: pointer; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff;
+}
+.msg-dano-prompt button.aplicar { background: #b4281e; border-color: #b4281e; }
+.msg-dano-prompt button.aplicar:hover { background: #d9342a; }
+.msg-dano-prompt button.ignorar:hover { background: rgba(255,255,255,0.14); }
 
 @media (max-width: 600px) {
   .chat-shell { max-width: 100%; }
@@ -2255,7 +2330,10 @@ body::before {
 
   <textarea class="notes-area" id="notes-historia" rows="5" placeholder="Origem, motivações, segredos, juramentos do poder, vínculos…"></textarea>
 
-  <button class="print-btn" onclick="exportarEImprimir()">⬡ Imprimir Ficha</button>
+  <div class="sheet-actions">
+    <button class="save-btn" onclick="salvarFichaAtual()">💾 Salvar Ficha</button>
+    <button class="print-btn" onclick="exportarEImprimir()">⬡ Imprimir Ficha</button>
+  </div>
 
 </div>
 
@@ -2648,9 +2726,9 @@ function renderScale1() {
 
 function increaseVita() {
 
-  if (state.vita.max >= 8) return;
+  if (state.vita.max >= 7) return;
 
-  if (state.guard.max <= 2) { showToast('⚠️', `Guarda mínima é <strong>2</strong>. Não é possível aumentar Vita mais.`, 4000); return; }
+  if (state.guard.max <= 3) { showToast('⚠️', `Guarda mínima é <strong>3</strong>. Não é possível aumentar Vita mais.`, 4000); return; }
 
   state.vita.max++; state.guard.max--;
 
@@ -2674,9 +2752,9 @@ function increaseVita() {
 
 function increaseGuard() {
 
-  if (state.guard.max >= 8) return;
+  if (state.guard.max >= 7) return;
 
-  if (state.vita.max <= 2) { showToast('⚠️', `Vitalidade mínima é <strong>2</strong>. Não é possível aumentar Guarda mais.`, 4000); return; }
+  if (state.vita.max <= 3) { showToast('⚠️', `Vitalidade mínima é <strong>3</strong>. Não é possível aumentar Guarda mais.`, 4000); return; }
 
   state.guard.max++; state.vita.max--;
 
@@ -2720,7 +2798,7 @@ function applyVitaEnergyConstraint(v) {
 
   const energyCeiling = 10 - penalty; // Energia máxima permitida (teto)
 
-  const energyMin = 2; // Energia mínima sempre 2
+  const energyMin = 3; // Energia mínima sempre 3
 
   if (state.energy.max > energyCeiling) {
 
@@ -2836,13 +2914,13 @@ function increaseEnergy() {
 
 function increaseMana() {
 
-  // Energia mínima é 2 (regra base)
-  if ((state.energy.max - 1) < 2) {
-    showToast('⚠️', `Energia mínima é <strong>2</strong>. Não é possível reduzir mais.`, 4500);
+  // Energia mínima é 3 (regra base)
+  if ((state.energy.max - 1) < 3) {
+    showToast('⚠️', `Energia mínima é <strong>3</strong>. Não é possível reduzir mais.`, 4500);
     return;
   }
 
-  if (state.mana.max >= 8) return; // Magia máxima 8 (energia mínima 2)
+  if (state.mana.max >= 7) return; // Magia máxima 7 (energia mínima 3)
 
   state.mana.max++; state.energy.max--;
 
@@ -2904,7 +2982,7 @@ function applyEnergyGuardBonus() {
 
     state.guard.max = state.guard.max - prevBonus + newBonus;
 
-    state.guard.max = Math.max(2, state.guard.max); // Guarda mínima 2
+    state.guard.max = Math.max(3, state.guard.max); // Guarda mínima 3
 
     state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
@@ -2937,7 +3015,7 @@ function applyManaVitaPenalty() {
     // A penalidade de mana reduz vita.max
     state.vita.max = state.vita.max + prevPenalty - newPenalty;
 
-    state.vita.max = Math.max(2, state.vita.max); // Vita mínima 2
+    state.vita.max = Math.max(3, state.vita.max); // Vita mínima 3
 
     state.vita.cur = Math.min(state.vita.cur, state.vita.max);
 
@@ -2946,7 +3024,7 @@ function applyManaVitaPenalty() {
 
     const energyBonus = state._energyGuardBonus || 0;
 
-    state.guard.max = Math.max(2, guardBase + energyBonus);
+    state.guard.max = Math.max(3, guardBase + energyBonus);
 
     state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
@@ -3364,6 +3442,9 @@ renderPP();
         </div>
 
         <div class="chat-composer">
+          <div class="composer-toolbar">
+            <button class="ficha-picker-btn" id="ficha-picker-btn" onclick="abrirSeletorFicha()">🗂️ <span id="ficha-picker-label">Escolher Ficha</span></button>
+          </div>
           <div class="composer-hint" id="composer-hint">Escreva normalmente para narrar ou agir · use <code>//</code> no início para falar fora do personagem (não fica no registro)</div>
           <div class="composer-row">
             <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação ou fala…" rows="1"></textarea>
@@ -3372,6 +3453,20 @@ renderPP();
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<div class="ficha-modal-overlay" id="ficha-modal-overlay">
+  <div class="ficha-modal-box">
+    <div class="ficha-modal-header">
+      <h3>Escolher Ficha</h3>
+      <button class="ficha-modal-close" onclick="fecharSeletorFicha()">✕</button>
+    </div>
+    <div class="ficha-modal-list" id="ficha-modal-list"></div>
+    <div class="ficha-modal-footer">
+      <span style="font-family:var(--mono);font-size:0.6rem;color:var(--chat-muted);">Salve fichas na sua Ficha de Personagem</span>
+      <button class="ficha-limpar-selecao" onclick="limparFichaSelecionada()">Nenhuma</button>
     </div>
   </div>
 </div>
@@ -3513,6 +3608,163 @@ async function buscarUltimoUsuario() {
 }
 
 // ═══════════════════════════════════════════
+// ARMAZENAMENTO DE FICHAS (cada usuário pode salvar várias)
+// Guardamos uma lista de fichas por usuário, cada uma com uma cópia
+// completa do `state` (vita/guarda/energia/magia/pp) no momento do save.
+// ═══════════════════════════════════════════
+const STORAGE_FICHAS_PREFIX = 'harmina-fichas:';
+
+function listarFichas(usuario) {
+  if (!usuario) return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase());
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function salvarFichaNaLista(usuario, ficha) {
+  const lista = listarFichas(usuario);
+  const idx = lista.findIndex(f => f.nome.toLowerCase() === ficha.nome.toLowerCase());
+  if (idx >= 0) lista[idx] = ficha; else lista.push(ficha);
+  localStorage.setItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase(), JSON.stringify(lista));
+  return lista;
+}
+
+function excluirFichaDaLista(usuario, nome) {
+  const lista = listarFichas(usuario).filter(f => f.nome.toLowerCase() !== nome.toLowerCase());
+  localStorage.setItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase(), JSON.stringify(lista));
+  return lista;
+}
+
+// Captura os campos atuais da ficha aberta e salva (cria ou atualiza pelo nome)
+function montarFichaParaSalvar(nome) {
+  return {
+    nome,
+    vocacao: document.getElementById('id-vocacao') ? document.getElementById('id-vocacao').value.trim() : '',
+    regiao: document.getElementById('id-regiao') ? document.getElementById('id-regiao').value : '',
+    state: JSON.parse(JSON.stringify(state)), // cópia independente do state atual
+    atualizadoEm: new Date().toISOString()
+  };
+}
+
+function salvarFichaAtual() {
+  const nome = document.getElementById('id-nome').value.trim();
+
+  if (!nome) {
+    showToast('⚠️', 'Dê um nome ao personagem (campo "Nome do Personagem") antes de salvar.', 4500);
+    return;
+  }
+
+  if (!usuarioAtual) {
+    showToast('⚠️', 'Você precisa estar logado para salvar a ficha.', 4000);
+    return;
+  }
+
+  salvarFichaNaLista(usuarioAtual, montarFichaParaSalvar(nome));
+  showToast('💾', `Ficha de <strong>${nome}</strong> salva!`, 3000);
+}
+
+// Salva a ficha ativa do chat sem mostrar toast de confirmação — usada quando
+// o dano é aplicado automaticamente, para persistir a mudança sem poluir a tela.
+function salvarFichaSilenciosa() {
+  if (!fichaAtivaChat || !usuarioAtual) return;
+  salvarFichaNaLista(usuarioAtual, montarFichaParaSalvar(fichaAtivaChat));
+}
+
+// Carrega uma ficha salva de volta para o `state` ao vivo (usado tanto ao
+// reabrir a ficha quanto ao escolhê-la no chat)
+function carregarFichaNoState(ficha) {
+  state.vita = { ...ficha.state.vita };
+  state.guard = { ...ficha.state.guard };
+  state.energy = { ...ficha.state.energy };
+  state.mana = { ...ficha.state.mana };
+  state.pp = { ...ficha.state.pp };
+  state._energyGuardBonus = ficha.state._energyGuardBonus || 0;
+  state._manаVitaPenalty = ficha.state._manаVitaPenalty || 0;
+
+  document.getElementById('id-nome').value = ficha.nome;
+  if (document.getElementById('id-vocacao')) document.getElementById('id-vocacao').value = ficha.vocacao || '';
+  if (document.getElementById('id-regiao') && ficha.regiao) {
+    document.getElementById('id-regiao').value = ficha.regiao;
+    if (typeof onRegiaoChange === 'function') onRegiaoChange();
+  }
+
+  renderScale1();
+  renderScale2();
+}
+
+// ─── Seletor de Ficha no chat ───
+function abrirSeletorFicha() {
+  if (!usuarioAtual) {
+    mostrarToast('⚠️ Você precisa estar logado para escolher uma ficha.', 4000);
+    return;
+  }
+  renderizarListaFichas();
+  document.getElementById('ficha-modal-overlay').classList.add('open');
+}
+
+function fecharSeletorFicha() {
+  document.getElementById('ficha-modal-overlay').classList.remove('open');
+}
+
+function renderizarListaFichas() {
+  const lista = listarFichas(usuarioAtual);
+  const container = document.getElementById('ficha-modal-list');
+
+  if (lista.length === 0) {
+    container.innerHTML = `<div class="ficha-modal-empty">Você ainda não salvou nenhuma ficha.<br>Abra "Criar Nova Ficha", monte seu personagem e use <strong>💾 Salvar Ficha</strong> para que ela apareça aqui.</div>`;
+    return;
+  }
+
+  container.innerHTML = lista.map(f => {
+    const selecionada = fichaAtivaChat === f.nome;
+    return `
+      <div class="ficha-item ${selecionada ? 'selected' : ''}" onclick="selecionarFichaChat('${f.nome.replace(/'/g, "\\'")}')">
+        <div class="ficha-item-info">
+          <div class="ficha-item-nome">${escaparHtml(f.nome)}</div>
+          <div class="ficha-item-meta">${escaparHtml(f.vocacao || 'Sem vocação')}</div>
+        </div>
+        <div class="ficha-item-stats">❤️${f.state.vita.cur}/${f.state.vita.max} 🔰${f.state.guard.cur}/${f.state.guard.max}</div>
+        <button class="ficha-item-remover" title="Excluir ficha salva" onclick="event.stopPropagation(); excluirFichaChat('${f.nome.replace(/'/g, "\\'")}')">🗑️</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function selecionarFichaChat(nome) {
+  const ficha = listarFichas(usuarioAtual).find(f => f.nome === nome);
+  if (!ficha) return;
+
+  carregarFichaNoState(ficha);
+  fichaAtivaChat = ficha.nome;
+
+  document.getElementById('ficha-picker-label').textContent = ficha.nome;
+  document.getElementById('ficha-picker-btn').classList.add('is-active');
+
+  // Mensagens que já tinham chegado (histórico) antes de eu escolher a ficha
+  // não tiveram chance de mostrar o prompt de dano — reavalia todas agora.
+  chatState.mensagens.forEach(tentarAdicionarPromptDeDano);
+
+  fecharSeletorFicha();
+  mostrarToast(`🗂️ Agora narrando como <strong>${escaparHtml(ficha.nome)}</strong>. Seus status aparecerão acima das suas ações.`, 3500);
+}
+
+function limparFichaSelecionada() {
+  fichaAtivaChat = null;
+  document.getElementById('ficha-picker-label').textContent = 'Escolher Ficha';
+  document.getElementById('ficha-picker-btn').classList.remove('is-active');
+  fecharSeletorFicha();
+}
+
+function excluirFichaChat(nome) {
+  excluirFichaDaLista(usuarioAtual, nome);
+  if (fichaAtivaChat === nome) limparFichaSelecionada();
+  renderizarListaFichas();
+}
+
+// ═══════════════════════════════════════════
 // NAVEGAÇÃO ENTRE TELAS
 // ═══════════════════════════════════════════
 function irPara(viewId) {
@@ -3603,6 +3855,12 @@ function entrarComSessao(usuario) {
 
 function sair() {
   usuarioAtual = null;
+  fichaAtivaChat = null;
+  filaDeStatusPendentes = [];
+  const fichaBtn = document.getElementById('ficha-picker-label');
+  if (fichaBtn) fichaBtn.textContent = 'Escolher Ficha';
+  const fichaPickerBtn = document.getElementById('ficha-picker-btn');
+  if (fichaPickerBtn) fichaPickerBtn.classList.remove('is-active');
   irPara('portal');
   digitarFrase(frasePortalAleatoria());
   document.getElementById('input-user').value = '';
@@ -3667,6 +3925,8 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 // ─── Conexão em tempo real com o servidor ───
 const socket = io();
 let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz login/cadastro
+let fichaAtivaChat = null; // nome da ficha escolhida para narrar no chat (null = nenhuma)
+let filaDeStatusPendentes = []; // snapshots de status aguardando a confirmação (echo) do servidor, na ordem de envio
 
 // ─── Estado do chat ───
 const chatState = {
@@ -3736,6 +3996,18 @@ function enviarMensagem() {
   const textoLimpo = ehForaDePersonagem ? texto.trimStart().slice(2).trim() : texto.trim();
   if (!textoLimpo) { input.value = ''; return; }
 
+  // Se a mensagem não é OOC, registra na fila um retrato do status atual
+  // (ou null, se não houver ficha escolhida) — isso mantém a fila alinhada
+  // 1-para-1 com os ecos que o servidor vai mandar de volta, na mesma ordem.
+  // Só o próprio jogador vê isso: é um dado puramente local, nunca enviado
+  // ao servidor nem aos outros jogadores.
+  if (!ehForaDePersonagem) {
+    filaDeStatusPendentes.push(fichaAtivaChat ? {
+      vita: { ...state.vita }, guard: { ...state.guard },
+      energy: { ...state.energy }, mana: { ...state.mana }
+    } : null);
+  }
+
   socket.emit('chat-mensagem', {
     nome: usuarioAtual,
     texto: textoLimpo,
@@ -3748,10 +4020,10 @@ function enviarMensagem() {
   socket.emit('parou-de-digitar', { nome: usuarioAtual });
 }
 
-function adicionarMensagem({ autor, texto, tipo, mine }) {
+function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot }) {
   const msg = {
     id: chatState.proximoId++,
-    autor, texto, tipo, mine,
+    autor, texto, tipo, mine, statusSnapshot: statusSnapshot || null,
     timestamp: new Date()
   };
   chatState.mensagens.push(msg);
@@ -3783,18 +4055,94 @@ function escaparHtml(str) {
 function renderizarMensagem(msg) {
   const container = document.getElementById('chat-messages');
   const row = document.createElement('div');
+  row.id = `msg-row-${msg.id}`;
 
   let classes = 'msg-row ' + (msg.mine ? 'mine' : 'theirs');
   if (msg.tipo === 'ooc') classes += ' ooc-msg';
 
   row.className = classes;
+
+  // Barra de status: só aparece na minha própria mensagem, quando há uma ficha
+  // escolhida e a ação não é OOC. Ninguém além de mim vê isso (é montado aqui,
+  // no navegador, a partir de um snapshot puramente local).
+  let statusHtml = '';
+  if (msg.mine && msg.statusSnapshot) {
+    const s = msg.statusSnapshot;
+    statusHtml = `<div class="msg-status-bar">
+      <span>❤️ ${s.vita.cur}/${s.vita.max}</span>
+      <span>🔰 ${s.guard.cur}/${s.guard.max}</span>
+      <span>⚡ ${s.energy.cur}/${s.energy.max}</span>
+      <span>🔮 ${s.mana.cur}/${s.mana.max}</span>
+    </div>`;
+  }
+
   row.innerHTML = `
     <div class="msg-author">${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}</div>
+    ${statusHtml}
     <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
     <div class="msg-time">${formatarHora(msg.timestamp)}</div>
   `;
   container.appendChild(row);
+
+  tentarAdicionarPromptDeDano(msg);
 }
+
+// ─── Reconhecimento de mecânicas: detecta "N de dano" em ações de outros
+// jogadores e oferece aplicar o desconto automaticamente na MINHA ficha
+// ativa (Guarda primeiro, depois Vitalidade). Nunca aplica sozinho —
+// sempre pede uma confirmação de um toque, porque só quem lê sabe se a
+// ação era mesmo contra o próprio personagem.
+// Reaproveitável: chamada tanto ao renderizar uma mensagem nova quanto ao
+// reavaliar o histórico inteiro depois que o jogador escolhe uma ficha
+// (mensagens antigas, recebidas antes da escolha, também precisam ganhar
+// o prompt retroativamente).
+function tentarAdicionarPromptDeDano(msg) {
+  if (msg.mine || msg.tipo !== 'normal' || !fichaAtivaChat) return;
+  if (document.getElementById(`dano-prompt-${msg.id}`)) return; // já existe
+
+  const m = msg.texto.match(/(\d+)\s*de\s*dano/i);
+  if (!m) return;
+
+  const row = document.getElementById(`msg-row-${msg.id}`);
+  if (!row) return;
+
+  const dano = parseInt(m[1], 10);
+  const prompt = document.createElement('div');
+  prompt.className = 'msg-dano-prompt';
+  prompt.id = `dano-prompt-${msg.id}`;
+  prompt.innerHTML = `⚔️ Ação de <strong>${escaparHtml(msg.autor)}</strong> indica <strong>${dano}</strong> de dano.
+    <button class="aplicar" onclick="aplicarDanoDoChat(${msg.id}, ${dano}, '${msg.autor.replace(/'/g, "\\'")}')">Sofri esse dano</button>
+    <button class="ignorar" onclick="document.getElementById('dano-prompt-${msg.id}').remove()">Ignorar</button>`;
+  row.appendChild(prompt);
+}
+
+// Aplica o dano detectado na ficha ativa: desconta primeiro da Guarda, e o
+// excedente (se houver) é descontado da Vitalidade — seguindo a regra de
+// que a Guarda absorve o dano antes da Vitalidade ser afetada.
+function aplicarDanoDoChat(msgId, dano, autorOrigem) {
+  if (!fichaAtivaChat) return;
+
+  const consumidoGuarda = Math.min(state.guard.cur, dano);
+  state.guard.cur -= consumidoGuarda;
+  const restante = dano - consumidoGuarda;
+  const consumidoVita = Math.min(state.vita.cur, restante);
+  state.vita.cur -= consumidoVita;
+
+  renderScale1();
+  salvarFichaSilenciosa();
+
+  let resumo = `🔰 −${consumidoGuarda} Guarda`;
+  if (consumidoVita > 0) resumo += ` · ❤️ −${consumidoVita} Vitalidade`;
+  let mensagemToast = `⚔️ ${dano} de dano de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ${resumo}.`;
+  if (state.vita.cur <= 0) {
+    mensagemToast += ` 💀 <strong>${escaparHtml(fichaAtivaChat)}</strong> está com a Vitalidade zerada!`;
+  }
+  mostrarToast(mensagemToast, 6000);
+
+  const prompt = document.getElementById(`dano-prompt-${msgId}`);
+  if (prompt) prompt.remove();
+}
+
 
 // ─── Registro de Ações (painel lateral) ───
 function adicionarAoRegistro(msg) {
@@ -3900,11 +4248,18 @@ socket.on('historico-chat', (mensagens) => {
 
 socket.on('chat-mensagem', (dados) => {
   pararDeDigitar();
+  const ehMinha = dados.nome === usuarioAtual;
+  // A fila só recebe entradas para mensagens 'normal' (não-OOC) — puxamos daqui
+  // na mesma ordem em que foram enviadas, alinhando com o eco do servidor.
+  const snapshot = (ehMinha && dados.tipo !== 'ooc' && filaDeStatusPendentes.length > 0)
+    ? filaDeStatusPendentes.shift()
+    : null;
   adicionarMensagem({
     autor: dados.nome,
     texto: dados.texto,
     tipo: dados.tipo === 'ooc' ? 'ooc' : 'normal',
-    mine: dados.nome === usuarioAtual
+    mine: ehMinha,
+    statusSnapshot: snapshot
   });
 });
 
