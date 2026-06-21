@@ -4303,6 +4303,855 @@ socket.on('digitando', (dados) => {
 socket.on('parou-de-digitar', (dados) => {
   if (dados.nome !== usuarioAtual) pararDeDigitar();
 });
+// ═══════════════════════════════════════════════════════
+// SISTEMA DE AÇÕES DE COMBATE
+// ═══════════════════════════════════════════════════════
+
+// Definição completa de todas as ações de combate com requisitos
+const ACOES_COMBATE = {
+  // DEFESA - quando SOFRE um ataque
+  receberDano: {
+    id: 'receberDano',
+    nome: 'Receber Dano',
+    categoria: 'defesa',
+    descricao: 'Guarda absorve primeiro, excedente vai para Vitalidade',
+    custo: { tipo: 'nenhum', valor: 0 },
+    requisito: () => true, // Sempre disponível
+    requisitoTexto: 'Sempre disponível',
+    efeito: (dano) => aplicarDano(dano)
+  },
+  
+  esquiva: {
+    id: 'esquiva',
+    nome: 'Esquiva',
+    categoria: 'defesa',
+    descricao: 'Custa 1 Energia a mais que o custo da ação inimiga. Evita dano completamente se bem-sucedida.',
+    custo: { tipo: 'energia', valor: 1 }, // base, será somado ao dano
+    requisito: (dano) => state.energy.cur >= (dano + 1),
+    requisitoTexto: (dano) => `Energia ≥ ${dano + 1} (dano + 1)`,
+    efeito: (dano) => {
+      const custo = dano + 1;
+      if (state.energy.cur >= custo) {
+        state.energy.cur -= custo;
+        renderScale2();
+        return { sucesso: true, mensagem: `Esquivou! Gastou ${custo}⚡` };
+      }
+      return { sucesso: false, mensagem: 'Energia insuficiente para esquiva' };
+    }
+  },
+  
+  posturaDefensiva: {
+    id: 'posturaDefensiva',
+    nome: 'Postura Defensiva',
+    categoria: 'defesa',
+    descricao: 'Gasta 1 Guarda para +2 Defesa temporária até fim do combate',
+    custo: { tipo: 'guarda', valor: 1 },
+    requisito: () => state.guard.cur >= 1,
+    requisitoTexto: 'Guarda ≥ 1',
+    efeito: () => {
+      if (state.guard.cur >= 1) {
+        state.guard.cur -= 1;
+        adicionarAcaoAtiva('posturaDefensiva', '+2 Defesa', '🔰', '1 Guarda');
+        renderScale1();
+        return { sucesso: true, mensagem: 'Postura defensiva ativa! +2 Defesa' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  interceptacao: {
+    id: 'interceptacao',
+    nome: 'Interceptação',
+    categoria: 'defesa',
+    descricao: 'Usa próprio dano para barrar dano corpo a corpo ou magia vs magia',
+    custo: { tipo: 'energia', valor: 1 },
+    requisito: () => state.energy.cur >= 1,
+    requisitoTexto: 'Energia ≥ 1, ataque corpo a corpo ou magia',
+    efeito: () => {
+      if (state.energy.cur >= 1) {
+        state.energy.cur -= 1;
+        renderScale2();
+        return { sucesso: true, mensagem: 'Interceptação realizada! Gastou 1⚡' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  sacrificioDefensivo: {
+    id: 'sacrificioDefensivo',
+    nome: 'Sacrifício Defensivo',
+    categoria: 'defesa',
+    descricao: 'Gasta 1-2 Vitalidade MÁXIMA por +3 Defesa até fim do combate',
+    custo: { tipo: 'vitaMax', valor: 1 },
+    requisito: () => state.vita.max >= 4,
+    requisitoTexto: 'Vitalidade máxima ≥ 4',
+    efeito: () => {
+      if (state.vita.max >= 4) {
+        state.vita.max -= 1;
+        state.vita.cur = Math.min(state.vita.cur, state.vita.max);
+        adicionarAcaoAtiva('sacrificioDefensivo', '+3 Defesa', '❤️', '-1 Vita Máx');
+        renderScale1();
+        return { sucesso: true, mensagem: 'Sacrifício defensivo! -1❤️ máx, +3 Defesa' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  negacaoExistencial: {
+    id: 'negacaoExistencial',
+    nome: 'Negação Existencial',
+    categoria: 'defesa',
+    descricao: 'Regra de Ouro: queima 2 PP para anular efeito que viole corpo/mente, imunidade 3 turnos',
+    custo: { tipo: 'pp', valor: 2 },
+    requisito: () => state.pp.cur >= 2,
+    requisitoTexto: 'PP atual ≥ 2',
+    efeito: () => {
+      if (state.pp.cur >= 2) {
+        state.pp.cur -= 2;
+        ppCur = state.pp.cur;
+        renderPP();
+        adicionarAcaoAtiva('negacaoExistencial', 'Imunidade 3 turnos', '💠', '2 PP');
+        return { sucesso: true, mensagem: 'Negação Existencial! Imunidade por 3 turnos' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  negacaoManifestacao: {
+    id: 'negacaoManifestacao',
+    nome: 'Negação de Manifestação',
+    categoria: 'defesa',
+    descricao: 'Gasta 2 PP antecipadamente para ignorar manifestação defensiva do alvo pelo turno',
+    custo: { tipo: 'pp', valor: 2 },
+    requisito: () => state.pp.cur >= 2,
+    requisitoTexto: 'PP atual ≥ 2',
+    efeito: () => {
+      if (state.pp.cur >= 2) {
+        state.pp.cur -= 2;
+        ppCur = state.pp.cur;
+        renderPP();
+        return { sucesso: true, mensagem: 'Negação de Manifestação ativa!' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  // CONTRA-ATAQUE
+  retaliar: {
+    id: 'retaliar',
+    nome: 'Retaliar',
+    categoria: 'contra-ataque',
+    descricao: 'Uma vez por combate, ataque extra contra quem o atacou. Custa 1 Energia',
+    custo: { tipo: 'energia', valor: 1 },
+    requisito: () => state.energy.cur >= 1 && !state._retaliadorUsado && temDon('Retaliador'),
+    requisitoTexto: 'Don "Retaliador" + Energia ≥ 1, 1x/combate',
+    efeito: () => {
+      if (state.energy.cur >= 1 && !state._retaliadorUsado && temDon('Retaliador')) {
+        state.energy.cur -= 1;
+        state._retaliadorUsado = true;
+        renderScale2();
+        return { sucesso: true, mensagem: 'Retaliação! Ataque extra realizado' };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  retalhar: {
+    id: 'retalhar',
+    nome: 'Retalhar',
+    categoria: 'contra-ataque',
+    descricao: 'Com guarda zerada e dano >1, devolve 1 dano e reduz 1 recebido',
+    custo: { tipo: 'nenhum', valor: 0 },
+    requisito: (dano) => state.guard.cur === 0 && dano > 1 && temDon('Retalhador'),
+    requisitoTexto: 'Don "Retalhador" + Guarda zerada + dano > 1',
+    efeito: (dano) => {
+      if (state.guard.cur === 0 && dano > 1 && temDon('Retalhador')) {
+        return { sucesso: true, mensagem: 'Retalhou! Devolveu 1 dano, recebeu -1', danoReduzido: 1 };
+      }
+      return { sucesso: false };
+    }
+  },
+  
+  // FURTIVIDADE
+  furtividade: {
+    id: 'furtividade',
+    nome: 'Furtividade',
+    categoria: 'furtividade',
+    descricao: 'Primeiro ataque furtivo ignora Guarda do alvo',
+    custo: { tipo: 'nenhum', valor: 0 },
+    requisito: () => state.guard.cur > 0, // Precisa ter guarda para ser furtivo
+    requisitoTexto: 'Guarda atual > 0 (superior ao oponente)',
+    efeito: () => {
+      adicionarAcaoAtiva('furtividade', 'Ignora Guarda', '👤', 'Ativo');
+      return { sucesso: true, mensagem: 'Furtividade ativa! Próximo ataque ignora Guarda' };
+    }
+  },
+  
+  // CANALIZAÇÃO
+  canalizarFoco: {
+    id: 'canalizarFoco',
+    nome: 'Canalizar Foco',
+    categoria: 'canalizacao',
+    descricao: 'Não atacar neste turno. Próximo ataque: -1 atributo, +2 dano',
+    custo: { tipo: 'nenhum', valor: 0 },
+    requisito: () => true,
+    requisitoTexto: 'Não atacou no turno anterior',
+    efeito: () => {
+      state._turnoSemAtacar++;
+      adicionarAcaoAtiva('canalizarFoco', '+2 dano próximo', '✨', 'Canalizado');
+      return { sucesso: true, mensagem: 'Foco canalizado! Próximo ataque: -1 atributo, +2 dano' };
+    }
+  },
+  
+  // ATAQUE ESPECIAL
+  ataqueEspecial: {
+    id: 'ataqueEspecial',
+    nome: 'Ataque Especial',
+    categoria: 'ataque',
+    descricao: 'Cada +1 dano = +1 turno de espera (máx +5). Custa energia base + bônus',
+    custo: { tipo: 'energia', valor: 2 }, // base +1
+    requisito: () => state.energy.cur >= 2,
+    requisitoTexto: 'Energia suficiente para o bônus desejado',
+    efeito: (bonus = 1) => {
+      const custo = 1 + bonus;
+      if (state.energy.cur >= custo) {
+        state.energy.cur -= custo;
+        renderScale2();
+        return { sucesso: true, mensagem: `Ataque especial! +${bonus} dano, espera ${bonus} turno(s)` };
+      }
+      return { sucesso: false };
+    }
+  }
+};
+
+// Verifica se personagem tem um Don específico
+function temDon(nomeDon) {
+  const don1 = document.getElementById('don1-nome')?.value || '';
+  const don2 = document.getElementById('don2-nome')?.value || '';
+  return don1 === nomeDon || don2 === nomeDon;
+}
+
+// ═══════════════════════════════════════════════════════
+// BARRA DE AÇÕES ATIVAS
+// ═══════════════════════════════════════════════════════
+
+let acoesAtivas = []; // { id, nome, efeito, icone, custo }
+
+function adicionarAcaoAtiva(id, efeito, icone, custo) {
+  // Remove se já existe
+  acoesAtivas = acoesAtivas.filter(a => a.id !== id);
+  acoesAtivas.push({ id, nome: ACOES_COMBATE[id]?.nome || id, efeito, icone, custo });
+  renderizarAcoesAtivas();
+}
+
+function removerAcaoAtiva(id) {
+  acoesAtivas = acoesAtivas.filter(a => a.id !== id);
+  renderizarAcoesAtivas();
+}
+
+function renderizarAcoesAtivas() {
+  const bar = document.getElementById('combate-acoes-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  acoesAtivas.forEach(acao => {
+    const chip = document.createElement('div');
+    chip.className = 'acao-ativa-chip';
+    chip.innerHTML = `
+      <button class="acao-x" onclick="removerAcaoAtiva('${acao.id}')" title="Desativar">×</button>
+      <span class="acao-label">${acao.icone} ${acao.nome}</span>
+      <span class="acao-custo">${acao.efeito} · ${acao.custo}</span>
+    `;
+    bar.appendChild(chip);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// PAINEL DE AÇÕES DE COMBATE (quando recebe dano)
+// ═══════════════════════════════════════════════════════
+
+let danoPendente = 0;
+let autorAtaquePendente = '';
+
+function abrirPainelCombate(dano, autor) {
+  danoPendente = dano;
+  autorAtaquePendente = autor;
+  
+  const overlay = document.getElementById('combate-painel-overlay');
+  const body = document.getElementById('combate-painel-body');
+  const sub = document.getElementById('combate-painel-sub');
+  
+  if (!overlay || !body) return;
+  
+  sub.textContent = `${autor} causou ${dano} de dano. Escolha como reagir:`;
+  
+  // Atualiza status no painel
+  document.getElementById('painel-vita').textContent = `${state.vita.cur}/${state.vita.max}`;
+  document.getElementById('painel-guard').textContent = `${state.guard.cur}/${state.guard.max}`;
+  document.getElementById('painel-energy').textContent = `${state.energy.cur}/${state.energy.max}`;
+  document.getElementById('painel-mana').textContent = `${state.mana.cur}/${state.mana.max}`;
+  document.getElementById('painel-pp').textContent = `${state.pp.cur}/${state.pp.max}`;
+  
+  body.innerHTML = '';
+  
+  // Seções de ações
+  const secoes = [
+    { titulo: 'Defesa', filtro: a => a.categoria === 'defesa' },
+    { titulo: 'Contra-Ataque', filtro: a => a.categoria === 'contra-ataque' },
+    { titulo: 'Outras', filtro: a => !['defesa','contra-ataque'].includes(a.categoria) }
+  ];
+  
+  secoes.forEach(secao => {
+    const acoes = Object.values(ACOES_COMBATE).filter(secao.filtro);
+    if (acoes.length === 0) return;
+    
+    const secEl = document.createElement('div');
+    secEl.className = 'combate-secao';
+    
+    const titulo = document.createElement('div');
+    titulo.className = 'combate-secao-titulo';
+    titulo.textContent = secao.titulo;
+    secEl.appendChild(titulo);
+    
+    const grid = document.createElement('div');
+    grid.className = 'combate-acoes-grid';
+    
+    acoes.forEach(acao => {
+      const reqTexto = typeof acao.requisitoTexto === 'function' 
+        ? acao.requisitoTexto(danoPendente) 
+        : acao.requisitoTexto;
+      const disponivel = acao.requisito(danoPendente);
+      
+      const btn = document.createElement('button');
+      btn.className = 'combate-acao-btn' + (disponivel ? '' : ' disabled');
+      btn.innerHTML = `
+        <div class="acao-btn-nome">${acao.nome}</div>
+        <div class="acao-btn-desc">${acao.descricao}</div>
+        <div class="acao-btn-req">${disponivel ? '✓ ' : '✗ '}${reqTexto}</div>
+      `;
+      
+      if (disponivel) {
+        btn.onclick = () => executarAcaoCombate(acao.id);
+      }
+      
+      grid.appendChild(btn);
+    });
+    
+    secEl.appendChild(grid);
+    body.appendChild(secEl);
+  });
+  
+  overlay.classList.add('open');
+}
+
+function fecharPainelCombate() {
+  document.getElementById('combate-painel-overlay')?.classList.remove('open');
+}
+
+function executarAcaoCombate(acaoId) {
+  const acao = ACOES_COMBATE[acaoId];
+  if (!acao) return;
+  
+  const resultado = acao.efeito(danoPendente);
+  
+  if (resultado.sucesso) {
+    // Registra no chat como ação
+    const msg = `Reagiu a ${autorAtaquePendente}: ${acao.nome}${resultado.mensagem ? ' — ' + resultado.mensagem : ''}`;
+    socket.emit('chat-mensagem', {
+      nome: usuarioAtual,
+      texto: msg,
+      tipo: 'normal'
+    });
+    
+    salvarFichaSilenciosa();
+    fecharPainelCombate();
+    
+    // Se for "receber dano", aplica o dano
+    if (acaoId === 'receberDano') {
+      aplicarDano(danoPendente);
+    }
+  } else {
+    mostrarToast('Não foi possível executar esta ação', 3000);
+  }
+}
+
+function receberDanoSimples() {
+  aplicarDano(danoPendente);
+  fecharPainelCombate();
+  
+  const msg = `Recebeu ${danoPendente} de dano de ${autorAtaquePendente}`;
+  socket.emit('chat-mensagem', {
+    nome: usuarioAtual,
+    texto: msg,
+    tipo: 'normal'
+  });
+}
+
+function aplicarDano(dano) {
+  const consumidoGuarda = Math.min(state.guard.cur, dano);
+  state.guard.cur -= consumidoGuarda;
+  const restante = dano - consumidoGuarda;
+  const consumidoVita = Math.min(state.vita.cur, restante);
+  state.vita.cur -= consumidoVita;
+  
+  renderScale1();
+  
+  if (state.vita.cur <= 0) {
+    mostrarToast(`💀 <strong>${fichaAtivaChat}</strong> está com Vitalidade zerada!`, 6000);
+  }
+  
+  salvarFichaSilenciosa();
+}
+
+// ═══════════════════════════════════════════════════════
+// GASTO DE ENERGIA AO ATACAR
+// ═══════════════════════════════════════════════════════
+
+function calcularCustoAtaque(tipoAtaque = 'normal', bonusDano = 0) {
+  let custo = 1; // Custo base de energia por ataque
+  
+  // Cada 3 Vitalidade = +1 dano corpo a corpo e +2 Energia obrigatório
+  const tiersVita = Math.floor(state.vita.max / 3);
+  if (tiersVita > 0 && tipoAtaque === 'corpoACorpo') {
+    custo += tiersVita * 2;
+  }
+  
+  // Ataque especial: +1 energia por +1 dano
+  custo += bonusDano;
+  
+  // Canalização de foco ativa: -1 atributo (custo reduz)
+  if (acoesAtivas.some(a => a.id === 'canalizarFoco')) {
+    custo = Math.max(1, custo - 1);
+  }
+  
+  // Ruptura ativa: ignora custos uma vez
+  if (acoesAtivas.some(a => a.id === 'ruptura') && !state._rupturaUsada) {
+    custo = 0;
+    state._rupturaUsada = true;
+    removerAcaoAtiva('ruptura');
+  }
+  
+  return custo;
+}
+
+function tentarAtaque(tipoAtaque = 'normal', bonusDano = 0) {
+  const custo = calcularCustoAtaque(tipoAtaque, bonusDano);
+  
+  if (state.energy.cur < custo) {
+    // Exaustão
+    if (state.energy.cur === 0 && !state._exaustao) {
+      state._exaustao = true;
+      state._turnosExaustao = 1;
+      mostrarToast('⚠️ Exaustão! 1 turno sem agir.', 4000);
+      return false;
+    }
+    mostrarToast(`⚠️ Energia insuficiente. Precisa de ${custo}⚡`, 4000);
+    return false;
+  }
+  
+  state.energy.cur -= custo;
+  renderScale2();
+  
+  // Reset canalização
+  state._turnoSemAtacar = 0;
+  
+  // Incrementa sequência (Impulsivo)
+  state._ataquesSequencia++;
+  
+  salvarFichaSilenciosa();
+  
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════
+// ENVIO DE MENSAGENS COM GASTO DE ENERGIA
+// ═══════════════════════════════════════════════════════
+
+function enviarMensagemCombate() {
+  const input = document.getElementById('chat-input');
+  const texto = input.value;
+  if (!texto.trim()) return;
+  if (!usuarioAtual) {
+    mostrarToast('Você precisa estar logado para falar na mesa.');
+    return;
+  }
+  
+  const ehForaDePersonagem = texto.trimStart().startsWith('//');
+  const textoLimpo = ehForaDePersonagem ? texto.trimStart().slice(2).trim() : texto.trim();
+  if (!textoLimpo) { input.value = ''; return; }
+  
+  // Detecta se é uma ação de ataque
+  const ehAtaque = detectarAtaque(textoLimpo);
+  
+  if (!ehForaDePersonagem && ehAtaque && fichaAtivaChat) {
+    // Tenta gastar energia
+    const bonusMatch = textoLimpo.match(/\+(\d+)\s*dano/i);
+    const bonusDano = bonusMatch ? parseInt(bonusMatch[1]) : 0;
+    
+    if (!tentarAtaque('normal', bonusDano)) {
+      return; // Não envia se não conseguiu atacar
+    }
+    
+    // Adiciona badge de gasto de energia
+    const custo = calcularCustoAtaque('normal', bonusDano);
+    
+    // Remove canalização se estava ativa
+    if (acoesAtivas.some(a => a.id === 'canalizarFoco')) {
+      removerAcaoAtiva('canalizarFoco');
+    }
+  }
+  
+  // Se não atacou (ação não-combativa), incrementa canalização
+  if (!ehForaDePersonagem && !ehAtaque && fichaAtivaChat) {
+    state._turnoSemAtacar++;
+  }
+  
+  if (!ehForaDePersonagem) {
+    filaDeStatusPendentes.push(fichaAtivaChat ? {
+      vita: { ...state.vita }, guard: { ...state.guard },
+      energy: { ...state.energy }, mana: { ...state.mana }
+    } : null);
+  }
+  
+  socket.emit('chat-mensagem', {
+    nome: usuarioAtual,
+    texto: textoLimpo,
+    tipo: ehForaDePersonagem ? 'ooc' : 'normal'
+  });
+  
+  input.value = '';
+  input.style.height = 'auto';
+  pararDeDigitar();
+  socket.emit('parou-de-digitar', { nome: usuarioAtual });
+}
+
+function detectarAtaque(texto) {
+  const termosAtaque = ['ataco', 'ataca', 'golpe', 'golpeia', 'disparo', 'dispara', 'corto', 'corta', 'ferro', 'machado', 'espada', 'adaga', 'arco', 'lanca', 'marreta', 'dano'];
+  const textoLower = texto.toLowerCase();
+  return termosAtaque.some(t => textoLower.includes(t));
+}
+
+// ═══════════════════════════════════════════════════════
+// DETECÇÃO DE MECÂNICA (dano/cura de outros)
+// ═══════════════════════════════════════════════════════
+
+const TERMOS_OPONENTE_GENERICOS = ['inimigo', 'inimiga', 'adversário', 'adversária', 'oponente', 'opositor', 'opositora', 'alvo'];
+
+function detectarMecanica(texto) {
+  let m = texto.match(/(\d+)\s*de\s*dano/i);
+  if (m) return { tipo: 'dano', valor: parseInt(m[1], 10) };
+  m = texto.match(/(\d+)\s*de\s*cura/i)
+    || texto.match(/cur[ao]u?\s+(\d+)/i)
+    || texto.match(/recuper[ao]u?\s+(\d+)/i)
+    || texto.match(/restaur[ao]u?\s+(\d+)/i);
+  if (m) return { tipo: 'cura', valor: parseInt(m[1], 10) };
+  return null;
+}
+
+function mensagemMeAlveja(texto) {
+  if (!fichaAtivaChat) return false;
+  const textoLower = texto.toLowerCase();
+  if (textoLower.includes(fichaAtivaChat.toLowerCase())) return true;
+  return TERMOS_OPONENTE_GENERICOS.some(termo => textoLower.includes(termo));
+}
+
+function tentarAdicionarPromptDeMecanica(msg) {
+  if (msg.mine || msg.tipo !== 'normal' || !fichaAtivaChat) return;
+  if (document.getElementById(`mec-prompt-${msg.id}`)) return;
+  
+  const mecanica = detectarMecanica(msg.texto);
+  if (!mecanica) return;
+  if (!mensagemMeAlveja(msg.texto)) return;
+  
+  const row = document.getElementById(`msg-row-${msg.id}`);
+  if (!row) return;
+  
+  const ehDano = mecanica.tipo === 'dano';
+  const prompt = document.createElement('div');
+  prompt.className = 'msg-dano-prompt';
+  prompt.id = `mec-prompt-${msg.id}`;
+  
+  prompt.innerHTML = `
+    ${ehDano ? '⚔️' : '✨'} Ação de <strong>${escaparHtml(msg.autor)}</strong> indica <strong>${mecanica.valor}</strong> ${ehDano ? 'de dano' : 'de cura'}.
+    <button class="aplicar" onclick="abrirPainelCombate(${mecanica.valor}, '${msg.autor.replace(/'/g, "\\'")}')">${ehDano ? 'Reagir' : 'Receber Cura'}</button>
+    <button class="ignorar" onclick="document.getElementById('mec-prompt-${msg.id}').remove()">Ignorar</button>
+  `;
+  
+  row.appendChild(prompt);
+}
+
+// ═══════════════════════════════════════════════════════
+// PERSISTÊNCIA & NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════
+
+const STORAGE_KEY_PREFIX = 'harmina-perfil:';
+const STORAGE_LAST_USER = 'harmina-ultimo-usuario';
+const STORAGE_FICHAS_PREFIX = 'harmina-fichas:';
+
+async function salvarPerfil(usuario, senha) {
+  const dados = { usuario, senha, criadoEm: new Date().toISOString() };
+  localStorage.setItem(STORAGE_KEY_PREFIX + usuario.toLowerCase(), JSON.stringify(dados));
+  localStorage.setItem(STORAGE_LAST_USER, usuario);
+}
+
+async function buscarPerfil(usuario) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + usuario.toLowerCase());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+async function existeAlgumPerfil() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      if (localStorage.key(i).startsWith(STORAGE_KEY_PREFIX)) return true;
+    }
+    return false;
+  } catch (e) { return false; }
+}
+
+async function buscarUltimoUsuario() {
+  try { return localStorage.getItem(STORAGE_LAST_USER); } catch (e) { return null; }
+}
+
+function listarFichas(usuario) {
+  if (!usuario) return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase());
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function salvarFichaNaLista(usuario, ficha) {
+  const lista = listarFichas(usuario);
+  const idx = lista.findIndex(f => f.nome.toLowerCase() === ficha.nome.toLowerCase());
+  if (idx >= 0) lista[idx] = ficha; else lista.push(ficha);
+  localStorage.setItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase(), JSON.stringify(lista));
+  return lista;
+}
+
+function excluirFichaDaLista(usuario, nome) {
+  const lista = listarFichas(usuario).filter(f => f.nome.toLowerCase() !== nome.toLowerCase());
+  localStorage.setItem(STORAGE_FICHAS_PREFIX + usuario.toLowerCase(), JSON.stringify(lista));
+  return lista;
+}
+
+function montarFichaParaSalvar(nome) {
+  return {
+    nome,
+    vocacao: document.getElementById('id-vocacao')?.value.trim() || '',
+    regiao: document.getElementById('id-regiao')?.value || '',
+    state: JSON.parse(JSON.stringify(state)),
+    acoesAtivas: [...acoesAtivas],
+    atualizadoEm: new Date().toISOString()
+  };
+}
+
+function salvarFichaAtual() {
+  const nome = document.getElementById('id-nome').value.trim();
+  if (!nome) {
+    showToast('⚠️', 'Dê um nome ao personagem antes de salvar.', 4500);
+    return;
+  }
+  if (!usuarioAtual) {
+    showToast('⚠️', 'Você precisa estar logado para salvar a ficha.', 4000);
+    return;
+  }
+  salvarFichaNaLista(usuarioAtual, montarFichaParaSalvar(nome));
+  showToast('💾', `Ficha de <strong>${nome}</strong> salva!`, 3000);
+}
+
+function salvarFichaSilenciosa() {
+  if (!fichaAtivaChat || !usuarioAtual) return;
+  salvarFichaNaLista(usuarioAtual, montarFichaParaSalvar(fichaAtivaChat));
+}
+
+function carregarFichaNoState(ficha) {
+  state.vita = { ...ficha.state.vita };
+  state.guard = { ...ficha.state.guard };
+  state.energy = { ...ficha.state.energy };
+  state.mana = { ...ficha.state.mana };
+  state.pp = { ...ficha.state.pp };
+  state._energyGuardBonus = ficha.state._energyGuardBonus || 0;
+  state._manaVitaPenalty = ficha.state._manaVitaPenalty || 0;
+  state._turnoSemAtacar = ficha.state._turnoSemAtacar || 0;
+  state._combateAtivo = ficha.state._combateAtivo || false;
+  state._ataquesSequencia = ficha.state._ataquesSequencia || 0;
+  state._retaliadorUsado = ficha.state._retaliadorUsado || false;
+  state._executorUsado = ficha.state._executorUsado || false;
+  state._condutorUsado = ficha.state._condutorUsado || false;
+  state._economistaUsado = ficha.state._economistaUsado || false;
+  state._rupturaUsada = ficha.state._rupturaUsada || false;
+  state._exaustao = ficha.state._exaustao || false;
+  state._turnosExaustao = ficha.state._turnosExaustao || 0;
+  
+  acoesAtivas = ficha.acoesAtivas || [];
+  renderizarAcoesAtivas();
+  
+  document.getElementById('id-nome').value = ficha.nome;
+  if (document.getElementById('id-vocacao')) document.getElementById('id-vocacao').value = ficha.vocacao || '';
+  if (document.getElementById('id-regiao') && ficha.regiao) {
+    document.getElementById('id-regiao').value = ficha.regiao;
+    if (typeof onRegiaoChange === 'function') onRegiaoChange();
+  }
+  renderScale1();
+  renderScale2();
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVEGAÇÃO ENTRE TELAS
+// ═══════════════════════════════════════════════════════
+
+function irPara(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const map = { portal: 'view-portal', cadastro: 'view-cadastro', login: 'view-login', boasvindas: 'view-boasvindas', ficha: 'view-ficha', chat: 'view-chat' };
+  document.getElementById(map[viewId]).classList.add('active');
+  if (viewId === 'cadastro') setTimeout(() => document.getElementById('input-user').focus(), 350);
+  if (viewId === 'login') setTimeout(() => document.getElementById('login-user').focus(), 350);
+}
+
+function mostrarToast(msg, ms) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), ms || 3000);
+}
+
+async function criarPerfil() {
+  const usuario = document.getElementById('input-user').value.trim();
+  const senha = document.getElementById('input-pass').value;
+  const erroEl = document.getElementById('cadastro-error');
+  erroEl.textContent = '';
+  if (usuario.length < 2) { erroEl.textContent = 'O nome de usuário precisa de ao menos 2 caracteres.'; return; }
+  if (senha.length < 4) { erroEl.textContent = 'A senha precisa de ao menos 4 caracteres.'; return; }
+  const existente = await buscarPerfil(usuario);
+  if (existente) { erroEl.textContent = 'Já existe um perfil com esse nome neste dispositivo. Tente "Entrar".'; return; }
+  await salvarPerfil(usuario, senha);
+  socket.emit('entrar-na-campanha', { usuario, senha });
+  entrarComSessao(usuario);
+}
+
+async function tentarEntrar() {
+  const btn = document.getElementById('btn-entrar');
+  if (btn.classList.contains('btn-disabled')) return;
+  const ultimo = await buscarUltimoUsuario();
+  document.getElementById('login-sub').textContent = ultimo ? `Último acesso: ${ultimo}` : 'Acesse seu perfil salvo';
+  if (ultimo) document.getElementById('login-user').value = ultimo;
+  irPara('login');
+}
+
+async function fazerLogin() {
+  const usuario = document.getElementById('login-user').value.trim();
+  const senha = document.getElementById('login-pass').value;
+  const erroEl = document.getElementById('login-error');
+  erroEl.textContent = '';
+  const perfil = await buscarPerfil(usuario);
+  if (!perfil) { erroEl.textContent = 'Nenhum perfil encontrado com esse nome.'; return; }
+  if (perfil.senha !== senha) { erroEl.textContent = 'Senha incorreta.'; return; }
+  localStorage.setItem(STORAGE_LAST_USER, usuario);
+  socket.emit('entrar-na-campanha', { usuario, senha });
+  entrarComSessao(usuario);
+}
+
+const fraseBoasVindas = [
+  "Que a sorte guie seus dados.", "Sua aventura espera por você.", "Hármina lembra de você.",
+  "Pronto para continuar a história?", "O mestre já está de olho em você."
+];
+
+function entrarComSessao(usuario) {
+  usuarioAtual = usuario;
+  document.getElementById('welcome-name').textContent = usuario;
+  document.getElementById('welcome-phrase').textContent = fraseBoasVindas[Math.floor(Math.random() * fraseBoasVindas.length)];
+  irPara('boasvindas');
+  mostrarToast(`Bem-vindo, <strong>${usuario}</strong>!`);
+}
+
+function sair() {
+  usuarioAtual = null;
+  fichaAtivaChat = null;
+  filaDeStatusPendentes = [];
+  acoesAtivas = [];
+  renderizarAcoesAtivas();
+  const fichaBtn = document.getElementById('ficha-picker-label');
+  if (fichaBtn) fichaBtn.textContent = 'Escolher Ficha';
+  const fichaPickerBtn = document.getElementById('ficha-picker-btn');
+  if (fichaPickerBtn) fichaPickerBtn.classList.remove('is-active');
+  irPara('portal');
+  digitarFrase(frasePortalAleatoria());
+  document.getElementById('input-user').value = '';
+  document.getElementById('input-pass').value = '';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  atualizarBotaoEntrar();
+}
+
+function abrirFicha() {
+  irPara('ficha');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function abrirChat() {
+  irPara('chat');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  initChatSeDronar();
+}
+
+function voltarAoMenu() {
+  irPara('boasvindas');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+async function atualizarBotaoEntrar() {
+  const temPerfil = await existeAlgumPerfil();
+  const btnEntrar = document.getElementById('btn-entrar');
+  const note = document.getElementById('entrar-note');
+  if (temPerfil) {
+    btnEntrar.classList.remove('btn-disabled');
+    if (note) note.remove();
+  } else {
+    btnEntrar.classList.add('btn-disabled');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CHAT / MESA DE RPG
+// ═══════════════════════════════════════════════════════
+
+const socket = io();
+let usuarioAtual = null;
+let fichaAtivaChat = null;
+let filaDeStatusPendentes = [];
+
+const chatState = {
+  mensagens: [],
+  proximoId: 1,
+  novasNaoLidas: 0,
+  estaNoFinal: true,
+  inicializado: false
+};
+
+function initChatSeDronar() {
+  if (chatState.inicializado) return;
+  chatState.inicializado = true;
+  
+  const input = document.getElementById('chat-input');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    sinalizarDigitando();
+  });
+  
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensagemCombate(); // USA A NOVA FUNÇÃO COM GASTO DE ENERGIA
+    }
+  });
+  
+  const msgArea = document.getElementById('chat-messages');
+  msgArea.addEventListener('scroll', () => {
+    const distanciaDoFim = msgArea.scrollHeight - msgArea.scrollTop - msgArea.clientHeight;
+    chatState.estaNoFinal = dist
 
 </script>
 
