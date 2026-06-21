@@ -28,6 +28,7 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 let bancoDeDadosFichas = {};
 let historicoChat = [];
+let boneco = { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
 
 function carregarDados() {
   try {
@@ -36,6 +37,7 @@ function carregarDados() {
       const json = JSON.parse(conteudo);
       bancoDeDadosFichas = json.fichas || {};
       historicoChat = json.historicoChat || [];
+      boneco = json.boneco || { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
       console.log(`📂 Dados carregados: ${Object.keys(bancoDeDadosFichas).length} ficha(s), ${historicoChat.length} mensagem(ns) de chat.`);
     }
   } catch (erro) {
@@ -52,7 +54,7 @@ function salvarDados() {
   if (salvamentoAgendado) clearTimeout(salvamentoAgendado);
   salvamentoAgendado = setTimeout(() => {
     const tmpFile = DATA_FILE + '.tmp';
-    const payload = JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat }, null, 2);
+    const payload = JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat, boneco }, null, 2);
     try {
       // Grava em arquivo temporário e renomeia por cima do original:
       // se o processo cair no meio da gravação, o arquivo original não fica corrompido.
@@ -83,6 +85,110 @@ function escaparHtml(texto) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ═══════════════════════════════════════════
+// BONECO DE TREINO
+// Um "jogador" simples controlado pelo servidor, pra você testar a mecânica
+// de combate sozinho — já que quase ninguém aparece na mesa pra treinar com
+// você. Ele entende as mesmas frases de dano/cura que os jogadores reais
+// usam ("causo 5 de dano", "curo 3 de vida"), aplica o efeito a si mesmo
+// quando a ação parece dirigida a ele (nome citado ou termos genéricos como
+// "inimigo"/"adversário"/"opositor"), revida com um contra-ataque aleatório,
+// e pode ser remontado a qualquer momento com "// resetar boneco".
+// ═══════════════════════════════════════════
+const NOME_BONECO = 'Boneco de Treino';
+
+function detectarMecanica(texto) {
+  let m = texto.match(/(\d+)\s*de\s*dano/i);
+  if (m) return { tipo: 'dano', valor: parseInt(m[1], 10) };
+
+  m = texto.match(/(\d+)\s*de\s*cura/i)
+    || texto.match(/cur[ao]u?\s+(\d+)/i)
+    || texto.match(/recuper[ao]u?\s+(\d+)/i)
+    || texto.match(/restaur[ao]u?\s+(\d+)/i);
+  if (m) return { tipo: 'cura', valor: parseInt(m[1], 10) };
+
+  return null;
+}
+
+// IMPORTANTE: o boneco só reage quando é citado pelo NOME, nunca por termos
+// genéricos ("inimigo", "adversário"...). Esses termos são ambíguos demais
+// pra uma reação automática sem confirmação humana — dois jogadores reais
+// lutando entre si também os usam o tempo todo, e o boneco não pode se
+// meter no combate deles. (Os termos genéricos continuam funcionando
+// normalmente do lado do jogador, onde existe sempre uma confirmação manual
+// antes de aplicar qualquer efeito.)
+function mensagemAlvejaBoneco(texto) {
+  return texto.toLowerCase().includes('boneco');
+}
+
+function aplicarMecanicaNoBoneco(mecanica) {
+  if (mecanica.tipo === 'cura') {
+    boneco.vita.cur = Math.min(boneco.vita.max, boneco.vita.cur + mecanica.valor);
+    return `recebeu ${mecanica.valor} de cura`;
+  }
+  const consumidoGuarda = Math.min(boneco.guard.cur, mecanica.valor);
+  boneco.guard.cur -= consumidoGuarda;
+  const restante = mecanica.valor - consumidoGuarda;
+  const consumidoVita = Math.min(boneco.vita.cur, restante);
+  boneco.vita.cur -= consumidoVita;
+  return `sofreu ${mecanica.valor} de dano`;
+}
+
+function statusBoneco() {
+  return `❤️ ${boneco.vita.cur}/${boneco.vita.max} · 🔰 ${boneco.guard.cur}/${boneco.guard.max}`;
+}
+
+function falaContraAtaqueBoneco() {
+  const dano = 1 + Math.floor(Math.random() * 4); // 1 a 4 de dano
+  const falas = [
+    `O Boneco de Treino revida com um golpe direto no oponente, causando ${dano} de dano.`,
+    `O Boneco de Treino gira e acerta um contra-golpe no adversário, causando ${dano} de dano.`,
+    `Os mecanismos do Boneco de Treino disparam uma lâmina contra o inimigo, causando ${dano} de dano.`
+  ];
+  return falas[Math.floor(Math.random() * falas.length)];
+}
+
+function emitirComoBoneco(texto) {
+  const msg = { nome: NOME_BONECO, texto, tipo: 'normal', timestamp: new Date().toISOString() };
+  historicoChat.push(msg);
+  if (historicoChat.length > MAX_HISTORICO_CHAT) historicoChat.shift();
+  io.emit('chat-mensagem', msg);
+}
+
+function resetarBoneco() {
+  boneco = { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
+  salvarDados();
+}
+
+// Processa uma mensagem de jogador em busca de reações do Boneco de Treino.
+// Roda DEPOIS da mensagem do jogador já ter sido transmitida normalmente.
+function processarReacaoDoBoneco(mensagem) {
+  if (mensagem.tipo === 'ooc' && /resetar\s+boneco/i.test(mensagem.texto)) {
+    resetarBoneco();
+    setTimeout(() => emitirComoBoneco(`O Boneco de Treino foi remontado e está pronto pra apanhar de novo. (${statusBoneco()})`), 400);
+    return;
+  }
+
+  if (mensagem.tipo !== 'normal' || !mensagemAlvejaBoneco(mensagem.texto)) return;
+
+  const mecanica = detectarMecanica(mensagem.texto);
+  if (!mecanica) return;
+
+  const resultado = aplicarMecanicaNoBoneco(mecanica);
+  salvarDados();
+
+  setTimeout(() => {
+    emitirComoBoneco(`O Boneco de Treino ${resultado} (${statusBoneco()}).`);
+
+    if (boneco.vita.cur <= 0) {
+      setTimeout(() => emitirComoBoneco(`O Boneco de Treino se estilhaça e cai, destruído. Escreva "// resetar boneco" para remontá-lo.`), 700);
+    } else if (mecanica.tipo === 'dano') {
+      // Só contra-ataca quando sofre dano, pra não revidar uma cura
+      setTimeout(() => emitirComoBoneco(falaContraAtaqueBoneco()), 900);
+    }
+  }, 700);
 }
 
 // Quando alguém abre o site, o servidor inicia uma conexão em tempo real (Socket)
@@ -179,6 +285,8 @@ io.on('connection', (socket) => {
     salvarDados();
 
     io.emit('chat-mensagem', mensagem);
+
+    processarReacaoDoBoneco(mensagem);
   });
 
   // Ouvintes: indicador de "está digitando"
@@ -218,7 +326,7 @@ http.listen(PORT, () => {
 function encerrarComCuidado() {
   console.log('💾 Salvando dados antes de encerrar...');
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat }, null, 2), 'utf8');
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat, boneco }, null, 2), 'utf8');
   } catch (erro) {
     console.error('⚠️ Falha ao salvar no encerramento:', erro.message);
   }
