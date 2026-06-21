@@ -679,7 +679,13 @@ body::before {
 
 @media (max-width: 620px) {
 
-  .sheet { padding: 1.5rem 1.2rem 2rem; }
+  .sheet { 
+    padding: 1.5rem 1.2rem 2rem; 
+    width: calc(100% - 16px); /* Impede a ficha de vazar da tela */
+    margin: 0 auto;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 2px rgba(139,105,20,0.15), 0 0 0 4px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5); /* Sombra ajustada para não quebrar o layout */
+  }
 
   .identity-grid, .dons-grid, .voc-grid, .poder-meta, .habilidades-grid, .sat-grid, .two-col, .three-col { grid-template-columns: 1fr; }
 
@@ -2592,9 +2598,9 @@ const state = {
 
   pp: { max: 12, cur: 12 },
 
-  _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 4 energia = +2 guarda)
+  _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 3 energia = +2 guarda)
 
-  _manаVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 4 magia = -1 vita)
+  _manаVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 3 magia = -1 vita)
 
 };
 
@@ -2700,7 +2706,7 @@ function increaseVita() {
 
   state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
-  // REGRA: cada 4 vita consome 2 de energia máxima obrigatoriamente
+  // REGRA: cada 3 vita consome 2 de energia máxima obrigatoriamente
   applyVitaEnergyConstraint(state.vita.max);
 
   // REGRA: energia pode ter bônus de guarda → re-renderizar
@@ -2741,11 +2747,11 @@ function renderDerivedS1(v, g) {
 
   const container = document.getElementById('scale1-derived'); container.innerHTML = '';
 
-  const dmgBonus = Math.floor(v / 4);
+  const dmgBonus = Math.floor(v / 3);
 
-  if (dmgBonus > 0) container.innerHTML += `<div class="derived-chip">❤️ +<span>${dmgBonus}</span> dano C.A.C</div>`;
+  if (dmgBonus > 0) container.innerHTML += `<div class="derived-chip">❤️ +<span>${dmgBonus}</span> dano físico (s/ arma)</div>`;
 
-  const energyCost = Math.floor(v / 4) * 2;
+  const energyCost = Math.floor(v / 3) * 2;
 
   if (energyCost > 0) container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️→⚡ –<span>${energyCost}</span> Energia Máx. (obrigatório)</div>`;
 
@@ -2753,10 +2759,11 @@ function renderDerivedS1(v, g) {
 
 function applyVitaEnergyConstraint(v) {
 
-  // REGRA: cada 4 pontos de vitalidade consomem obrigatoriamente 2 de energia máxima.
-  // Isso REDUZ o teto disponível da Escala 2. Ex: vita=4 → energia só pode ir até 8; vita=8 → até 6.
+  // REGRA: cada 3 pontos de vitalidade consomem obrigatoriamente 2 de energia máxima.
+  // Isso REDUZ o teto disponível da Escala 2. Ex: vita=3 → energia só pode ir até 8; vita=6 → até 6.
 
-  const penalty = Math.floor(v / 4) * 2;
+  const penalty = Math.floor(v / 3) * 2;
+
 
   const energyCeiling = 10 - penalty; // Energia máxima permitida (teto)
 
@@ -2778,7 +2785,7 @@ function applyVitaEnergyConstraint(v) {
 
     renderScale2Silent();
 
-    showToast('⚠️', `Vitalidade ${v} obriga –<strong>${penalty} de Energia máx.</strong> (regra: cada 4 Vita = –2 Energia máx.)`, 5000);
+    showToast('⚠️', `Vitalidade ${v} obriga –<strong>${penalty} de Energia máx.</strong> (regra: cada 3 Vita = –2 Energia máx.)`, 5000);
 
   }
 
@@ -2846,8 +2853,8 @@ function renderScale2Silent() { renderScale2(); }
 
 function increaseEnergy() {
 
-  // Teto de energia: limitado pela penalidade da vita (cada 4 vita = -2 energia máx)
-  const energyPenalty = Math.floor(state.vita.max / 4) * 2;
+  // Teto de energia: limitado pela penalidade da vita (cada 3 vita = -2 energia máx)
+  const energyPenalty = Math.floor(state.vita.max / 3) * 2;
   const energyCeiling = 10 - energyPenalty;
 
   if (state.energy.max >= energyCeiling) {
@@ -2904,14 +2911,13 @@ function renderDerivedS2(e, m) {
 
   const container = document.getElementById('scale2-derived'); container.innerHTML = '';
 
-  const energyTiers = Math.floor(e / 4);
+  const energyTiers = Math.floor(e / 3);
 
   if (energyTiers > 0) {
-    container.innerHTML += `<div class="derived-chip">⚡ +<span>${energyTiers}</span> reg. energia/turno</div>`;
     container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡→🔰 +<span>${energyTiers * 2}</span> Guarda máx. (aplicado)</div>`;
   }
 
-  const manaTiers = Math.floor(m / 4);
+  const manaTiers = Math.floor(m / 3);
 
   if (manaTiers > 0) {
     container.innerHTML += `<div class="derived-chip">🔮 +<span>${manaTiers}</span> dano mágico</div>`;
@@ -2919,6 +2925,7 @@ function renderDerivedS2(e, m) {
   }
 
 }
+
 
 // ═══════════════════════════════════════════
 
@@ -2928,7 +2935,7 @@ function renderDerivedS2(e, m) {
 
 function applyEnergyGuardBonus() {
 
-  // REGRA: Para cada 4 de energia, +2 de Guarda máxima.
+  // REGRA: Para cada 3 de energia, +2 de Guarda máxima.
   // Calculamos o bônus BASE de energia (sem contar bônus anteriores de energia)
   // A guarda base é o que está em state.guard.max MENOS qualquer bônus atual de energia.
   // Para simplificar: recalculamos guard.max = base_guard + energyBonus
@@ -2936,7 +2943,7 @@ function applyEnergyGuardBonus() {
   // Mas guard.max pode ter sido alterado pelo usuário, então usamos uma abordagem incremental:
   // Guardamos o bônus anterior e atualizamos.
 
-  const energyTiers = Math.floor(state.energy.max / 4);
+  const energyTiers = Math.floor(state.energy.max / 3);
   const prevBonus = state._energyGuardBonus || 0;
   const newBonus = energyTiers * 2;
 
@@ -2964,9 +2971,9 @@ function applyEnergyGuardBonus() {
 
 function applyManaVitaPenalty() {
 
-  // REGRA: cada 4 pontos de Magia consomem obrigatoriamente 1 de vitalidade máxima.
+  // REGRA: cada 3 pontos de Magia consomem obrigatoriamente 1 de vitalidade máxima.
 
-  const manaTiers = Math.floor(state.mana.max / 4);
+  const manaTiers = Math.floor(state.mana.max / 3);
 
   const prevPenalty = state._manаVitaPenalty || 0;
 
