@@ -267,7 +267,7 @@ body::before {
 
 /* @import já incluído globalmente no topo do documento unificado */
 
-#view-ficha, #view-ficha *, #view-ficha *::before, #view-ficha *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:where(#view-ficha, #view-ficha *, #view-ficha *::before, #view-ficha *::after) { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* :root mesclado no bloco global do documento unificado (topo da folha de estilos) */
 
@@ -929,6 +929,24 @@ body::before {
   font-size: 0.78rem; border: 1px dashed rgba(255,255,255,0.12); border-radius: 10px;
 }
 .msg-row.ooc-msg .msg-author { color: var(--chat-muted); opacity: 0.7; }
+
+/* Mensagem privada (#pv) — visível só para remetente e destinatário */
+.msg-row.pv-msg { max-width: 80%; }
+.msg-row.pv-msg .msg-bubble {
+  background: rgba(138,43,226,0.18);
+  border: 1px solid rgba(180,90,255,0.35);
+  border-radius: 10px;
+  color: #d8b4fe;
+  font-size: 0.85rem;
+  position: relative;
+}
+.msg-row.pv-msg .msg-author { color: #b97eff; }
+.pv-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em;
+  background: rgba(138,43,226,0.35); color: #d8b4fe;
+  border-radius: 6px; padding: 0.1rem 0.4rem; margin-bottom: 0.3rem;
+}
 
 .msg-time {
   font-family: var(--mono); font-size: 0.58rem; color: var(--chat-muted);
@@ -2262,7 +2280,7 @@ body::before {
 
   <div class="section-label" style="justify-content: flex-start;">Inventário</div>
 
-  <div id="inv-info-bar" style="display:flex; justify-content:space-between; align-items:center; margin: -0.3rem 0 0.6rem; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.05em; color: var(--burnish);">
+  <div id="inv-info-bar" style="display:flex; flex-wrap: wrap; justify-content:space-between; align-items:center; gap: 0.2rem 0.6rem; margin: -0.3rem 0 0.6rem; font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.05em; color: var(--burnish);">
 
     <span style="color:#999; font-style:italic; font-family:var(--body); font-size:0.68rem;">Capacidade de carga determinada pela Vitalidade</span>
 
@@ -2588,9 +2606,9 @@ function showToast(icon, html, duration = 4000) {
 
 const state = {
 
-  vita: { max: 6, cur: 6 },
+  vita: { max: 4, cur: 4 },
 
-  guard: { max: 4, cur: 4 },
+  guard: { max: 6, cur: 6 },
 
   energy: { max: 8, cur: 8 },
 
@@ -2600,7 +2618,7 @@ const state = {
 
   _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 3 energia = +2 guarda)
 
-  _manаVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 3 magia = -1 vita)
+  _manaVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 3 magia = -1 vita)
 
 };
 
@@ -2706,11 +2724,9 @@ function increaseVita() {
 
   state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
-  // REGRA: cada 3 vita consome 2 de energia máxima obrigatoriamente
-  applyVitaEnergyConstraint(state.vita.max);
-
-  // REGRA: energia pode ter bônus de guarda → re-renderizar
-  applyEnergyGuardBonus();
+  // REGRAS: cada 3 vita consome 2 de energia máx., energia pode dar bônus
+  // de guarda, magia realocada pode penalizar vita — reconcilia tudo.
+  reconciliarEscalas();
 
   renderScale1();
 
@@ -2732,10 +2748,8 @@ function increaseGuard() {
 
   state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
-  // Ao reduzir vita, penalidade de energia pode diminuir
-  applyVitaEnergyConstraint(state.vita.max);
-
-  applyEnergyGuardBonus();
+  // Ao reduzir vita, penalidade de energia pode diminuir, e mais
+  reconciliarEscalas();
 
   renderScale1();
 
@@ -2782,6 +2796,11 @@ function applyVitaEnergyConstraint(v) {
     state.energy.cur = Math.min(state.energy.cur, state.energy.max);
 
     state.mana.cur = Math.min(state.mana.cur, state.mana.max);
+
+    // A magia realocada pode ter cruzado um novo patamar de 3 — aplica
+    // já aqui a penalidade obrigatória de magia sobre vita, na mesma
+    // passada, ou o total da Escala 1 (Vita+Guarda) se descalibra do 10.
+    applyManaVitaPenalty();
 
     renderScale2Silent();
 
@@ -2872,8 +2891,11 @@ function increaseEnergy() {
 
   state.mana.cur = Math.min(state.mana.cur, state.mana.max);
 
-  // Aplicar bônus de guarda por energia
-  applyEnergyGuardBonus();
+  // Magia caiu: se isso cruzou um patamar de 3 para baixo, a penalidade
+  // de vita correspondente precisa ser liberada agora (senão a vita fica
+  // presa baixa mesmo depois que a magia que a penalizava já diminuiu).
+  // Energia subiu: reaplica também o bônus de guarda correspondente.
+  reconciliarEscalas();
 
   renderScale2();
 
@@ -2899,9 +2921,9 @@ function increaseMana() {
 
   state.energy.cur = Math.min(state.energy.cur, state.energy.max);
 
-  // Aplicar penalidade da magia sobre vita e bônus de guarda por energia
-  applyManaVitaPenalty();
-  applyEnergyGuardBonus();
+  // Magia subiu: pode cruzar patamar de 3 e penalizar vita; energia caiu:
+  // pode perder bônus de guarda — reconcilia todos os efeitos cruzados.
+  reconciliarEscalas();
 
   renderScale2(); showToast('🔮', `Magia Máxima <strong>${state.mana.max}</strong> / Energia <strong>${state.energy.max}</strong>.`);
 
@@ -2975,7 +2997,7 @@ function applyManaVitaPenalty() {
 
   const manaTiers = Math.floor(state.mana.max / 3);
 
-  const prevPenalty = state._manаVitaPenalty || 0;
+  const prevPenalty = state._manaVitaPenalty || 0;
 
   const newPenalty = manaTiers;
 
@@ -2997,7 +3019,7 @@ function applyManaVitaPenalty() {
 
     state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
-    state._manаVitaPenalty = newPenalty;
+    state._manaVitaPenalty = newPenalty;
 
     renderScale1();
 
@@ -3009,6 +3031,29 @@ function applyManaVitaPenalty() {
 
   }
 
+}
+
+// ═══════════════════════════════════════════
+// RECONCILIAÇÃO — roda as 3 regras cruzadas (Vita↔Energia teto,
+// Energia→Guarda bônus, Magia→Vita penalidade) repetidas vezes até
+// nenhuma mudar mais nada. Necessário porque ajustar uma pode reabrir
+// a necessidade de ajustar outra (efeito cascata): ex. remover a
+// penalidade de magia aumenta vita, o que pode tornar o teto de
+// energia mais apertado de novo. Chamar sempre esta função em vez das
+// 3 individualmente garante que o total da Escala 1 (Vita+Guarda) e da
+// Escala 2 (Energia+Magia) nunca fica fora de sincronia.
+// ═══════════════════════════════════════════
+function reconciliarEscalas() {
+  for (let i = 0; i < 8; i++) {
+    const antes = [state.vita.max, state.guard.max, state.energy.max, state.mana.max, state._energyGuardBonus, state._manaVitaPenalty].join('|');
+
+    applyVitaEnergyConstraint(state.vita.max);
+    applyEnergyGuardBonus();
+    applyManaVitaPenalty();
+
+    const depois = [state.vita.max, state.guard.max, state.energy.max, state.mana.max, state._energyGuardBonus, state._manaVitaPenalty].join('|');
+    if (antes === depois) break;
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -3353,6 +3398,10 @@ buildInventory();
 
 buildEvol();
 
+// Reconcilia os bônus/penalidades derivados com os valores iniciais de
+// state (vita/energia/magia) ANTES da primeira renderização.
+reconciliarEscalas();
+
 renderScale1();
 
 renderScale2();
@@ -3417,7 +3466,7 @@ renderPP();
           </div>
           <div class="composer-hint" id="composer-hint">Use <code>//</code> para falar fora do personagem · ações com <code>"N de dano"</code> ou <code>"N de cura"</code> mirando um nome ou "inimigo/adversário" são reconhecidas automaticamente · fale com o <strong>Boneco de Treino</strong> pra testar sozinho</div>
           <div class="composer-row">
-            <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação ou fala…" rows="1"></textarea>
+            <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação… · // para fora do personagem · #pv(nome) para sussurro privado" rows="1"></textarea>
             <button class="composer-send" id="composer-send" onclick="enviarMensagem()" title="Enviar">➤</button>
           </div>
         </div>
@@ -3652,7 +3701,11 @@ function carregarFichaNoState(ficha) {
   state.mana = { ...ficha.state.mana };
   state.pp = { ...ficha.state.pp };
   state._energyGuardBonus = ficha.state._energyGuardBonus || 0;
-  state._manаVitaPenalty = ficha.state._manаVitaPenalty || 0;
+  state._manaVitaPenalty = ficha.state._manaVitaPenalty || ficha.state._manаVitaPenalty || 0;
+
+  // Reconcilia caso a ficha tenha sido salva antes desta correção (ou
+  // editada manualmente) e esteja com os derivados desatualizados.
+  reconciliarEscalas();
 
   document.getElementById('id-nome').value = ficha.nome;
   if (document.getElementById('id-vocacao')) document.getElementById('id-vocacao').value = ficha.vocacao || '';
@@ -3952,6 +4005,49 @@ function initChatSeDronar() {
 }
 
 // ─── Envio de mensagens (vai para o servidor; a renderização acontece quando ele ecoa de volta) ───
+// ─── Mensagem Privada: detecção do comando #pv(nome) ───
+// Retorna { destinatario, texto } ou null.
+// Fuzzy: normaliza acentos, ignora maiúsculas/minúsculas, tolera 1 letra
+// extra ou faltando no prefixo (#pv / #pvv / #pv  etc.)
+function detectarComandoPV(rawTexto) {
+  const t = rawTexto.trim();
+
+  // Normaliza: remove acentos e coloca em minúsculas (usado só para detecção)
+  const normalizar = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const norm = normalizar(t);
+
+  // ── Detecção Fuzzy do Cabeçalho ──────────────────────────────────────────
+  // Aceita variações de "#pv(": maiúsculas, espaços, letras extras ou
+  // faltando, caracteres parecidos (ex: "# pv (", "#Pv(", "#pvv(", "#p v(").
+  // Regex: # opcional-espaço p opcional-espaço v 0-2chars-extras espaços (
+  const matchCabecalho = norm.match(/^#\s*p{1,2}\s*v{1,2}\s*[a-z]?\s*\(/);
+  if (!matchCabecalho) return null;
+
+  // ── Extração do destinatário e mensagem ──────────────────────────────────
+  const inicio = t.indexOf('(');
+  // Parêntese de fechamento é opcional (aceita "#pv(Ana oi tudo bem?" sem ')')
+  const fim = t.indexOf(')', inicio);
+  const temFechamento = fim > inicio;
+
+  let destinatario, mensagem;
+
+  if (temFechamento) {
+    destinatario = t.slice(inicio + 1, fim).trim();
+    mensagem = t.slice(fim + 1).trim();
+  } else {
+    // Sem ')': primeiro token após '(' é o nome, o resto é a mensagem
+    const apos = t.slice(inicio + 1).trim();
+    const espaco = apos.search(/\s/);
+    if (espaco < 0) return null; // só tem o nome, sem mensagem
+    destinatario = apos.slice(0, espaco).trim();
+    mensagem = apos.slice(espaco).trim();
+  }
+
+  if (!destinatario || !mensagem) return null;
+
+  return { destinatario, mensagem };
+}
+
 function enviarMensagem() {
   const input = document.getElementById('chat-input');
   const texto = input.value;
@@ -3962,8 +4058,36 @@ function enviarMensagem() {
     return;
   }
 
-  const ehForaDePersonagem = texto.trimStart().startsWith('//');
-  const textoLimpo = ehForaDePersonagem ? texto.trimStart().slice(2).trim() : texto.trim();
+  // ── Fora de Personagem (OOC) ────────────────────────────────────────────
+  // Aceita: //, ///, / / (espaço entre barras), //  (espaços extras)
+  const textoTrimmed = texto.trimStart();
+  const ehForaDePersonagem = /^\/\s*\//.test(textoTrimmed);
+
+  // ── Mensagem Privada ──────────────────────────────────────────────────────
+  // Detecta #pv(nome) com tolerância a maiúsculas, acentos e 1 letra errada.
+  const pv = detectarComandoPV(texto);
+  if (pv) {
+    // Mostra localmente para o remetente antes do eco do servidor
+    adicionarMensagem({
+      autor: usuarioAtual,
+      texto: pv.mensagem,
+      tipo: 'pv',
+      mine: true,
+      pvDestinatario: pv.destinatario
+    });
+    socket.emit('chat-privado', {
+      de: usuarioAtual,
+      para: pv.destinatario,
+      texto: pv.mensagem
+    });
+    input.value = '';
+    input.style.height = 'auto';
+    pararDeDigitar();
+    socket.emit('parou-de-digitar', { nome: usuarioAtual });
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+  const textoLimpo = ehForaDePersonagem ? textoTrimmed.replace(/^\/\s*\/{1,2}\s*/, '').trim() : texto.trim();
   if (!textoLimpo) { input.value = ''; return; }
 
   // Se a mensagem não é OOC, registra na fila um retrato do status atual
@@ -3990,16 +4114,17 @@ function enviarMensagem() {
   socket.emit('parou-de-digitar', { nome: usuarioAtual });
 }
 
-function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot }) {
+function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot, pvDestinatario }) {
   const msg = {
     id: chatState.proximoId++,
     autor, texto, tipo, mine, statusSnapshot: statusSnapshot || null,
+    pvDestinatario: pvDestinatario || null,
     timestamp: new Date()
   };
   chatState.mensagens.push(msg);
   renderizarMensagem(msg);
 
-  // Ações (tudo que não é // ) entram no registro lateral
+  // Ações (tudo que não é // ou PV) entram no registro lateral
   if (tipo === 'normal') {
     adicionarAoRegistro(msg);
   }
@@ -4029,6 +4154,7 @@ function renderizarMensagem(msg) {
 
   let classes = 'msg-row ' + (msg.mine ? 'mine' : 'theirs');
   if (msg.tipo === 'ooc') classes += ' ooc-msg';
+  if (msg.tipo === 'pv')  classes += ' pv-msg';
 
   row.className = classes;
 
@@ -4048,6 +4174,7 @@ function renderizarMensagem(msg) {
 
   row.innerHTML = `
     <div class="msg-author">${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}</div>
+    ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ${msg.mine ? '→ ' + escaparHtml(msg.pvDestinatario || '') : '← ' + escaparHtml(msg.autor)}</div>` : ''}
     ${statusHtml}
     <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
     <div class="msg-time">${formatarHora(msg.timestamp)}</div>
@@ -4069,17 +4196,49 @@ function renderizarMensagem(msg) {
 
 // Termos genéricos que, em uma ação de combate, indicam que o autor está se
 // referindo ao oponente sem citar um nome específico.
-const TERMOS_OPONENTE_GENERICOS = ['inimigo', 'inimiga', 'adversário', 'adversária', 'oponente', 'opositor', 'opositora', 'alvo'];
+const TERMOS_OPONENTE_GENERICOS = [
+  'inimigo', 'inimiga', 'inimigos', 'inimigas',
+  'adversário', 'adversária', 'adversario', 'adversaria',
+  'oponente', 'oponentes',
+  'opositor', 'opositora',
+  'alvo', 'alvos',
+  'criatura', 'criaturas',
+  'monstro', 'monstros',
+  'chefe', 'chefão', 'chefao',
+  'boss', 'vilão', 'vilao', 'vilã', 'vila',
+  'guardião', 'guardiao',
+  'você', 'voce', 'vc', 'tu'
+];
 
 // Tenta identificar dano ou cura numa frase de ação. Retorna { tipo, valor } ou null.
 function detectarMecanica(texto) {
-  let m = texto.match(/(\d+)\s*de\s*dano/i);
+  // Helper: normaliza sem acentos, para buscas fuzzy
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const t = norm(texto);
+
+  // ── DANO ──────────────────────────────────────────────────────────────────
+  // Aceita: "X de dano", "dano de X", "sofreu X", "causou X de dano",
+  // "infligiu X", "recebe X de dano", variações sem acento (dano, dans, dam).
+  let m = t.match(/(\d+)\s*de\s*dan[oa]?s?/) ||
+           t.match(/dan[oa]?s?\s+(?:de\s+)?(\d+)/) ||
+           t.match(/infligiu\s+(\d+)/) ||
+           t.match(/caus[ao]u?\s+(\d+)/) ||
+           t.match(/sofre[uo]?\s+(\d+)/) ||
+           texto.match(/(\d+)\s*de\s*dano/i);
   if (m) return { tipo: 'dano', valor: parseInt(m[1], 10) };
 
-  m = texto.match(/(\d+)\s*de\s*cura/i)
-    || texto.match(/cur[ao]u?\s+(\d+)/i)
-    || texto.match(/recuper[ao]u?\s+(\d+)/i)
-    || texto.match(/restaur[ao]u?\s+(\d+)/i);
+  // ── CURA ──────────────────────────────────────────────────────────────────
+  // Aceita: "X de cura", "curou X", "recuperou X", "restaurou X", "sana X",
+  // "recebe X de cura", variações sem acento (cura, kura, cure).
+  m = t.match(/(\d+)\s*de\s*cur[aao]?s?/) ||
+      t.match(/cur[ao]u?\s+(\d+)/) ||
+      t.match(/recuper[ao]u?\s+(\d+)/) ||
+      t.match(/restaur[ao]u?\s+(\d+)/) ||
+      t.match(/san[ao]u?\s+(\d+)/) ||
+      texto.match(/(\d+)\s*de\s*cura/i) ||
+      texto.match(/cur[ao]u?\s+(\d+)/i) ||
+      texto.match(/recuper[ao]u?\s+(\d+)/i) ||
+      texto.match(/restaur[ao]u?\s+(\d+)/i);
   if (m) return { tipo: 'cura', valor: parseInt(m[1], 10) };
 
   return null;
@@ -4291,6 +4450,17 @@ socket.on('chat-sistema', (dados) => {
   adicionarMensagem({ autor: 'Mestre', texto: dados.texto, tipo: 'normal', mine: false });
 });
 
+// Mensagem privada: só chega para o destinatário (o servidor filtra)
+socket.on('chat-privado', (dados) => {
+  adicionarMensagem({
+    autor: dados.de,
+    texto: dados.texto,
+    tipo: 'pv',
+    mine: false,
+    pvDestinatario: usuarioAtual
+  });
+});
+
 socket.on('presenca-atualizada', ({ total }) => {
   const el = document.getElementById('chat-presence');
   if (el) el.textContent = total === 1 ? '1 aventureiro à mesa' : `${total} aventureiros à mesa`;
@@ -4308,4 +4478,3 @@ socket.on('parou-de-digitar', (dados) => {
 
 </body>
 </html>
-
