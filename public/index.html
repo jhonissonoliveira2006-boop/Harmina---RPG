@@ -1071,15 +1071,65 @@ body::before {
 .msg-dano-prompt {
   font-family: var(--mono); font-size: 0.68rem; color: #f3d4d0;
   background: rgba(180,40,30,0.18); border: 1px solid rgba(217,83,79,0.4); border-radius: 8px;
-  padding: 0.4rem 0.6rem; margin-top: 0.3rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.4rem 0.6rem; margin-top: 0.3rem; display: flex; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;
+  flex-direction: column;
+}
+.msg-dano-prompt .prompt-header {
+  display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 600;
+  color: #f3a0a0; margin-bottom: 0.2rem;
+}
+.msg-dano-prompt .prompt-options {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
 }
 .msg-dano-prompt button {
-  font-family: var(--mono); font-size: 0.62rem; border-radius: 5px; padding: 0.25rem 0.55rem;
+  font-family: var(--mono); font-size: 0.62rem; border-radius: 5px; padding: 0.28rem 0.6rem;
   cursor: pointer; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff;
+  transition: background 0.15s, opacity 0.15s;
 }
 .msg-dano-prompt button.aplicar { background: #b4281e; border-color: #b4281e; }
 .msg-dano-prompt button.aplicar:hover { background: #d9342a; }
-.msg-dano-prompt button.ignorar:hover { background: rgba(255,255,255,0.14); }
+.msg-dano-prompt button.ignorar { background: transparent; border-color: rgba(255,255,255,0.15); color: #aaa; }
+.msg-dano-prompt button.ignorar:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.msg-dano-prompt button.opt-action {
+  background: rgba(59,107,214,0.18); border-color: rgba(100,160,255,0.35); color: #aac4ff;
+}
+.msg-dano-prompt button.opt-action:hover:not(:disabled) { background: rgba(59,107,214,0.4); }
+.msg-dano-prompt button.opt-action:disabled {
+  opacity: 0.38; cursor: not-allowed; filter: grayscale(0.6);
+  border-color: rgba(120,120,120,0.3); color: #777; background: rgba(80,80,80,0.1);
+}
+.msg-dano-prompt .opt-cost {
+  display: inline-block; margin-left: 0.2rem; opacity: 0.75; font-size: 0.56rem;
+}
+/* ─── Active Combat Action Tag ─── */
+#active-combat-action {
+  display: none; align-items: center; gap: 0.4rem;
+  background: rgba(59,107,214,0.22); border: 1px solid rgba(100,160,255,0.4); border-radius: 7px;
+  padding: 0.28rem 0.5rem 0.28rem 0.6rem; margin-bottom: 0.3rem;
+  font-family: var(--mono); font-size: 0.62rem; color: #aac4ff;
+  flex-wrap: wrap;
+}
+#active-combat-action.visible { display: flex; }
+#active-combat-action .aca-label { flex: 1; }
+#active-combat-action .aca-cost { opacity: 0.75; }
+#active-combat-action .aca-remove {
+  background: none; border: none; color: #f07878; cursor: pointer;
+  font-size: 0.8rem; line-height: 1; padding: 0 0.1rem; margin-left: 0.2rem;
+}
+#active-combat-action .aca-remove:hover { color: #ff4444; }
+/* ─── Energy cost toast indicator ─── */
+.energy-spent-badge {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-family: var(--mono); font-size: 0.58rem; color: #facc15;
+  background: rgba(250,204,21,0.12); border: 1px solid rgba(250,204,21,0.3);
+  border-radius: 5px; padding: 0.1rem 0.35rem; margin-top: 0.15rem;
+}
+/* ─── Regen indicator on chat ─── */
+.regen-indicator {
+  font-family: var(--mono); font-size: 0.58rem; color: #6ee7b7;
+  background: rgba(110,231,183,0.1); border: 1px solid rgba(110,231,183,0.25);
+  border-radius: 5px; padding: 0.1rem 0.35rem; display: inline-flex; align-items: center; gap: 0.2rem;
+}
 
 @media (max-width: 600px) {
   .chat-shell { max-width: 100%; }
@@ -3465,6 +3515,12 @@ renderPP();
             <button class="ficha-picker-btn" id="ficha-picker-btn" onclick="abrirSeletorFicha()">🗂️ <span id="ficha-picker-label">Escolher Ficha</span></button>
           </div>
           <div class="composer-hint" id="composer-hint">Use <code>//</code> para falar fora do personagem · ações com <code>"N de dano"</code> ou <code>"N de cura"</code> mirando um nome ou "inimigo/adversário" são reconhecidas automaticamente · fale com o <strong>Boneco de Treino</strong> pra testar sozinho</div>
+          <!-- Ação de combate ativa (ex: Esquiva, Postura Defensiva) exibida como tag acima do input -->
+          <div id="active-combat-action">
+            <span class="aca-label" id="aca-label-text"></span>
+            <span class="aca-cost" id="aca-label-cost"></span>
+            <button class="aca-remove" onclick="desativarAcaoCombate()" title="Remover ação ativa">✕</button>
+          </div>
           <div class="composer-row">
             <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação… · // para fora do personagem · #pv(nome) para sussurro privado" rows="1"></textarea>
             <button class="composer-send" id="composer-send" onclick="enviarMensagem()" title="Enviar">➤</button>
@@ -3951,6 +4007,14 @@ let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz l
 let fichaAtivaChat = null; // nome da ficha escolhida para narrar no chat (null = nenhuma)
 let filaDeStatusPendentes = []; // snapshots de status aguardando a confirmação (echo) do servidor, na ordem de envio
 
+// ─── Estado de Combate por Turno ────────────────────────────────────────────
+// atacouEsteTurno: true se o jogador enviou ao menos 1 mensagem de ataque
+//   neste turno (para o cálculo de regen: +1 sempre, +2 se não atacou).
+// acaoCombateAtiva: ação defensiva/especial salva pelo jogador para aplicar
+//   quando o próximo dano chegar (ex: Esquiva, Postura Defensiva...).
+let atacouEsteTurno = false;
+let acaoCombateAtiva = null; // { id, label, custo, efeitoFn } | null
+
 // ─── Estado do chat ───
 const chatState = {
   mensagens: [],      // { id, autor, texto, tipo: 'normal'|'ooc', mine, timestamp }
@@ -4048,6 +4112,280 @@ function detectarComandoPV(rawTexto) {
   return { destinatario, mensagem };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE COMBATE — ENERGIA / REGEN / AÇÕES ATIVAS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Detecta se uma mensagem narrativa do personagem representa um ataque —
+// i.e., uma ação ofensiva que deveria gastar 1 de Energia.
+// Palavras-chave de ataque físico, mágico ou especial.
+function detectarAtaque(texto) {
+  const t = texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const PALAVRAS_ATAQUE = [
+    'atac', 'golpe', 'golpei', 'golpea', 'golpear', 'soco', 'chute', 'chutei',
+    'cortei', 'corta', 'cortar', 'perfurei', 'perfura', 'esfaqueei', 'esfaquea',
+    'disparo', 'disparei', 'lanc', 'arremess', 'flechei', 'flecha',
+    'conjurei', 'conjura', 'conjurou', 'invoquei', 'invoca', 'lancei feitico',
+    'cast', 'golpe magico', 'feitico', 'magia', 'spell',
+    'desferiu', 'desfere', 'acerta', 'acertei', 'dou', 'dei um golpe',
+    'bato', 'bati', 'bate', 'quebro', 'quebrei', 'esmago', 'esmaguei',
+    'arranho', 'mordo', 'mordi', 'morda',
+    'derrub', 'empurro', 'empurrei', 'choco', 'colido', 'colidi',
+    'explodir', 'explodi', 'explosao', 'detonou'
+  ];
+  return PALAVRAS_ATAQUE.some(k => t.includes(k));
+}
+
+// Gasta 1 de Energia quando o personagem ataca, exibe badge de custo e marca
+// o turno como "atacou" (o que reduz o regen de energia ao final do turno).
+function gastarEnergiaDeAtaque() {
+  if (!fichaAtivaChat) return;
+  if (state.energy.cur <= 0) {
+    mostrarToast('😮‍💨 Sem energia! Seu personagem entra em <strong>exaustão</strong> e perde o próximo turno.', 5000);
+    return;
+  }
+  state.energy.cur = Math.max(0, state.energy.cur - 1);
+  renderScale2();
+  salvarFichaSilenciosa();
+  atacouEsteTurno = true;
+  mostrarToast(`⚡ −1 Energia pelo ataque. Energia atual: <strong>${state.energy.cur}/${state.energy.max}</strong>.`, 3500);
+}
+
+// Regeneração passiva de Energia ao final de cada "turno" do jogador.
+// Regra: +1 sempre. +2 se não atacou neste turno.
+// Chamada automaticamente cada vez que o jogador envia uma mensagem normal.
+function regenEnergiaFinaldeTurno() {
+  if (!fichaAtivaChat) return;
+  const ganho = atacouEsteTurno ? 1 : 2;
+  const antes = state.energy.cur;
+  state.energy.cur = Math.min(state.energy.max, state.energy.cur + ganho);
+  const efetivo = state.energy.cur - antes;
+  if (efetivo > 0) {
+    renderScale2();
+    salvarFichaSilenciosa();
+    // Badge sutil no chat para o próprio jogador saber
+    const chatEl = document.getElementById('chat-messages');
+    if (chatEl) {
+      const badge = document.createElement('div');
+      badge.className = 'regen-indicator';
+      badge.style.cssText = 'margin: 0.15rem auto 0.1rem; display: table;';
+      badge.innerHTML = `⚡ +${efetivo} Energia${atacouEsteTurno ? ' (regen base)' : ' (não atacou → +2)'}`;
+      chatEl.appendChild(badge);
+    }
+  }
+  // Reset do flag de ataque para o próximo turno
+  atacouEsteTurno = false;
+}
+
+// ─── Ação de Combate Ativa ───────────────────────────────────────────────────
+// Quando o jogador escolhe uma ação defensiva/especial no prompt de dano,
+// ela fica "salva" como uma tag acima do campo de escrita. A ação é aplicada
+// automaticamente no próximo dano que chegar (ou pode ser cancelada com ✕).
+
+function ativarAcaoCombate(id, label, custo, resumo) {
+  acaoCombateAtiva = { id, label, custo, resumo };
+  const tag = document.getElementById('active-combat-action');
+  const labelEl = document.getElementById('aca-label-text');
+  const costEl = document.getElementById('aca-label-cost');
+  if (!tag) return;
+  labelEl.textContent = `🛡️ ${label}`;
+  costEl.textContent = custo ? `· Custo ao aplicar: ${custo}` : '';
+  tag.classList.add('visible');
+}
+
+function desativarAcaoCombate() {
+  acaoCombateAtiva = null;
+  const tag = document.getElementById('active-combat-action');
+  if (tag) tag.classList.remove('visible');
+}
+
+// ─── Catálogo de Opções de Resposta a Dano ───────────────────────────────────
+// Retorna a lista de ações disponíveis para reagir a um ataque recebido.
+// Cada ação tem:
+//   id, icon, label, custo (exibido no botão), descricao (tooltip),
+//   verificar(dano) → true se o personagem tem os recursos para usar,
+//   aplicar(dano, msgId, autor) → executa o efeito mecânico.
+
+function obterOpcoesReaçãoADano(danoRecebido) {
+  const s = state;
+  return [
+
+    // ── 1. Receber o Dano (guarda absorve) ──────────────────────────────────
+    {
+      id: 'receber',
+      icon: '💢', label: 'Receber o dano',
+      custo: '', descricao: 'A Guarda absorve o dano primeiro; o excedente vai para a Vitalidade.',
+      verificar: () => true,
+      aplicar: (dano, msgId, autor) => {
+        const cg = Math.min(s.guard.cur, dano);
+        s.guard.cur -= cg;
+        const sobra = dano - cg;
+        const cv = Math.min(s.vita.cur, sobra);
+        s.vita.cur -= cv;
+        let resumo = cg > 0 ? `🔰 −${cg} Guarda` : '';
+        if (cv > 0) resumo += (resumo ? ' · ' : '') + `❤️ −${cv} Vita`;
+        if (sobra > cg) resumo += ' ⚠️ Dano excedeu Vitalidade';
+        renderScale1(); salvarFichaSilenciosa();
+        mostrarToast(`⚔️ ${dano} de dano de <strong>${escaparHtml(autor)}</strong>: ${resumo}.${s.vita.cur<=0?' 💀 Vitalidade zerada!':''}`, 6000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 2. Receber dano diretamente na Vita (ignora Guarda) ─────────────────
+    {
+      id: 'dano-direto',
+      icon: '❤️', label: 'Dano direto à Vitalidade',
+      custo: '', descricao: 'Recebe o dano direto, preservando a Guarda para outros momentos.',
+      verificar: () => true,
+      aplicar: (dano, msgId, autor) => {
+        const cv = Math.min(s.vita.cur, dano);
+        s.vita.cur -= cv;
+        renderScale1(); salvarFichaSilenciosa();
+        mostrarToast(`❤️ ${dano} de dano direto de <strong>${escaparHtml(autor)}</strong>: −${cv} Vita.${s.vita.cur<=0?' 💀 Vitalidade zerada!':''}`, 6000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 3. Esquiva ───────────────────────────────────────────────────────────
+    // Regra: gasta 1 energia a mais que o custo estimado do ataque (mínimo 2).
+    // Estimamos o custo do ataque como 1 para ataques simples.
+    {
+      id: 'esquiva',
+      icon: '🌀', label: 'Esquiva',
+      custo: `2⚡`, descricao: `Esquiva de ação simples custa 2 de Energia (custo do ataque +1). Elimina todo o dano.`,
+      verificar: () => s.energy.cur >= 2,
+      aplicar: (dano, msgId, autor) => {
+        s.energy.cur = Math.max(0, s.energy.cur - 2);
+        renderScale2(); salvarFichaSilenciosa();
+        mostrarToast(`🌀 Esquiva de ${dano} de dano! −2 Energia. Energia: <strong>${s.energy.cur}/${s.energy.max}</strong>.`, 5000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 4. Postura Defensiva ─────────────────────────────────────────────────
+    // +1 Defesa (abstrata, narrativa). Cada 6 dano barrado = 1 dano direto à Vita.
+    // Defesa extra-muscular: floor(vita.max/3) de defesa extra ao se defender.
+    {
+      id: 'postura-def',
+      icon: '🛡️', label: 'Postura Defensiva',
+      custo: '0⚡', descricao: `Sem custo de Energia. Reduz o dano recebido por (1 + piso(Vita/3)) pontos. A cada 6 dano bloqueado, 1 vai direto à Vita.`,
+      verificar: () => true,
+      aplicar: (dano, msgId, autor) => {
+        const bonusMusc = Math.floor(s.vita.max / 3);
+        const defTotal = 1 + bonusMusc;
+        const danoAposDefesa = Math.max(0, dano - defTotal);
+        // Regra: a cada 6 barrados, 1 de dano direto
+        const bloqueado = dano - danoAposDefesa;
+        const vazamento = Math.floor(bloqueado / 6);
+        const danoFinal = danoAposDefesa + vazamento;
+        const cg = Math.min(s.guard.cur, danoFinal);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, danoFinal - cg);
+        s.vita.cur -= cv;
+        renderScale1(); salvarFichaSilenciosa();
+        mostrarToast(`🛡️ Postura Defensiva! Defesa ${defTotal} (1 base + ${bonusMusc} muscular). Dano bloqueado: ${bloqueado}. Vazamento: ${vazamento}. Dano final: ${danoFinal}. 🔰 −${cg} Guarda · ❤️ −${cv} Vita.`, 7000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 5. Defesa de Guarda ──────────────────────────────────────────────────
+    // Gasta 1 Guarda atual → ganha +2 de Defesa temporária contra este ataque.
+    {
+      id: 'defesa-guarda',
+      icon: '🔰', label: 'Defesa de Guarda',
+      custo: '1🔰', descricao: 'Gasta 1 ponto de Guarda para ganhar +2 de Defesa temporária contra este ataque.',
+      verificar: () => s.guard.cur >= 1,
+      aplicar: (dano, msgId, autor) => {
+        s.guard.cur = Math.max(0, s.guard.cur - 1); // gasta 1 guarda
+        const defBonus = 2;
+        const danoReduzido = Math.max(0, dano - defBonus);
+        const cg = Math.min(s.guard.cur, danoReduzido);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, danoReduzido - cg);
+        s.vita.cur -= cv;
+        renderScale1(); salvarFichaSilenciosa();
+        mostrarToast(`🔰 Defesa de Guarda! −1 Guarda (custo) → +2 Defesa. Dano de ${dano} reduzido para ${danoReduzido}. 🔰 −${cg+1} Guarda · ❤️ −${cv} Vita.`, 6000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 6. Interceptação de Ataque ───────────────────────────────────────────
+    // Usa o dano de sua próxima ação para barrar o dano do oponente.
+    // Para corpo a corpo. Requer ao menos 1 de Energia (para atacar de volta).
+    {
+      id: 'interceptar',
+      icon: '⚔️🛡️', label: 'Interceptar Ataque',
+      custo: '1⚡', descricao: 'Usa o dano do seu próximo ataque para barrar este dano (corpo a corpo / magia vs magia). Gasta 1 Energia.',
+      verificar: () => s.energy.cur >= 1,
+      aplicar: (dano, msgId, autor) => {
+        s.energy.cur = Math.max(0, s.energy.cur - 1);
+        // O dano da interceptação é narrativo — o jogador define quanto cancela.
+        // Mecanicamente, aplicamos metade do dano (o excedente não barrado).
+        const barrado = Math.ceil(dano / 2);
+        const restante = dano - barrado;
+        const cg = Math.min(s.guard.cur, restante);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, restante - cg);
+        s.vita.cur -= cv;
+        renderScale1(); renderScale2(); salvarFichaSilenciosa();
+        mostrarToast(`⚔️ Interceptação! −1⚡. Barrou ${barrado} de dano. Restante ${restante}: 🔰 −${cg} Guarda · ❤️ −${cv} Vita.`, 6000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 7. Sacrifício Defensivo ──────────────────────────────────────────────
+    // Sacrifica 1 ponto de Vita Máxima → +3 Defesa contra este ataque.
+    // Limite: 2 usos por combate (o código só bloqueia se vita.max cair para 3).
+    {
+      id: 'sacrificio-def',
+      icon: '🩸', label: 'Sacrifício Defensivo',
+      custo: '1 Vita Máx.', descricao: 'Sacrifica 1 ponto de Vitalidade Máxima permanente (até o fim do combate) → +3 Defesa contra este ataque. Máx. 2x por combate.',
+      verificar: () => s.vita.max > 3, // Vita mínima é 3
+      aplicar: (dano, msgId, autor) => {
+        s.vita.max = Math.max(3, s.vita.max - 1);
+        s.vita.cur = Math.min(s.vita.cur, s.vita.max);
+        const defBonus = 3;
+        const danoReduzido = Math.max(0, dano - defBonus);
+        const cg = Math.min(s.guard.cur, danoReduzido);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, danoReduzido - cg);
+        s.vita.cur -= cv;
+        reconciliarEscalas(); renderScale1(); salvarFichaSilenciosa();
+        mostrarToast(`🩸 Sacrifício Defensivo! Vita Máx. −1 → ${s.vita.max}. +3 Defesa. Dano de ${dano} → ${danoReduzido}. 🔰 −${cg} Guarda · ❤️ −${cv} Vita.`, 7000);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 8. Canalizar Foco (não é defesa, mas é reação possível) ─────────────
+    // O personagem usa a reação para focar em vez de defender — próximo
+    // ataque custará −1 e causará +2 dano. Mas recebe o dano normalmente.
+    {
+      id: 'canalizar-foco',
+      icon: '🌟', label: 'Canalizar Foco',
+      custo: 'recebe dano', descricao: 'Recebe o dano normalmente, mas acumula Foco: próximo ataque custa −1 e causa +2 dano.',
+      verificar: () => true,
+      aplicar: (dano, msgId, autor) => {
+        // Aplica o dano normalmente
+        const cg = Math.min(s.guard.cur, dano);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, dano - cg);
+        s.vita.cur -= cv;
+        renderScale1(); salvarFichaSilenciosa();
+        // Ativa o bônus de foco para o próximo ataque
+        ativarAcaoCombate('foco-ativo', 'Foco acumulado — próximo ataque: −1⚡ e +2 dano', '', '−1⚡ +2 dano no próximo ataque');
+        mostrarToast(`🌟 Foco canalizado! Dano recebido normalmente (🔰−${cg} · ❤️−${cv}). Próximo ataque: −1⚡ e +2 dano.`, 7000);
+        fecharPromptDano(msgId);
+      }
+    },
+  ];
+}
+
+function fecharPromptDano(msgId) {
+  const el = document.getElementById(`mec-prompt-${msgId}`);
+  if (el) el.remove();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 function enviarMensagem() {
   const input = document.getElementById('chat-input');
   const texto = input.value;
@@ -4059,42 +4397,47 @@ function enviarMensagem() {
   }
 
   // ── Fora de Personagem (OOC) ────────────────────────────────────────────
-  // Aceita: //, ///, / / (espaço entre barras), //  (espaços extras)
   const textoTrimmed = texto.trimStart();
   const ehForaDePersonagem = /^\/\s*\//.test(textoTrimmed);
 
   // ── Mensagem Privada ──────────────────────────────────────────────────────
-  // Detecta #pv(nome) com tolerância a maiúsculas, acentos e 1 letra errada.
   const pv = detectarComandoPV(texto);
   if (pv) {
-    // Mostra localmente para o remetente antes do eco do servidor
-    adicionarMensagem({
-      autor: usuarioAtual,
-      texto: pv.mensagem,
-      tipo: 'pv',
-      mine: true,
-      pvDestinatario: pv.destinatario
-    });
-    socket.emit('chat-privado', {
-      de: usuarioAtual,
-      para: pv.destinatario,
-      texto: pv.mensagem
-    });
-    input.value = '';
-    input.style.height = 'auto';
-    pararDeDigitar();
-    socket.emit('parou-de-digitar', { nome: usuarioAtual });
+    adicionarMensagem({ autor: usuarioAtual, texto: pv.mensagem, tipo: 'pv', mine: true, pvDestinatario: pv.destinatario });
+    socket.emit('chat-privado', { de: usuarioAtual, para: pv.destinatario, texto: pv.mensagem });
+    input.value = ''; input.style.height = 'auto';
+    pararDeDigitar(); socket.emit('parou-de-digitar', { nome: usuarioAtual });
     return;
   }
-  // ─────────────────────────────────────────────────────────────────────────
+
   const textoLimpo = ehForaDePersonagem ? textoTrimmed.replace(/^\/\s*\/{1,2}\s*/, '').trim() : texto.trim();
   if (!textoLimpo) { input.value = ''; return; }
 
-  // Se a mensagem não é OOC, registra na fila um retrato do status atual
-  // (ou null, se não houver ficha escolhida) — isso mantém a fila alinhada
-  // 1-para-1 com os ecos que o servidor vai mandar de volta, na mesma ordem.
-  // Só o próprio jogador vê isso: é um dado puramente local, nunca enviado
-  // ao servidor nem aos outros jogadores.
+  // ── Mecânicas de Combate (apenas mensagens em personagem com ficha ativa) ─
+  if (!ehForaDePersonagem && fichaAtivaChat) {
+    const ehAtaque = detectarAtaque(textoLimpo);
+
+    if (ehAtaque) {
+      // ── Foco ativo: próximo ataque custa −1⚡ e causa +2 dano ─────────────
+      let custoEnergia = 1;
+      if (acaoCombateAtiva && acaoCombateAtiva.id === 'foco-ativo') {
+        custoEnergia = Math.max(0, 1 - 1); // custo reduzido em 1 (pode chegar a 0)
+        desativarAcaoCombate();
+        mostrarToast('🌟 Foco aplicado! Custo do ataque: 0⚡ · +2 dano bônus.', 4000);
+      }
+      // ── Gasta Energia pelo ataque ─────────────────────────────────────────
+      if (custoEnergia > 0) {
+        gastarEnergiaDeAtaque();
+      } else {
+        atacouEsteTurno = true; // mesmo sem gastar, marca que atacou
+      }
+    }
+
+    // ── Regen de Energia ao final do turno (sempre que envia msg em personagem) ──
+    regenEnergiaFinaldeTurno();
+  }
+
+  // ── Snapshot de status (para exibição ao lado das msgs — captura APÓS as mecânicas) ──
   if (!ehForaDePersonagem) {
     filaDeStatusPendentes.push(fichaAtivaChat ? {
       vita: { ...state.vita }, guard: { ...state.guard },
@@ -4257,7 +4600,7 @@ function mensagemMeAlveja(texto) {
 
 function tentarAdicionarPromptDeMecanica(msg) {
   if (msg.mine || msg.tipo !== 'normal' || !fichaAtivaChat) return;
-  if (document.getElementById(`mec-prompt-${msg.id}`)) return; // já existe
+  if (document.getElementById(`mec-prompt-${msg.id}`)) return;
 
   const mecanica = detectarMecanica(msg.texto);
   if (!mecanica) return;
@@ -4266,53 +4609,84 @@ function tentarAdicionarPromptDeMecanica(msg) {
   const row = document.getElementById(`msg-row-${msg.id}`);
   if (!row) return;
 
-  const ehDano = mecanica.tipo === 'dano';
   const prompt = document.createElement('div');
   prompt.className = 'msg-dano-prompt';
   prompt.id = `mec-prompt-${msg.id}`;
-  const rotuloAcao = ehDano ? 'Sofri esse dano' : 'Recebi essa cura';
-  const rotuloDetectado = ehDano ? `<strong>${mecanica.valor}</strong> de dano` : `<strong>${mecanica.valor}</strong> de cura`;
-  prompt.innerHTML = `${ehDano ? '⚔️' : '✨'} Ação de <strong>${escaparHtml(msg.autor)}</strong> indica ${rotuloDetectado}.
-    <button class="aplicar" onclick="aplicarMecanicaDoChat(${msg.id}, '${mecanica.tipo}', ${mecanica.valor}, '${msg.autor.replace(/'/g, "\\'")}')">${rotuloAcao}</button>
-    <button class="ignorar" onclick="document.getElementById('mec-prompt-${msg.id}').remove()">Ignorar</button>`;
+
+  const autorSafe = escaparHtml(msg.autor);
+  const autorEscaped = msg.autor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+  if (mecanica.tipo === 'cura') {
+    // ── Cura: botão simples ────────────────────────────────────────────────
+    prompt.innerHTML = `
+      <div class="prompt-header">✨ <strong>${autorSafe}</strong> indica <strong>${mecanica.valor}</strong> de cura.</div>
+      <div class="prompt-options">
+        <button class="aplicar" onclick="aplicarCuraDoChat(${msg.id}, ${mecanica.valor}, '${autorEscaped}')">✨ Receber a cura</button>
+        <button class="ignorar" onclick="fecharPromptDano(${msg.id})">Ignorar</button>
+      </div>`;
+  } else {
+    // ── Dano: painel completo de opções ───────────────────────────────────
+    const opcoes = obterOpcoesReaçãoADano(mecanica.valor);
+    const temAcaoAtiva = acaoCombateAtiva !== null;
+
+    let botoesHtml = '';
+    for (const op of opcoes) {
+      const disponivel = op.verificar();
+      const desabilitado = disponivel ? '' : 'disabled';
+      const classeExtra = disponivel ? 'opt-action' : 'opt-action';
+      const destaque = (temAcaoAtiva && acaoCombateAtiva.id === op.id)
+        ? 'style="border-color:#7bc4f7;background:rgba(59,107,214,0.35);"' : '';
+      const custoHtml = op.custo ? `<span class="opt-cost">[${op.custo}]</span>` : '';
+      const titulo = op.descricao.replace(/"/g, '&quot;');
+      botoesHtml += `<button class="${classeExtra}" ${desabilitado} ${destaque}
+        title="${titulo}"
+        onclick="opcaoReacaoDano(${msg.id}, '${op.id}', ${mecanica.valor}, '${autorEscaped}')"
+      >${op.icon} ${escaparHtml(op.label)}${custoHtml}</button>`;
+    }
+
+    // Se há ação ativa compatível, adiciona aviso de destaque
+    const avisoAcaoAtiva = temAcaoAtiva
+      ? `<div style="font-size:0.6rem;color:#7bc4f7;margin-bottom:0.2rem;">🛡️ Ação ativa: <strong>${escaparHtml(acaoCombateAtiva.label)}</strong> — destaque em azul.</div>`
+      : '';
+
+    prompt.innerHTML = `
+      <div class="prompt-header">⚔️ <strong>${autorSafe}</strong> causa <strong>${mecanica.valor}</strong> de dano. Como reagir?</div>
+      ${avisoAcaoAtiva}
+      <div class="prompt-options">${botoesHtml}</div>
+      <div class="prompt-options" style="margin-top:0.25rem;">
+        <button class="ignorar" onclick="fecharPromptDano(${msg.id})">Ignorar</button>
+      </div>`;
+  }
+
   row.appendChild(prompt);
 }
 
-// Aplica dano ou cura detectados na ficha ativa.
-// Dano: desconta primeiro da Guarda, e o excedente (se houver) é descontado
-// da Vitalidade — a Guarda absorve o dano antes da Vitalidade ser afetada.
-// Cura: restaura Vitalidade, até o máximo.
-function aplicarMecanicaDoChat(msgId, tipo, valor, autorOrigem) {
+// Aplica cura detectada na ficha ativa.
+function aplicarCuraDoChat(msgId, valor, autorOrigem) {
+  if (!fichaAtivaChat) return;
+  const antes = state.vita.cur;
+  state.vita.cur = Math.min(state.vita.max, state.vita.cur + valor);
+  const efetivo = state.vita.cur - antes;
+  renderScale1(); salvarFichaSilenciosa();
+  mostrarToast(`✨ ${valor} de cura de <strong>${escaparHtml(autorOrigem)}</strong>: ❤️ +${efetivo} Vitalidade.`, 5000);
+  fecharPromptDano(msgId);
+}
+
+// Executa a opção de reação escolhida pelo jogador.
+// Busca a opção pelo id no catálogo e chama seu .aplicar().
+function opcaoReacaoDano(msgId, opId, dano, autorOrigem) {
   if (!fichaAtivaChat) return;
 
-  let mensagemToast;
-
-  if (tipo === 'cura') {
-    const antes = state.vita.cur;
-    state.vita.cur = Math.min(state.vita.max, state.vita.cur + valor);
-    const efetivo = state.vita.cur - antes;
-    mensagemToast = `✨ ${valor} de cura de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ❤️ +${efetivo} Vitalidade.`;
-  } else {
-    const consumidoGuarda = Math.min(state.guard.cur, valor);
-    state.guard.cur -= consumidoGuarda;
-    const restante = valor - consumidoGuarda;
-    const consumidoVita = Math.min(state.vita.cur, restante);
-    state.vita.cur -= consumidoVita;
-
-    let resumo = `🔰 −${consumidoGuarda} Guarda`;
-    if (consumidoVita > 0) resumo += ` · ❤️ −${consumidoVita} Vitalidade`;
-    mensagemToast = `⚔️ ${valor} de dano de <strong>${escaparHtml(autorOrigem)}</strong> aplicado em <strong>${escaparHtml(fichaAtivaChat)}</strong>: ${resumo}.`;
-    if (state.vita.cur <= 0) {
-      mensagemToast += ` 💀 <strong>${escaparHtml(fichaAtivaChat)}</strong> está com a Vitalidade zerada!`;
-    }
+  // Se o jogador tinha uma ação ativa pendente e escolheu usá-la agora, limpa.
+  if (acaoCombateAtiva && acaoCombateAtiva.id === opId) {
+    desativarAcaoCombate();
   }
 
-  renderScale1();
-  salvarFichaSilenciosa();
-  mostrarToast(mensagemToast, 6000);
+  const opcoes = obterOpcoesReaçãoADano(dano);
+  const op = opcoes.find(o => o.id === opId);
+  if (!op) return;
 
-  const prompt = document.getElementById(`mec-prompt-${msgId}`);
-  if (prompt) prompt.remove();
+  op.aplicar(dano, msgId, autorOrigem);
 }
 
 
