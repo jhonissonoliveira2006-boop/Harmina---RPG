@@ -306,6 +306,11 @@ io.on('connection', (socket) => {
   });
 });
 
+socket.on('desafio-combate', ({de, para}) => ...)
+socket.on('resposta-desafio', ({de, para, aceito}) => ...)
+socket.on('encerrar-combate', ({jogador1, jogador2}) => ...)
+socket.on('solicitar-presenca-lista', () => ...)
+
 // Rota simples de status — útil para serviços de monitoramento (ex.: UptimeRobot)
 // manterem o projeto acordado no Glitch e para você checar rapidamente se está no ar.
 app.get('/health', (req, res) => {
@@ -335,7 +340,3 @@ function encerrarComCuidado() {
 process.on('SIGINT', encerrarComCuidado);
 process.on('SIGTERM', encerrarComCuidado);
 
-socket.on('desafio-combate', ({de, para}) => ...)
-socket.on('resposta-desafio', ({de, para, aceito}) => ...)
-socket.on('encerrar-combate', ({jogador1, jogador2}) => ...)
-socket.on('solicitar-presenca-lista', () => ...)
