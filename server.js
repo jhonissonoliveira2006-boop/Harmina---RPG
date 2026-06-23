@@ -7,28 +7,31 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-// Não expõe qual framework o servidor usa (boa prática básica de segurança)
 app.disable('x-powered-by');
-
-// Informa ao servidor para rodar os seus arquivos de interface (HTML) da pasta 'public'
 app.use(express.static('public'));
 
 // ═══════════════════════════════════════════
 // PERSISTÊNCIA EM DISCO
-// Tudo isso antes vivia só em memória (let bancoDeDadosFichas = {}), o que
-// significa que cada vez que o Glitch reiniciasse ou "dormisse" o projeto,
-// TODAS as fichas e senhas cadastradas eram perdidas. Agora gravamos em
-// um arquivo JSON na pasta /data, que sobrevive a reinícios.
 // ═══════════════════════════════════════════
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'fichas.json');
-const MAX_HISTORICO_CHAT = 50; // quantas mensagens recentes guardamos para quem entra depois
+const MAX_HISTORICO_CHAT = 50;
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 let bancoDeDadosFichas = {};
 let historicoChat = [];
-let boneco = { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
+
+// Estado do Boneco — agora inclui energia e foco para mecânicas inteligentes
+let boneco = {
+  vita:    { max: 8, cur: 8 },
+  guard:   { max: 6, cur: 6 },
+  energy:  { max: 6, cur: 6 },
+  focoAtivo:      false,
+  emCombate:      false,
+  atacouUltimoTurno: false,
+  turno:   0
+};
 
 function carregarDados() {
   try {
@@ -36,12 +39,16 @@ function carregarDados() {
       const conteudo = fs.readFileSync(DATA_FILE, 'utf8');
       const json = JSON.parse(conteudo);
       bancoDeDadosFichas = json.fichas || {};
-      historicoChat = json.historicoChat || [];
-      boneco = json.boneco || { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
-      console.log(`📂 Dados carregados: ${Object.keys(bancoDeDadosFichas).length} ficha(s), ${historicoChat.length} mensagem(ns) de chat.`);
+      historicoChat     = json.historicoChat || [];
+      if (json.boneco) {
+        boneco.vita  = json.boneco.vita  || boneco.vita;
+        boneco.guard = json.boneco.guard || boneco.guard;
+        boneco.energy = json.boneco.energy || boneco.energy;
+      }
+      console.log(`📂 Dados carregados: ${Object.keys(bancoDeDadosFichas).length} ficha(s), ${historicoChat.length} mensagem(ns).`);
     }
   } catch (erro) {
-    console.error('⚠️ Não foi possível carregar data/fichas.json, iniciando vazio:', erro.message);
+    console.error('⚠️ Não foi possível carregar dados:', erro.message);
     bancoDeDadosFichas = {};
     historicoChat = [];
   }
@@ -49,15 +56,15 @@ function carregarDados() {
 
 let salvamentoAgendado = null;
 function salvarDados() {
-  // "Debounce": se várias mudanças chegarem em sequência rápida, salva só uma vez,
-  // evitando gravar no disco a cada tecla digitada.
   if (salvamentoAgendado) clearTimeout(salvamentoAgendado);
   salvamentoAgendado = setTimeout(() => {
     const tmpFile = DATA_FILE + '.tmp';
-    const payload = JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat, boneco }, null, 2);
+    const payload = JSON.stringify({
+      fichas: bancoDeDadosFichas,
+      historicoChat,
+      boneco: { vita: boneco.vita, guard: boneco.guard, energy: boneco.energy }
+    }, null, 2);
     try {
-      // Grava em arquivo temporário e renomeia por cima do original:
-      // se o processo cair no meio da gravação, o arquivo original não fica corrompido.
       fs.writeFileSync(tmpFile, payload, 'utf8');
       fs.renameSync(tmpFile, DATA_FILE);
     } catch (erro) {
@@ -69,10 +76,7 @@ function salvarDados() {
 carregarDados();
 
 // ═══════════════════════════════════════════
-// VALIDAÇÃO DE ENTRADA
-// O servidor antigo confiava 100% no que o cliente mandava. Qualquer
-// pessoa podia, por exemplo, mandar `usuario: null` e travar o servidor,
-// ou mandar uma ficha de 50MB e estourar a memória.
+// VALIDAÇÃO
 // ═══════════════════════════════════════════
 function textoValido(valor, tamanhoMax) {
   return typeof valor === 'string' && valor.trim().length > 0 && valor.length <= tamanhoMax;
@@ -88,18 +92,45 @@ function escaparHtml(texto) {
 }
 
 // ═══════════════════════════════════════════
-// BONECO DE TREINO
-// Um "jogador" simples controlado pelo servidor, pra você testar a mecânica
-// de combate sozinho — já que quase ninguém aparece na mesa pra treinar com
-// você. Ele entende as mesmas frases de dano/cura que os jogadores reais
-// usam ("causo 5 de dano", "curo 3 de vida"), aplica o efeito a si mesmo
-// quando a ação parece dirigida a ele (nome citado ou termos genéricos como
-// "inimigo"/"adversário"/"opositor"), revida com um contra-ataque aleatório,
-// e pode ser remontado a qualquer momento com "// resetar boneco".
+// MAPA DE SOCKETS — username (lowercase) → socket
+// Necessário para: mensagens privadas, desafios de combate, lista de presença.
+// ═══════════════════════════════════════════
+const jogadoresSocketMap = new Map();
+
+// ═══════════════════════════════════════════
+// BONECO DE TREINO — MODO INTELIGENTE
+//
+// O Boneco agora usa as mesmas mecânicas do sistema:
+//   • Gasta 1⚡ por ataque normal; 2⚡ para segundo ataque no mesmo turno
+//   • Regen passivo: +1⚡/turno se atacou; +2⚡ se não atacou (foco)
+//   • Reage ao dano de acordo com o estado:
+//       – Guarda alta + energia ok  → recebe normalmente
+//       – Energia ≥ custo_esquiva   → esquiva (gasta custoAtaque+1 energia)
+//       – Guarda zerada ou energia baixa → Postura Defensiva (gratuita)
+//   • Canaliza Foco quando sem energia (turno sem ataque → +2 regen e +2 dano no próximo)
+//   • Faz segundo ataque quando energia ≥ 3 (30% de chance)
+//   • Narra cada ação com status ao final
 // ═══════════════════════════════════════════
 const NOME_BONECO = 'Boneco de Treino';
 
-function detectarMecanica(texto) {
+function resetarBoneco() {
+  boneco = {
+    vita:    { max: 8, cur: 8 },
+    guard:   { max: 6, cur: 6 },
+    energy:  { max: 6, cur: 6 },
+    focoAtivo: false,
+    emCombate: false,
+    atacouUltimoTurno: false,
+    turno: 0
+  };
+  salvarDados();
+}
+
+function statusBoneco() {
+  return `❤️ ${boneco.vita.cur}/${boneco.vita.max} · 🔰 ${boneco.guard.cur}/${boneco.guard.max} · ⚡ ${boneco.energy.cur}/${boneco.energy.max}`;
+}
+
+function detectarMecanicaServidor(texto) {
   let m = texto.match(/(\d+)\s*de\s*dano/i);
   if (m) return { tipo: 'dano', valor: parseInt(m[1], 10) };
 
@@ -112,42 +143,103 @@ function detectarMecanica(texto) {
   return null;
 }
 
-// IMPORTANTE: o boneco só reage quando é citado pelo NOME, nunca por termos
-// genéricos ("inimigo", "adversário"...). Esses termos são ambíguos demais
-// pra uma reação automática sem confirmação humana — dois jogadores reais
-// lutando entre si também os usam o tempo todo, e o boneco não pode se
-// meter no combate deles. (Os termos genéricos continuam funcionando
-// normalmente do lado do jogador, onde existe sempre uma confirmação manual
-// antes de aplicar qualquer efeito.)
 function mensagemAlvejaBoneco(texto) {
   return texto.toLowerCase().includes('boneco');
 }
 
-function aplicarMecanicaNoBoneco(mecanica) {
-  if (mecanica.tipo === 'cura') {
-    boneco.vita.cur = Math.min(boneco.vita.max, boneco.vita.cur + mecanica.valor);
-    return `recebeu ${mecanica.valor} de cura`;
+// Boneco decide como reagir ao dano recebido, usando mecânicas reais
+function bonecoReceberDano(dano, custoAtaqueOponente) {
+  const b = boneco;
+  const custo = custoAtaqueOponente || 1;
+  const custoEsquiva = custo + 1;
+
+  // Esquiva: se tiver energia suficiente (igual ao do sistema do jogador)
+  if (b.energy.cur >= custoEsquiva && Math.random() < 0.40) {
+    b.energy.cur -= custoEsquiva;
+    return `desvia do ataque (🌀 Esquiva, −${custoEsquiva}⚡)! O dano de ${dano} é completamente evitado.`;
   }
-  const consumidoGuarda = Math.min(boneco.guard.cur, mecanica.valor);
-  boneco.guard.cur -= consumidoGuarda;
-  const restante = mecanica.valor - consumidoGuarda;
-  const consumidoVita = Math.min(boneco.vita.cur, restante);
-  boneco.vita.cur -= consumidoVita;
-  return `sofreu ${mecanica.valor} de dano`;
+
+  // Postura Defensiva: gratuita, mas perde turno de ataque
+  if (b.guard.cur <= 2 || b.energy.cur <= 1) {
+    const defTotal = 1 + Math.floor(b.vita.max / 3);
+    const bloqueado = Math.min(dano, defTotal);
+    const vazamento = Math.floor(bloqueado / 6);
+    const danoFinal = Math.max(0, dano - defTotal) + vazamento;
+    const cg = Math.min(b.guard.cur, danoFinal);
+    b.guard.cur -= cg;
+    const cv = Math.min(b.vita.cur, danoFinal - cg);
+    b.vita.cur -= cv;
+    return `entra em Postura Defensiva (🛡️ Def ${defTotal})! Barrou ${bloqueado}. Dano final: ${danoFinal} (🔰−${cg} · ❤️−${cv}).`;
+  }
+
+  // Receber normalmente (Guarda absorve primeiro)
+  const cg = Math.min(b.guard.cur, dano);
+  b.guard.cur -= cg;
+  const cv = Math.min(b.vita.cur, dano - cg);
+  b.vita.cur -= cv;
+  return `sofreu ${dano} de dano (🔰−${cg} · ❤️−${cv}).`;
 }
 
-function statusBoneco() {
-  return `❤️ ${boneco.vita.cur}/${boneco.vita.max} · 🔰 ${boneco.guard.cur}/${boneco.guard.max}`;
-}
+// Boneco decide se e como vai atacar neste turno
+function bonecoDecidirAtaque() {
+  const b = boneco;
+  b.turno++;
 
-function falaContraAtaqueBoneco() {
-  const dano = 1 + Math.floor(Math.random() * 4); // 1 a 4 de dano
+  // Regen de energia (espelha a regra do jogador)
+  const regenE = b.atacouUltimoTurno ? 1 : 2;
+  b.energy.cur = Math.min(b.energy.max, b.energy.cur + regenE);
+  // Regen passivo de guarda (1/turno, narrativo)
+  b.guard.cur = Math.min(b.guard.max, b.guard.cur + 1);
+  b.atacouUltimoTurno = false;
+
+  // KO
+  if (b.vita.cur <= 0) return null;
+
+  // Sem energia → Canalizar Foco (não ataca, ganha bônus no próximo turno)
+  if (b.energy.cur < 1) {
+    b.focoAtivo = true;
+    return {
+      tipo: 'foco',
+      fala: `O Boneco de Treino não possui energia para atacar e 🌟 canaliza seu foco. Próximo ataque será mais poderoso! (${statusBoneco()})`
+    };
+  }
+
+  // Monta o ataque
+  let dano = 1 + Math.floor(Math.random() * 3); // 1-3 base
+  let extra = '';
+  let custoTotal = 1;
+
+  // Aplica bônus de foco acumulado
+  if (b.focoAtivo) {
+    dano += 2;
+    extra = ' com Foco acumulado (+2 dano)';
+    b.focoAtivo = false;
+  }
+
+  // Segundo ataque: 30% de chance se energia ≥ 3
+  let danoSegundo = 0;
+  if (b.energy.cur >= 3 && Math.random() < 0.30) {
+    danoSegundo = 1 + Math.floor(Math.random() * 2);
+    custoTotal = 2;
+  }
+
+  b.energy.cur = Math.max(0, b.energy.cur - custoTotal);
+  b.atacouUltimoTurno = true;
+
   const falas = [
-    `O Boneco de Treino revida com um golpe direto no oponente, causando ${dano} de dano.`,
-    `O Boneco de Treino gira e acerta um contra-golpe no adversário, causando ${dano} de dano.`,
-    `Os mecanismos do Boneco de Treino disparam uma lâmina contra o inimigo, causando ${dano} de dano.`
+    `O Boneco de Treino avança e desfere um golpe certeiro, causando ${dano} de dano${extra}.`,
+    `O Boneco de Treino gira e acerta um contra-golpe no adversário, causando ${dano} de dano${extra}.`,
+    `Os mecanismos do Boneco disparam uma lâmina, causando ${dano} de dano${extra}.`,
+    `O Boneco de Treino avança com força total, causando ${dano} de dano${extra}.`
   ];
-  return falas[Math.floor(Math.random() * falas.length)];
+
+  let fala = falas[Math.floor(Math.random() * falas.length)];
+  if (danoSegundo > 0) {
+    fala += ` Imediatamente realiza um ⚡⚔️ segundo ataque (−1⚡ extra), causando mais ${danoSegundo} de dano!`;
+  }
+  fala += ` (${statusBoneco()})`;
+
+  return { tipo: 'ataque', fala };
 }
 
 function emitirComoBoneco(texto) {
@@ -157,51 +249,56 @@ function emitirComoBoneco(texto) {
   io.emit('chat-mensagem', msg);
 }
 
-function resetarBoneco() {
-  boneco = { vita: { max: 8, cur: 8 }, guard: { max: 6, cur: 6 } };
-  salvarDados();
-}
-
-// Processa uma mensagem de jogador em busca de reações do Boneco de Treino.
-// Roda DEPOIS da mensagem do jogador já ter sido transmitida normalmente.
 function processarReacaoDoBoneco(mensagem) {
+  // Comando de reset
   if (mensagem.tipo === 'ooc' && /resetar\s+boneco/i.test(mensagem.texto)) {
     resetarBoneco();
-    setTimeout(() => emitirComoBoneco(`O Boneco de Treino foi remontado e está pronto pra apanhar de novo. (${statusBoneco()})`), 400);
+    setTimeout(() => emitirComoBoneco(`O Boneco de Treino foi remontado e está pronto para o combate! (${statusBoneco()})`), 400);
     return;
   }
 
   if (mensagem.tipo !== 'normal' || !mensagemAlvejaBoneco(mensagem.texto)) return;
 
-  const mecanica = detectarMecanica(mensagem.texto);
+  const mecanica = detectarMecanicaServidor(mensagem.texto);
   if (!mecanica) return;
 
-  const resultado = aplicarMecanicaNoBoneco(mecanica);
+  let resultado;
+  if (mecanica.tipo === 'cura') {
+    boneco.vita.cur = Math.min(boneco.vita.max, boneco.vita.cur + mecanica.valor);
+    resultado = `recebeu ${mecanica.valor} de cura (${statusBoneco()})`;
+  } else {
+    resultado = bonecoReceberDano(mecanica.valor, 1);
+    boneco.emCombate = true;
+  }
   salvarDados();
 
   setTimeout(() => {
-    emitirComoBoneco(`O Boneco de Treino ${resultado} (${statusBoneco()}).`);
+    emitirComoBoneco(`O Boneco de Treino ${resultado}`);
 
     if (boneco.vita.cur <= 0) {
-      setTimeout(() => emitirComoBoneco(`O Boneco de Treino se estilhaça e cai, destruído. Escreva "// resetar boneco" para remontá-lo.`), 700);
+      setTimeout(() => {
+        emitirComoBoneco(`O Boneco de Treino se estilhaça e cai, completamente destruído! Use "// resetar boneco" ou o botão no menu (⋮) para remontá-lo.`);
+        boneco.emCombate = false;
+      }, 700);
     } else if (mecanica.tipo === 'dano') {
-      // Só contra-ataca quando sofre dano, pra não revidar uma cura
-      setTimeout(() => emitirComoBoneco(falaContraAtaqueBoneco()), 900);
+      // Contra-ataque após receber dano
+      setTimeout(() => {
+        const acao = bonecoDecidirAtaque();
+        if (acao) emitirComoBoneco(acao.fala);
+      }, 1100);
     }
   }, 700);
 }
 
-// Quando alguém abre o site, o servidor inicia uma conexão em tempo real (Socket)
+// ═══════════════════════════════════════════
+// SOCKET.IO
+// ═══════════════════════════════════════════
 io.on('connection', (socket) => {
-  console.log(`⚔️ Um jogador se conectou ao Hármina RPG! (${io.engine.clientsCount} online)`);
-
-  // Manda pro recém-chegado as últimas mensagens da mesa, pra sala não parecer vazia
+  console.log(`⚔️ Jogador conectado. (${io.engine.clientsCount} online)`);
   socket.emit('historico-chat', historicoChat);
-
-  // Avisa a todos quantos jogadores estão online agora
   io.emit('presenca-atualizada', { total: io.engine.clientsCount });
 
-  // Ouvinte: Quando o jogador faz login e pede a ficha dele
+  // ── Login / Ficha ──────────────────────────────────────────────────────
   socket.on('entrar-na-campanha', (dadosLogin) => {
     if (!dadosLogin || !textoValido(dadosLogin.usuario, 40) || !textoValido(dadosLogin.senha, 200)) {
       socket.emit('login-erro', 'Usuário ou senha inválidos.');
@@ -209,12 +306,11 @@ io.on('connection', (socket) => {
     }
 
     const usuario = dadosLogin.usuario.trim();
-    const chave = usuario.toLowerCase();
+    const chave   = usuario.toLowerCase();
 
-    // Se o jogador nunca entrou antes, cria um registro vazio para ele
     if (!bancoDeDadosFichas[chave]) {
       bancoDeDadosFichas[chave] = {
-        usuario, // nome original (com maiúsculas) para exibir
+        usuario,
         senhaHash: bcrypt.hashSync(dadosLogin.senha, 10),
         state: null
       };
@@ -223,42 +319,32 @@ io.on('connection', (socket) => {
 
     const registro = bancoDeDadosFichas[chave];
 
-    // Compara a senha de forma segura (hash), nunca em texto puro
     if (bcrypt.compareSync(dadosLogin.senha, registro.senhaHash)) {
       socket.nomeJogador = registro.usuario;
+      // Registra no mapa para roteamento privado/combate
+      jogadoresSocketMap.set(chave, socket);
       socket.emit('login-sucesso', registro.state);
     } else {
       socket.emit('login-erro', 'Senha incorreta para este personagem!');
     }
   });
 
-  // Ouvinte: Toda vez que o jogador alterar a vida, guarda, energia ou tomar dano
+  // ── Salvar Ficha ───────────────────────────────────────────────────────
   socket.on('salvar-mudanca-ficha', (novoState) => {
-    if (!socket.nomeJogador) return; // precisa estar logado
-
+    if (!socket.nomeJogador) return;
     const chave = socket.nomeJogador.toLowerCase();
     if (!bancoDeDadosFichas[chave]) return;
-
-    // Limite de tamanho defensivo: evita que um cliente malicioso (ou um bug)
-    // mande um objeto gigantesco e estoure a memória do servidor.
-    const tamanhoAproximado = JSON.stringify(novoState || {}).length;
-    if (tamanhoAproximado > 500_000) {
-      console.warn(`⚠️ Ficha de [${socket.nomeJogador}] rejeitada: payload grande demais (${tamanhoAproximado} bytes).`);
+    const tam = JSON.stringify(novoState || {}).length;
+    if (tam > 500_000) {
+      console.warn(`⚠️ Ficha de [${socket.nomeJogador}] rejeitada: payload grande demais (${tam} bytes).`);
       return;
     }
-
     bancoDeDadosFichas[chave].state = novoState;
     salvarDados();
-    console.log(`💾 Ficha de [${socket.nomeJogador}] atualizada no servidor.`);
-
-    // Avisa os outros jogadores ou o Mestre em tempo real
-    socket.broadcast.emit('jogador-atualizou-status', {
-      jogador: socket.nomeJogador,
-      state: novoState
-    });
+    socket.broadcast.emit('jogador-atualizou-status', { jogador: socket.nomeJogador, state: novoState });
   });
 
-  // Ouvinte: chat da mesa
+  // ── Chat ───────────────────────────────────────────────────────────────
   socket.on('chat-mensagem', (dados) => {
     if (!socket.nomeJogador) {
       socket.emit('login-erro', 'Você precisa estar logado para falar na mesa.');
@@ -266,30 +352,38 @@ io.on('connection', (socket) => {
     }
     if (!dados || !textoValido(dados.texto, 1000)) return;
 
-    // Rate limit simples: no máximo 1 mensagem a cada 400ms por jogador, pra evitar spam/flood
     const agora = Date.now();
     if (socket.ultimaMensagemEm && agora - socket.ultimaMensagemEm < 400) return;
     socket.ultimaMensagemEm = agora;
 
     const mensagem = {
-      // O nome SEMPRE vem da sessão autenticada no servidor, nunca do que o
-      // cliente mandar — antes era possível qualquer jogador se passar por outro.
-      nome: socket.nomeJogador,
-      texto: escaparHtml(dados.texto.trim()),
-      tipo: dados.tipo === 'ooc' ? 'ooc' : 'normal',
+      nome:      socket.nomeJogador,
+      texto:     escaparHtml(dados.texto.trim()),
+      tipo:      dados.tipo === 'ooc' ? 'ooc' : 'normal',
       timestamp: new Date().toISOString()
     };
 
     historicoChat.push(mensagem);
     if (historicoChat.length > MAX_HISTORICO_CHAT) historicoChat.shift();
     salvarDados();
-
     io.emit('chat-mensagem', mensagem);
-
     processarReacaoDoBoneco(mensagem);
   });
 
-  // Ouvintes: indicador de "está digitando"
+  // ── Chat Privado ────────────────────────────────────────────────────────
+  socket.on('chat-privado', ({ para, texto }) => {
+    if (!socket.nomeJogador) return;
+    if (!textoValido(texto, 1000)) return;
+    const alvo = jogadoresSocketMap.get(String(para).toLowerCase());
+    if (alvo) {
+      alvo.emit('chat-privado', {
+        de:    socket.nomeJogador,
+        texto: escaparHtml(texto.trim())
+      });
+    }
+  });
+
+  // ── Digitando ──────────────────────────────────────────────────────────
   socket.on('digitando', () => {
     if (!socket.nomeJogador) return;
     socket.broadcast.emit('digitando', { nome: socket.nomeJogador });
@@ -300,15 +394,63 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('parou-de-digitar', { nome: socket.nomeJogador });
   });
 
+  // ── COMBATE: Desafio ────────────────────────────────────────────────────
+  // Quando o jogador clica em "Convidar para Combate" e seleciona um alvo,
+  // o servidor roteia o desafio para o socket daquele jogador.
+  socket.on('desafio-combate', ({ para }) => {
+    if (!socket.nomeJogador) return;
+    const alvo = jogadoresSocketMap.get(String(para).toLowerCase());
+    if (alvo) {
+      alvo.emit('desafio-recebido', { de: socket.nomeJogador });
+    }
+  });
+
+  // ── COMBATE: Resposta ao Desafio ────────────────────────────────────────
+  // O jogador desafiado responde; o servidor informa ambos e, se aceito,
+  // emite 'combate-iniciado' para os dois, ativando as mecânicas.
+  socket.on('resposta-desafio', ({ para, aceito }) => {
+    if (!socket.nomeJogador) return;
+    const alvo = jogadoresSocketMap.get(String(para).toLowerCase());
+    if (alvo) {
+      alvo.emit('resposta-desafio', { de: socket.nomeJogador, aceito });
+      if (aceito) {
+        socket.emit('combate-iniciado',  { oponente: para });
+        alvo.emit('combate-iniciado',    { oponente: socket.nomeJogador });
+      }
+    }
+  });
+
+  // ── COMBATE: Encerrar ───────────────────────────────────────────────────
+  socket.on('encerrar-combate', ({ jogador2 }) => {
+    if (!socket.nomeJogador) return;
+    const alvo = jogadoresSocketMap.get(String(jogador2).toLowerCase());
+    if (alvo) alvo.emit('combate-encerrado', {});
+  });
+
+  // ── Lista de Jogadores Online (para modal de desafio) ──────────────────
+  socket.on('solicitar-presenca-lista', () => {
+    const lista = [];
+    for (const [, s] of jogadoresSocketMap) {
+      if (s.nomeJogador && s !== socket) lista.push(s.nomeJogador);
+    }
+    socket.emit('presenca-lista', lista);
+  });
+
+  // ── Desconexão ─────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
-    console.log(`👋 ${socket.nomeJogador || 'Um usuário'} saiu da sessão. (${io.engine.clientsCount} online)`);
+    if (socket.nomeJogador) {
+      const chave = socket.nomeJogador.toLowerCase();
+      // Remove do mapa apenas se for este exato socket (evita apagar reconexão)
+      if (jogadoresSocketMap.get(chave) === socket) {
+        jogadoresSocketMap.delete(chave);
+      }
+    }
+    console.log(`👋 ${socket.nomeJogador || 'Anônimo'} saiu. (${io.engine.clientsCount} online)`);
     io.emit('presenca-atualizada', { total: io.engine.clientsCount });
   });
 });
 
-
-// Rota simples de status — útil para serviços de monitoramento (ex.: UptimeRobot)
-// manterem o projeto acordado no Glitch e para você checar rapidamente se está no ar.
+// ── Health Check ────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -317,22 +459,25 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Liga o servidor na porta certa do Glitch
+// ── Iniciar Servidor ────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-  console.log(`🚀 Servidor de Hármina rodando com sucesso na porta ${PORT}!`);
+  console.log(`🚀 Servidor Hármina rodando na porta ${PORT}!`);
 });
 
-// Salva tudo antes de encerrar (ex.: quando o Glitch reinicia o projeto)
+// ── Encerramento Gracioso ───────────────────────────────────────────────────
 function encerrarComCuidado() {
   console.log('💾 Salvando dados antes de encerrar...');
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ fichas: bancoDeDadosFichas, historicoChat, boneco }, null, 2), 'utf8');
+    fs.writeFileSync(DATA_FILE, JSON.stringify({
+      fichas: bancoDeDadosFichas,
+      historicoChat,
+      boneco: { vita: boneco.vita, guard: boneco.guard, energy: boneco.energy }
+    }, null, 2), 'utf8');
   } catch (erro) {
     console.error('⚠️ Falha ao salvar no encerramento:', erro.message);
   }
   process.exit(0);
 }
-process.on('SIGINT', encerrarComCuidado);
+process.on('SIGINT',  encerrarComCuidado);
 process.on('SIGTERM', encerrarComCuidado);
-
