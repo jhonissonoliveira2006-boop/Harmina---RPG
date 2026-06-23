@@ -334,3 +334,8 @@ function encerrarComCuidado() {
 }
 process.on('SIGINT', encerrarComCuidado);
 process.on('SIGTERM', encerrarComCuidado);
+
+socket.on('desafio-combate', ({de, para}) => ...)
+socket.on('resposta-desafio', ({de, para, aceito}) => ...)
+socket.on('encerrar-combate', ({jogador1, jogador2}) => ...)
+socket.on('solicitar-presenca-lista', () => ...)
