@@ -1126,46 +1126,79 @@ body::before {
   to   { opacity:1; transform: scale(1); }
 }
 
-/* ─── Animação de Combate Flutuante (aparece acima do balão) ─── */
+/* ─── Animação de Combate — aparece acima do balão próprio ─── */
+.msg-bubble { position: relative; overflow: visible; }
+
+/* Quadradinho no canto superior esquerdo onde o emoji pousa */
+.msg-combat-badge-slot {
+  position: absolute;
+  top: -2px; left: -2px;
+  width: 22px; height: 22px;
+  border-radius: 5px 0 5px 0;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: none; /* aparece quando o badge pousa */
+  align-items: center; justify-content: center;
+  font-size: 0.72rem; z-index: 5;
+}
+.msg-combat-badge-slot.active { display: flex; }
+
+/* Animação flutuante acima do balão */
 .msg-combat-anim {
-  position: absolute; top: -72px; left: 50%;
-  transform: translateX(-50%) scale(0);
-  font-size: 2.2rem; z-index: 30; pointer-events: none;
-  white-space: nowrap;
-  animation: combat-anim-appear 0.45s 0.05s cubic-bezier(0.34,1.56,0.64,1) forwards,
-             combat-anim-hold 0.8s 0.6s linear forwards,
-             combat-anim-shrink 0.7s 1.5s cubic-bezier(0.4,0,0.2,1) forwards;
+  position: absolute;
+  /* Posicionada abaixo do topo do balão para ancorar ao balão, acima via transform */
+  top: 0; left: 50%;
+  transform: translateX(-50%) translateY(-100%) scale(0);
+  font-size: 2.2rem; z-index: 40; pointer-events: none;
+  white-space: nowrap; line-height: 1;
+  /* 3 fases: aparecer, segurar, encolher até o canto */
+  animation:
+    mca-appear  0.4s 0.05s cubic-bezier(0.34,1.56,0.64,1) forwards,
+    mca-hold    0.7s 0.55s ease forwards,
+    mca-shrink  0.65s 1.35s cubic-bezier(0.4,0,0.6,1) forwards;
 }
-@keyframes combat-anim-appear {
-  from { transform: translateX(-50%) scale(0) rotate(-15deg); opacity:0; }
-  to   { transform: translateX(-50%) scale(1.2) rotate(3deg); opacity:1; }
+@keyframes mca-appear {
+  from { transform: translateX(-50%) translateY(-130%) scale(0) rotate(-10deg); opacity:0; }
+  to   { transform: translateX(-50%) translateY(-110%) scale(1.25) rotate(2deg); opacity:1; }
 }
-@keyframes combat-anim-hold {
-  from { transform: translateX(-50%) scale(1.2) rotate(3deg); opacity:1; }
-  to   { transform: translateX(-50%) scale(1.05) rotate(0deg); opacity:1; }
+@keyframes mca-hold {
+  from { transform: translateX(-50%) translateY(-110%) scale(1.25) rotate(2deg); opacity:1; }
+  to   { transform: translateX(-50%) translateY(-105%) scale(1.1) rotate(0deg); opacity:1; }
 }
-@keyframes combat-anim-shrink {
-  0%   { transform: translateX(-50%) scale(1.05); opacity:1; top:-72px; }
-  100% { transform: translateX(calc(-100% - 4px)) scale(0.22); opacity:0; top:4px; }
+@keyframes mca-shrink {
+  0%   { transform: translateX(-50%) translateY(-105%) scale(1.1); opacity:1; }
+  100% { transform: translateX(calc(-100% - 1px)) translateY(calc(-100% + 0px)) scale(0.25); opacity:0.6; }
 }
 
-/* ─── Badge de Combate (ícone persistente no canto superior esquerdo do balão) ─── */
-.msg-combat-badge {
-  position: absolute; top: 4px; left: 6px;
-  font-size: 0.78rem; line-height: 1; z-index: 2;
-  opacity: 0; pointer-events: none;
-  animation: badge-appear 0.3s 2.2s ease forwards;
+/* Escurecimento do balão durante a animação */
+.msg-bubble.combat-flash {
+  animation: bubble-flash 1.9s ease forwards;
 }
-@keyframes badge-appear {
-  to { opacity: 1; }
+@keyframes bubble-flash {
+  0%   { filter: brightness(1); }
+  15%  { filter: brightness(0.65); }
+  60%  { filter: brightness(0.72); }
+  85%  { filter: brightness(1); }
+  100% { filter: brightness(1); }
 }
-.msg-bubble { position: relative; } /* garante o posicionamento absoluto dos filhos */
 
-/* ─── Linha de partículas de impacto (decorativa) ─── */
+/* Tremor do balão quando o badge pousa */
+.msg-bubble.combat-shake {
+  animation: bubble-shake 0.45s ease;
+}
+@keyframes bubble-shake {
+  0%,100% { transform: translateX(0); }
+  15%  { transform: translateX(-4px) rotate(-1deg); }
+  30%  { transform: translateX(3px) rotate(0.5deg); }
+  50%  { transform: translateX(-2px); }
+  70%  { transform: translateX(2px); }
+  85%  { transform: translateX(-1px); }
+}
+
+/* Partícula de impacto */
 .combat-spark {
   position: absolute; width: 4px; height: 4px; border-radius: 50%;
-  animation: spark-fly 0.5s ease-out forwards;
-  pointer-events: none;
+  animation: spark-fly 0.5s ease-out forwards; pointer-events: none; z-index: 41;
 }
 @keyframes spark-fly {
   from { transform: scale(1) translate(0,0); opacity:1; }
@@ -2862,67 +2895,66 @@ function renderScale1() {
 
   const bar = document.getElementById('scale1-bar'); bar.innerHTML = '';
 
-  
+  // Calcula as "origens" de cada pip para colorir bordas:
+  // – Pips de guarda "extras" (acima de 10-vita) vieram do bônus de energia → borda amarela
+  // – Pips de guarda "removidos" por magia (abaixo de 10-vita sem energyBonus) → borda roxa
+  const guardaBase = 10 - v; // guarda se não houvesse bônus/penalidade
+  const energyBonus = state._energyGuardBonus || 0;
+  const manaGuardaReduz = Math.max(0, guardaBase + energyBonus - g); // pips de guarda removidos pela mana-vita
 
   for (let i = 1; i <= v; i++) {
-
     const cell = document.createElement('div');
-
     cell.className = 'pip-bar-cell' + (i <= state.vita.cur ? ' filled' : '');
-
-    cell.title = `Vitalidade Atual: ${i}`;
-
-    cell.textContent = '❤️'; // Substituição do pip pelo Emoji
-
+    cell.title = `Vitalidade ${i} (cada 3 vita = −2 energia máx.)`;
+    cell.textContent = '❤️';
     cell.onclick = () => toggleCur(1, 'vita', i);
-
+    // Pips de vita que forçam custo de energia têm anel âmbar
+    if (i % 3 === 0) {
+      cell.style.outline = '2px solid rgba(245,158,11,0.6)';
+      cell.style.outlineOffset = '1px';
+      cell.style.borderRadius = '3px';
+    }
     bar.appendChild(cell);
-
   }
-
-  
 
   if (v > 0 && g > 0) {
-
     const sep = document.createElement('div');
-
     sep.className = 'pip-bar-separator'; sep.textContent = '||'; bar.appendChild(sep);
-
   }
-
-  
 
   for (let i = 1; i <= g; i++) {
-
     const cell = document.createElement('div');
-
     cell.className = 'pip-bar-cell' + (i <= state.guard.cur ? ' filled' : '');
-
-    cell.title = `Guarda Atual: ${i}`;
-
-    cell.textContent = '🔰'; // Substituição do pip pelo Emoji
-
+    cell.title = `Guarda ${i}`;
+    cell.textContent = '🔰';
     cell.onclick = () => toggleCur(1, 'guard', i);
 
-    bar.appendChild(cell);
+    // Pips de guarda que vieram do bônus de energia: borda amarelo-esverdeada
+    const isEnergyBonus = i > (guardaBase);
+    // Pips de guarda removidos pela penalidade de magia→vita: borda roxa
+    const isManaRemoved = i > (guardaBase + energyBonus - manaGuardaReduz) && manaGuardaReduz > 0;
 
+    if (isEnergyBonus && energyBonus > 0) {
+      cell.style.outline = '2px solid rgba(250,204,21,0.75)';
+      cell.style.outlineOffset = '1px';
+      cell.style.borderRadius = '3px';
+      cell.title += ' (bônus de energia ⚡)';
+    } else if (isManaRemoved) {
+      cell.style.outline = '2px solid rgba(168,85,247,0.7)';
+      cell.style.outlineOffset = '1px';
+      cell.style.borderRadius = '3px';
+      cell.title += ' (reduzido pela magia 🔮)';
+    }
+
+    bar.appendChild(cell);
   }
 
-  
-
   document.getElementById('s1-vita').textContent = v;
-
   document.getElementById('s1-guard').textContent = g;
-
   document.getElementById('vita-max-display').textContent = v;
-
   document.getElementById('guard-max-display').textContent = g;
-
   document.getElementById('vita-cur-display').textContent = state.vita.cur;
-
   document.getElementById('guard-cur-display').textContent = state.guard.cur;
-
-  
 
   renderDerivedS1(v, g); updateInventorySlots(v);
 
@@ -2979,13 +3011,42 @@ function renderDerivedS1(v, g) {
 
   const container = document.getElementById('scale1-derived'); container.innerHTML = '';
 
+  // Dano físico sem arma: cada 3 vita = +1 dano (regra base)
   const dmgBonus = Math.floor(v / 3);
+  if (dmgBonus > 0) {
+    container.innerHTML += `<div class="derived-chip">❤️ <span>+${dmgBonus}</span> dano físico (s/ arma) · ${v} vita ÷ 3 = ${dmgBonus}</div>`;
+  }
 
-  if (dmgBonus > 0) container.innerHTML += `<div class="derived-chip">❤️ +<span>${dmgBonus}</span> dano físico (s/ arma)</div>`;
-
+  // Custo obrigatório de energia: cada 3 vita consome 2 de energia máx.
   const energyCost = Math.floor(v / 3) * 2;
+  if (energyCost > 0) {
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️ → –<span>${energyCost}⚡</span> Energia Máx. obrigatório · cada 3❤️ custa 2⚡</div>`;
+  }
 
-  if (energyCost > 0) container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️→⚡ –<span>${energyCost}</span> Energia Máx. (obrigatório)</div>`;
+  // Bônus de guarda derivado da energia (mostrado aqui para contexto)
+  const energyBonus = state._energyGuardBonus || 0;
+  if (energyBonus > 0) {
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(250,204,21,0.5);color:#a16207;">⚡ → +<span>${energyBonus}🔰</span> Guarda Máx. · cada 3⚡ adiciona 2🔰</div>`;
+  }
+
+}
+
+function renderDerivedS2(e, m) {
+
+  const container = document.getElementById('scale2-derived'); container.innerHTML = '';
+
+  // Bônus de guarda por energia: cada 3 energia = +2 guarda máx.
+  const energyTiers = Math.floor(e / 3);
+  if (energyTiers > 0) {
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡ → +<span>${energyTiers * 2}🔰</span> Guarda Máx. · ${e}⚡ ÷ 3 = ${energyTiers} tier(s) × 2 (aplicado)</div>`;
+  }
+
+  // Magia: dano mágico e penalidade de vita
+  const manaTiers = Math.floor(m / 3);
+  if (manaTiers > 0) {
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(168,85,247,0.4);color:#7e22ce;">🔮 +<span>${manaTiers}</span> dano mágico · cada 3🔮 = +1 dano</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(239,68,68,0.5);color:#b91c1c;">🔮 → –<span>${manaTiers}❤️</span> Vita Máx. obrigatório · cada 3🔮 custa 1❤️</div>`;
+  }
 
 }
 
@@ -3040,46 +3101,50 @@ function renderScale2() {
 
   const bar = document.getElementById('scale2-bar'); bar.innerHTML = '';
 
-  
+  // Pips de energia "bloqueados" pela penalidade de vita (cada 3 vita = -2 energia):
+  // o teto real é 10 - floor(vita/3)*2. Os pips acima do teto "ficaram" para a magia.
+  const energyCeiling = 10 - Math.floor(state.vita.max / 3) * 2;
 
   for (let i = 1; i <= e; i++) {
-
     const cell = document.createElement('div');
-
     cell.className = 'pip-bar-cell' + (i <= state.energy.cur ? ' filled' : '');
-
-    cell.title = `Energia Atual: ${i}`;
-
     cell.textContent = '⚡';
-
     cell.onclick = () => toggleCur(2, 'energy', i);
 
+    // Pips próximos ao teto imposto pela vita recebem anel âmbar
+    if (i === energyCeiling) {
+      cell.style.outline = '2px solid rgba(239,68,68,0.55)';
+      cell.style.outlineOffset = '1px';
+      cell.style.borderRadius = '3px';
+      cell.title = `Energia ${i} — teto imposto pela Vitalidade (${state.vita.max} vita = max ${energyCeiling}⚡)`;
+    } else {
+      cell.title = `Energia ${i} (cada 3⚡ = +2🔰 na Guarda)`;
+    }
     bar.appendChild(cell);
-
   }
 
   if (e > 0 && m > 0) { const sep = document.createElement('div'); sep.className = 'pip-bar-separator'; sep.textContent = '||'; bar.appendChild(sep); }
 
   for (let i = 1; i <= m; i++) {
-
     const cell = document.createElement('div');
-
     cell.className = 'pip-bar-cell' + (i <= state.mana.cur ? ' filled' : '');
-
-    cell.title = `Magia Atual: ${i}`;
-
     cell.textContent = '🔮';
-
     cell.onclick = () => toggleCur(2, 'mana', i);
 
+    // Pips de magia que cruzam patamares de 3 (causando penalidade de vita) recebem anel roxo
+    if (i % 3 === 0) {
+      cell.style.outline = '2px solid rgba(168,85,247,0.65)';
+      cell.style.outlineOffset = '1px';
+      cell.style.borderRadius = '3px';
+      cell.title = `Magia ${i} — cada 3🔮 reduz 1 Vita máx. e dá +1 de dano mágico`;
+    } else {
+      cell.title = `Magia ${i}`;
+    }
     bar.appendChild(cell);
-
   }
 
   document.getElementById('s2-energy').textContent = e; document.getElementById('s2-mana').textContent = m;
-
   document.getElementById('energy-max-display').textContent = e; document.getElementById('mana-max-display').textContent = m;
-
   document.getElementById('energy-cur-display').textContent = state.energy.cur; document.getElementById('mana-cur-display').textContent = state.mana.cur;
 
   renderDerivedS2(e, m);
@@ -3147,24 +3212,6 @@ function increaseMana() {
 
 }
 
-function renderDerivedS2(e, m) {
-
-  const container = document.getElementById('scale2-derived'); container.innerHTML = '';
-
-  const energyTiers = Math.floor(e / 3);
-
-  if (energyTiers > 0) {
-    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡→🔰 +<span>${energyTiers * 2}</span> Guarda máx. (aplicado)</div>`;
-  }
-
-  const manaTiers = Math.floor(m / 3);
-
-  if (manaTiers > 0) {
-    container.innerHTML += `<div class="derived-chip">🔮 +<span>${manaTiers}</span> dano mágico</div>`;
-    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(239,68,68,0.5);color:#b91c1c;">🔮→❤️ –<span>${manaTiers}</span> Vita máx. (aplicado)</div>`;
-  }
-
-}
 
 
 // ═══════════════════════════════════════════
@@ -3707,6 +3754,7 @@ renderPP();
             <span class="cop-label">⚔️ Ações:</span>
             <button class="cop-btn" id="cop-foco" onclick="ativarFocoCombate()" title="Não atacar este turno → próximo ataque: −1⚡ e +2 dano">🌟 Canalizar Foco</button>
             <button class="cop-btn" id="cop-segundo" onclick="ativarSegundoAtaque()" title="Gastar +1⚡ para atacar uma segunda vez neste turno (máx. 1x por turno)">⚡⚔️ 2º Ataque (+1⚡)</button>
+            <button class="cop-btn" id="cop-sac-energy" onclick="ciclarSacrifEnergia()" title="Sacrificar energia ATUAL (não máx.) para +dano: 0→+1⚡→+2⚡ por turno">⚡🩸 Sacr.⚡ Atual (<span id="cop-sac-e-val">0</span>)</button>
             <button class="cop-btn" id="cop-sacrificio-of" onclick="abrirSacrificiioOfensivo()" title="Sacrificar 1-2 pontos de um atributo para +1 dano por ponto (máx. 2 pts, 1 atributo)">🩸 Sacrifício (+dano)</button>
             <button class="cop-btn" id="cop-furtivo" onclick="ativarFurtividade()" title="Entrar em furtividade se tiver mais Guarda que o oponente">👁️ Furtividade</button>
             <button class="cop-btn" id="cop-imobilizar" onclick="ativarImobilizacao()" title="Imobilizar oponente (custo: 2⚡, requer Energia + Vita ≥ oponente)">🤼 Imobilizar (2⚡)</button>
@@ -4209,6 +4257,90 @@ let filaDeStatusPendentes = []; // snapshots de status aguardando a confirmaçã
 let atacouEsteTurno = false;
 let acaoCombateAtiva = null; // { id, label, custo } | null
 
+// Energia sacrificada no turno atual para +dano (atual, não máxima; máx 2 pts/turno)
+let energySacrificeBonus = 0; // 0, 1 ou 2
+
+// ─── Lê o maior dano registrado nas armas da ficha ──────────────────────────
+function lerDanoArmas() {
+  let maxArma = 0;
+  const rows = document.querySelectorAll('#equip-body tr');
+  rows.forEach(tr => {
+    const cells = tr.querySelectorAll('td input');
+    if (cells.length < 4) return;
+    const tipo = (cells[1].value || '').toLowerCase();
+    const danoRaw = (cells[2].value || '').trim();
+    // Extrai número do campo dano (ex: "3", "2-4", "2+1")
+    const nums = danoRaw.match(/\d+/g);
+    if (!nums) return;
+    const danoMax = Math.max(...nums.map(Number));
+    if (!isNaN(danoMax) && tipo && !tipo.includes('armadu') && danoMax > maxArma) {
+      maxArma = danoMax;
+    }
+  });
+  return maxArma;
+}
+
+// ─── Calcula o dano máximo que o personagem pode declarar num ataque ─────────
+// Leva em conta: dano da arma equipada, dano corpo a corpo (vita), bônus de
+// foco (+2), segundo ataque, sacrifício de energia, e sacrifício ofensivo ativo.
+function calcularDanoMaximoPermitido() {
+  // Dano base: maior entre arma equipada e dano corpo a corpo
+  const danoArma = lerDanoArmas();
+  const danoCaC = Math.floor(state.vita.max / 3); // cada 3 vita = +1 dano (s/ arma)
+  // Exceção para combate: a cada 4 vita, +1 de dano c.a.c.
+  const danoCaCCombate = Math.floor(state.vita.max / 4);
+  const danoBase = danoArma > 0 ? danoArma : Math.max(1, danoCaC + danoCaCCombate);
+
+  // Bônus adicionais permitidos pelas mecânicas ativas
+  let bonus = 0;
+
+  // Foco ativo: +2 dano
+  if (combateState.focoAtivo || (acaoCombateAtiva && acaoCombateAtiva.id === 'foco-ativo')) {
+    bonus += 2;
+  }
+
+  // Sacrifício ofensivo (via tag de sacrifício ativa)
+  const sacTag = pendingReactions.find(t => t.id && t.id.startsWith('sac-of-'));
+  if (sacTag) {
+    const pts = parseInt(sacTag.cost) || 0;
+    bonus += pts;
+  }
+
+  // Sacrifício de energia atual (energySacrificeBonus, máx 2)
+  bonus += energySacrificeBonus;
+
+  // Sacrifício pelo botão ofensivo (acaoCombateAtiva pode ter bonus)
+  if (acaoCombateAtiva && acaoCombateAtiva.id && acaoCombateAtiva.id.startsWith('sac-of-')) {
+    const m = acaoCombateAtiva.label && acaoCombateAtiva.label.match(/\+(\d+) dano/);
+    if (m) bonus += parseInt(m[1]);
+  }
+
+  return danoBase + bonus;
+}
+
+// ─── Valida o dano declarado em uma mensagem de ataque ───────────────────────
+// Retorna null se válido, ou uma string de erro se inválido.
+function validarDanoDeclarado(texto) {
+  if (!fichaAtivaChat) return null; // sem ficha, sem validação
+  if (!combateState.ativo) return null; // sem combate formal, sem validação
+
+  // Detecta se há declaração de dano na mensagem
+  const mecanica = detectarMecanica(texto);
+  if (!mecanica || mecanica.tipo !== 'dano') return null;
+
+  const danoDeclarado = mecanica.valor;
+  const danoMax = calcularDanoMaximoPermitido();
+
+  if (danoDeclarado > danoMax) {
+    const danoArma = lerDanoArmas();
+    const danoCaC = Math.floor(state.vita.max / 3) + Math.floor(state.vita.max / 4);
+    const base = danoArma > 0 ? `arma (${danoArma})` : `corpo a corpo (${Math.max(1,danoCaC)})`;
+    return `⚠️ Dano incorreto! Você declarou <strong>${danoDeclarado}</strong>, mas o máximo permitido é <strong>${danoMax}</strong> (base: ${base}${energySacrificeBonus > 0 ? `, +${energySacrificeBonus} sacrif.⚡` : ''}${combateState.focoAtivo ? ', +2 foco' : ''}). Ajuste o dano ou use mecânicas de sacrifício/foco.`;
+  }
+
+  return null;
+}
+
 // Objeto central de estado de uma sessão de combate.
 // Ativo apenas enquanto um combate formal estiver em curso (desafio aceito).
 const combateState = {
@@ -4238,6 +4370,7 @@ function resetarCombateState() {
   combateState.nocauteado = false;
   combateState.atordoado = false;
   atacouEsteTurno = false;
+  energySacrificeBonus = 0;
   desativarAcaoCombate();
   atualizarBarraCombate();
 }
@@ -4860,41 +4993,58 @@ function triggerCombatAnimation(rowId, animType) {
   const cfg = COMBAT_ANIM_CONFIGS[animType] || COMBAT_ANIM_CONFIGS['receber'];
   const row = document.getElementById(`msg-row-${rowId}`);
   if (!row) return;
+  const bubble = row.querySelector('.msg-bubble');
+  if (!bubble) return;
 
-  // Garante que o row é position:relative para o anim posicionar corretamente
-  row.style.position = 'relative';
-
-  // Remove animação anterior neste row, se houver
-  const old = row.querySelector('.msg-combat-anim');
+  // Remove animação anterior neste balão
+  const old = bubble.querySelector('.msg-combat-anim');
   if (old) old.remove();
 
+  // Cria ou obtém o slot de badge no canto superior esquerdo
+  let slot = bubble.querySelector('.msg-combat-badge-slot');
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.className = 'msg-combat-badge-slot';
+    bubble.insertBefore(slot, bubble.firstChild);
+  }
+
+  // Cria a animação posicionada sobre o balão
   const anim = document.createElement('div');
   anim.className = 'msg-combat-anim';
   anim.textContent = cfg.icon;
   anim.title = cfg.label;
-  row.appendChild(anim);
+  bubble.appendChild(anim);
+
+  // Escurecimento do balão
+  bubble.classList.remove('combat-flash', 'combat-shake');
+  void bubble.offsetWidth; // reflow para resetar a animação
+  bubble.classList.add('combat-flash');
+
+  // Partículas
+  emitirSparks(bubble, cfg.sparks);
 
   // Som
   playSound(cfg.sound);
 
-  // Partículas dentro do anim
-  emitirSparks(anim, cfg.sparks);
-
-  // Após a animação CSS terminar, cria o badge no bubble
-  const totalDuration = (0.05 + 0.45 + 0.8 + 0.7) * 1000 + 100;
+  // Após a animação terminar: exibe o badge no slot e treme o balão
+  const totalDuration = (0.05 + 0.4 + 0.7 + 0.65) * 1000 + 80;
   setTimeout(() => {
     anim.remove();
-    const bubble = row.querySelector('.msg-bubble');
-    if (bubble) {
-      // Remove badge anterior se houver
-      const oldBadge = bubble.querySelector('.msg-combat-badge');
-      if (oldBadge) oldBadge.remove();
-      const badge = document.createElement('div');
-      badge.className = 'msg-combat-badge';
-      badge.title = cfg.label;
-      badge.textContent = cfg.icon.slice(0, 2); // primeiros 2 chars (emoji)
-      bubble.insertBefore(badge, bubble.firstChild);
-    }
+    // Popula o slot com o emoji
+    slot.textContent = cfg.icon.charAt(0);
+    slot.title = cfg.label;
+    slot.classList.add('active');
+
+    // Tremor do balão ao pousar
+    bubble.classList.remove('combat-shake');
+    void bubble.offsetWidth;
+    bubble.classList.add('combat-shake');
+
+    // Remove a classe de shake depois
+    setTimeout(() => bubble.classList.remove('combat-shake'), 500);
+
+    // Som de impacto no pouso
+    playSound('thud');
   }, totalDuration);
 }
 
@@ -4998,11 +5148,33 @@ function enviarMensagem() {
   if (!ehForaDePersonagem && fichaAtivaChat) {
     // Aplica reações defensivas pendentes (tags escolhidas acima do input)
     const tevReacao = aplicarReacoesPendentes();
-    // pendingAnimForNextMsg já foi definido por aplicarReacoesPendentes() se havia reação
 
     const ehAtaque = !tevReacao && detectarAtaque(textoLimpo);
 
     if (ehAtaque) {
+      // ── Validação de Dano ──────────────────────────────────────────────────
+      // Só valida em combate formal ativo (não contra o Boneco de Treino solo)
+      if (combateState.ativo && combateState.oponente !== 'Boneco de Treino') {
+        const erroDano = validarDanoDeclarado(textoLimpo);
+        if (erroDano) {
+          mostrarToast(erroDano, 7000);
+          input.value = ''; input.style.height = 'auto';
+          return; // bloqueia o envio
+        }
+      }
+
+      // ── Sacrifício de Energia Atual ──────────────────────────────────────
+      if (energySacrificeBonus > 0) {
+        state.energy.cur = Math.max(0, state.energy.cur - energySacrificeBonus);
+        renderScale2(); salvarFichaSilenciosa();
+        mostrarToast(`⚡🩸 ${energySacrificeBonus} de energia sacrificada → +${energySacrificeBonus} de dano neste ataque.`, 4000);
+        energySacrificeBonus = 0;
+        const el = document.getElementById('cop-sac-e-val');
+        if (el) el.textContent = '0';
+        const btn = document.getElementById('cop-sac-energy');
+        if (btn) btn.classList.remove('active');
+      }
+
       let custoEnergia = 1;
       if (combateState.focoAtivo || (acaoCombateAtiva && acaoCombateAtiva.id === 'foco-ativo')) {
         custoEnergia = 0;
@@ -5422,17 +5594,36 @@ function atualizarBarraCombate() {
   atualizarPainelOfensivo();
 }
 
+// Sacrifício de Energia ATUAL (não máxima) para +dano.
+// Cicla: 0 → +1⚡ → +2⚡ → 0. Aplica o gasto ao enviar o ataque.
+function ciclarSacrifEnergia() {
+  const proximo = (energySacrificeBonus + 1) % 3; // 0→1→2→0
+  // Verifica se tem energia suficiente
+  if (proximo > 0 && state.energy.cur < proximo + 1) { // precisa ter pelo menos 1 pra atacar + o sacr.
+    mostrarToast(`⚡ Energia atual insuficiente para sacrificar ${proximo} (precisa de ${proximo+1}⚡ no mínimo).`, 3500);
+    return;
+  }
+  energySacrificeBonus = proximo;
+  const el = document.getElementById('cop-sac-e-val');
+  if (el) el.textContent = proximo > 0 ? `+${proximo}⚡→+${proximo}dano` : '0';
+  const btn = document.getElementById('cop-sac-energy');
+  if (btn) btn.classList.toggle('active', proximo > 0);
+  if (proximo > 0) {
+    mostrarToast(`⚡🩸 Sacrifício de energia ativado: −${proximo}⚡ atual → +${proximo} dano neste ataque.`, 4000);
+  }
+}
+
 function atualizarPainelOfensivo() {
   const s = state;
   const cs = combateState;
   const btnFoco = document.getElementById('cop-foco');
   const btnSegundo = document.getElementById('cop-segundo');
+  const btnSacE = document.getElementById('cop-sac-energy');
   if (!btnFoco || !btnSegundo) return;
-  // Foco: indisponível se já ativo, ou se já atacou neste turno
   btnFoco.disabled = cs.focoAtivo || atacouEsteTurno;
   btnFoco.classList.toggle('active', cs.focoAtivo);
-  // Segundo ataque: disponível apenas se já atacou (1º ataque feito) e ainda não usou
   btnSegundo.disabled = !atacouEsteTurno || cs.segundoAtaqueUsado || s.energy.cur < 1;
+  if (btnSacE) btnSacE.disabled = s.energy.cur < 2;
 }
 
 // ─── Ações Ofensivas ──────────────────────────────────────────────────────
