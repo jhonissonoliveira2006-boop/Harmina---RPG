@@ -1101,6 +1101,37 @@ body::before {
 .msg-dano-prompt .opt-cost {
   display: inline-block; margin-left: 0.2rem; opacity: 0.75; font-size: 0.56rem;
 }
+/* ─── Seletor de Ataque — tag e painel flutuante ─── */
+#attack-selector-wrap { position: relative; }
+#attack-selector-tag {
+  display: none; align-items: center; gap: 0.35rem;
+  padding: 0.25rem 0.55rem; margin-bottom: 0.2rem;
+  background: rgba(180,40,30,0.2); border: 1px solid rgba(217,83,79,0.45);
+  border-radius: 20px; cursor: pointer; width: fit-content;
+  font-family: var(--mono); font-size: 0.62rem; color: #fbb;
+  transition: background 0.15s;
+}
+#attack-selector-tag.visible { display: inline-flex; }
+#attack-selector-tag:hover { background: rgba(180,40,30,0.35); }
+#attack-selector-tag .ast-icon { font-size: 0.9rem; }
+#attack-selector-tag .ast-dano { font-weight:700; color:#f87171; }
+#attack-selector-tag .ast-chevron { opacity:0.55; }
+#attack-panel {
+  display: none; position: absolute; bottom: calc(100% + 4px); left: 0;
+  min-width: 240px; max-width: 92vw;
+  background: #1c1410; border: 1px solid rgba(180,40,30,0.5);
+  border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+  z-index: 60; padding: 0.5rem 0; font-family: var(--mono);
+}
+#attack-panel.open { display: block; }
+.ap-header { font-size:0.57rem; color:#f3a0a0; padding:0 0.75rem 0.3rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.25rem; letter-spacing:0.07em; text-transform:uppercase; }
+.attack-option { display:flex; align-items:center; gap:0.4rem; padding:0.35rem 0.75rem; cursor:pointer; transition:background 0.1s; }
+.attack-option:hover { background:rgba(180,40,30,0.22); }
+.attack-option.disabled { opacity:0.38; cursor:not-allowed; pointer-events:none; }
+.ao-icon { font-size:1rem; flex-shrink:0; }
+.ao-name { flex:1; font-size:0.68rem; color:#d4c49a; }
+.ao-dano { color:#f87171; font-weight:700; background:rgba(180,40,30,0.2); border-radius:4px; padding:0.05rem 0.3rem; font-size:0.68rem; }
+.ao-tip { font-size:0.55rem; color:#9ca3af; display:block; margin-top:0.05rem; }
 /* ─── Tags de Reação Pendente (acima do compositor) ─── */
 #reaction-tags-bar {
   display: none; flex-wrap: wrap; gap: 0.3rem; align-items: center;
@@ -1129,17 +1160,19 @@ body::before {
 /* ─── Animação de Combate — aparece acima do balão próprio ─── */
 .msg-bubble { position: relative; overflow: visible; }
 
-/* Quadradinho no canto superior esquerdo onde o emoji pousa */
+/* Quadradinho no canto superior esquerdo — acima da borda do balão */
 .msg-combat-badge-slot {
   position: absolute;
-  top: -2px; left: -2px;
-  width: 22px; height: 22px;
-  border-radius: 5px 0 5px 0;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.12);
-  display: none; /* aparece quando o badge pousa */
+  top: -14px;              /* acima do balão, não sobrepõe texto */
+  left: 4px;
+  width: 20px; height: 20px;
+  border-radius: 5px 5px 0 5px;
+  background: rgba(0,0,0,0.28); /* um pouco mais escuro que qualquer balão */
+  border: 1px solid rgba(255,255,255,0.15);
+  display: none;
   align-items: center; justify-content: center;
-  font-size: 0.72rem; z-index: 5;
+  font-size: 0.72rem; z-index: 6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
 }
 .msg-combat-badge-slot.active { display: flex; }
 
@@ -3761,6 +3794,19 @@ renderPP();
           </div>
           <!-- Tags de reação pendente (cada reação escolhida aparece aqui como pílula removível) -->
           <div id="reaction-tags-bar"></div>
+          <!-- Seletor de ataque: tag clicável mostra dano disponível, abre painel de opções -->
+          <div id="attack-selector-wrap">
+            <div id="attack-selector-tag" title="Escolher tipo de ataque">
+              <span class="ast-icon">⚔️</span>
+              <span id="ast-label">Escolher ataque</span>
+              <span class="ast-dano" id="ast-dano"></span>
+              <span class="ast-chevron">▾</span>
+            </div>
+            <div id="attack-panel">
+              <div class="ap-header">⚔️ Qual ataque usar?</div>
+              <div id="attack-options-list"></div>
+            </div>
+          </div>
           <!-- Ação de combate ativa (ex: Foco, Esquiva pré-declarada) exibida como tag -->
           <div id="active-combat-action">
             <span class="aca-label" id="aca-label-text"></span>
@@ -4373,6 +4419,7 @@ function resetarCombateState() {
   energySacrificeBonus = 0;
   desativarAcaoCombate();
   atualizarBarraCombate();
+  atualizarTagAtaque();
 }
 
 // ─── Estado do chat ───
@@ -4737,7 +4784,33 @@ function obterOpcoesReaçãoADano(danoRecebido, custoAtaque) {
       }
     },
 
-    // ── 7. Canalizar Foco (reação — aceita o dano e ganha foco) ──────────
+    // ── 7. Sacrifício de Guarda (+2 Def por 1 turno) ─────────────────────
+    // Gasta 1 ponto de Guarda ATUAL (não máxima) → +2 de Defesa temporária
+    // que absorve o dano deste ataque. Dura apenas este turno/ataque.
+    {
+      id: 'sacrificio-guarda-def',
+      icon: '🔰🛡️', label: 'Sacrif. de Guarda (+2 Def)',
+      custo: '1🔰 atual',
+      descricao: 'Gasta 1 ponto de Guarda atual → +2 de Defesa temporária contra este ataque. Dura apenas este turno. (Regra: Defesa de Guarda)',
+      verificar: () => s.guard.cur >= 1,
+      aplicar: (dano, msgId, autor) => {
+        const guardaAntes = s.guard.cur;
+        s.guard.cur = Math.max(0, s.guard.cur - 1); // gasta 1 guarda
+        const defBonus = 2;
+        const danoReduzido = Math.max(0, dano - defBonus);
+        // O restante passa pela guarda normalmente
+        const cg = Math.min(s.guard.cur, danoReduzido);
+        s.guard.cur -= cg;
+        const cv = Math.min(s.vita.cur, danoReduzido - cg);
+        s.vita.cur -= cv;
+        renderScale1(); salvarFichaSilenciosa();
+        verificarAtordoamentoEKO(autor, guardaAntes);
+        mostrarToast(`🔰🛡️ Sacrifício de Guarda! −1🔰 → +2 Def temporária. Dano ${dano} → ${danoReduzido}. 🔰−${1+cg} · ❤️−${cv}.`, 6500);
+        fecharPromptDano(msgId);
+      }
+    },
+
+    // ── 8. Canalizar Foco (reação — aceita o dano e ganha foco) ──────────
     // Recebe o dano normalmente, mas o próximo ataque terá −1 custo e +2 dano.
     {
       id: 'canalizar-foco',
@@ -5117,6 +5190,172 @@ function aplicarReacoesPendentes() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE SELEÇÃO DE ATAQUE
+// O jogador escolhe qual ataque usar via painel (não escreve o dano).
+// O sistema injeta automaticamente "X de dano" na mensagem enviada,
+// garantindo que o receptor receba o prompt de reação com o valor correto.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let selectedAttack = null; // { id, icon, label, dano, tipo, custo }
+let attackPanelOpen = false;
+
+// Constrói a lista de ataques disponíveis a partir da ficha atual
+function obterOpcoesDeAtaque() {
+  const opcoes = [];
+
+  // ── Corpo a Corpo / Desarmado ──────────────────────────────────────────
+  const v = state.vita.max;
+  const danoCaC = Math.max(1, Math.floor(v / 3) + Math.floor(v / 4));
+  opcoes.push({
+    id: 'cac',
+    icon: '👊',
+    label: 'Golpe Corporal',
+    dano: danoCaC,
+    tipo: 'fisico',
+    custo: '1⚡',
+    tip: `${Math.floor(v/3)} (vita÷3) + ${Math.floor(v/4)} (vita÷4) = ${danoCaC} · desarmado`,
+    disponivel: state.energy.cur >= 1
+  });
+
+  // ── Armas Equipadas (lê o equip-body) ─────────────────────────────────
+  const rows = document.querySelectorAll('#equip-body tr');
+  rows.forEach((tr, idx) => {
+    const inputs = tr.querySelectorAll('td input');
+    if (inputs.length < 4) return;
+    const nome = (inputs[0].value || '').trim();
+    const tipo = (inputs[1].value || '').trim();
+    const danoRaw = (inputs[2].value || '').trim();
+    if (!nome || !danoRaw) return;
+    const nums = danoRaw.match(/\d+/g);
+    if (!nums) return;
+    const danoMax = Math.max(...nums.map(Number));
+    if (isNaN(danoMax) || danoMax <= 0) return;
+    const isRanged = /arco|besta|arremess|lanç/i.test(tipo);
+    const custo = isRanged ? '2⚡' : '1⚡';
+    const custoE = isRanged ? 2 : 1;
+    opcoes.push({
+      id: `arma_${idx}`,
+      icon: isRanged ? '🏹' : '⚔️',
+      label: nome,
+      dano: danoMax,
+      tipo: isRanged ? 'ranged' : 'fisico',
+      custo,
+      tip: `${tipo} · ${danoRaw} de dano`,
+      disponivel: state.energy.cur >= custoE
+    });
+  });
+
+  // ── Feitiços (Magia) ───────────────────────────────────────────────────
+  const m = state.mana.max;
+  const manaAtual = state.mana.cur;
+  if (m >= 1) {
+    const danoMagia = Math.max(1, Math.floor(m / 3) + 1);
+    opcoes.push({
+      id: 'feitico',
+      icon: '🔮',
+      label: 'Feitiço',
+      dano: danoMagia,
+      tipo: 'magico',
+      custo: '1⚡ + 1🔮',
+      tip: `Dano mágico: ${Math.floor(m/3)} (magia÷3) +1 = ${danoMagia}`,
+      disponivel: state.energy.cur >= 1 && manaAtual >= 1
+    });
+  }
+
+  // ── Com Foco ativo: todas as opções ganham +2 ──────────────────────────
+  const focoBonus = (combateState.focoAtivo || (acaoCombateAtiva && acaoCombateAtiva.id === 'foco-ativo')) ? 2 : 0;
+  if (focoBonus > 0) {
+    opcoes.forEach(o => {
+      o.dano += focoBonus;
+      o.label += ' 🌟';
+      o.tip += ` · +${focoBonus} (Foco)`;
+    });
+  }
+
+  // ── Com Sacrifício de energia atual ──────────────────────────────────
+  if (energySacrificeBonus > 0) {
+    opcoes.forEach(o => {
+      o.dano += energySacrificeBonus;
+      o.tip += ` · +${energySacrificeBonus} (sacr.⚡)`;
+    });
+  }
+
+  return opcoes;
+}
+
+function renderizarPainelAtaque() {
+  const list = document.getElementById('attack-options-list');
+  if (!list) return;
+  const opcoes = obterOpcoesDeAtaque();
+  if (opcoes.length === 0) {
+    list.innerHTML = `<div style="padding:0.5rem 0.75rem;font-family:var(--mono);font-size:0.65rem;color:#9ca3af;">Nenhuma arma ou habilidade encontrada.<br><span style="font-size:0.58rem">Adicione armas na ficha de personagem.</span></div>`;
+    return;
+  }
+  list.innerHTML = opcoes.map(op => `
+    <div class="attack-option ${op.disponivel ? '' : 'disabled'}"
+         onclick="selecionarAtaque('${op.id}','${op.icon}','${op.label.replace(/'/g,"\\'")}',${op.dano},'${op.tipo}','${op.custo}')">
+      <span class="ao-icon">${op.icon}</span>
+      <span class="ao-name">${op.label}<span class="ao-tip">${op.tip}</span></span>
+      <span class="ao-dano">${op.dano} dano</span>
+    </div>
+  `).join('');
+}
+
+function abrirPainelAtaque() {
+  if (!combateState.ativo) {
+    mostrarToast('⚔️ Inicie um combate primeiro para selecionar um ataque.', 3500);
+    return;
+  }
+  renderizarPainelAtaque();
+  document.getElementById('attack-panel').classList.add('open');
+  attackPanelOpen = true;
+  // Fecha ao clicar fora
+  setTimeout(() => document.addEventListener('click', fecharPainelAtaqueClick, { once: true }), 50);
+}
+
+function fecharPainelAtaqueClick(e) {
+  const panel = document.getElementById('attack-panel');
+  const tag = document.getElementById('attack-selector-tag');
+  if (panel && !panel.contains(e.target) && tag && !tag.contains(e.target)) {
+    fecharPainelAtaque();
+  }
+}
+
+function fecharPainelAtaque() {
+  document.getElementById('attack-panel').classList.remove('open');
+  attackPanelOpen = false;
+}
+
+function selecionarAtaque(id, icon, label, dano, tipo, custo) {
+  selectedAttack = { id, icon, label, dano, tipo, custo };
+  const tag = document.getElementById('attack-selector-tag');
+  document.getElementById('ast-label').textContent = label;
+  document.getElementById('ast-dano').textContent = `${dano} dano`;
+  tag.classList.add('visible');
+  fecharPainelAtaque();
+  mostrarToast(`⚔️ Ataque selecionado: <strong>${label}</strong> — ${dano} de dano.`, 3000);
+}
+
+function limparAtaqueSelecionado() {
+  selectedAttack = null;
+  const tag = document.getElementById('attack-selector-tag');
+  if (tag) tag.classList.remove('visible');
+  document.getElementById('ast-label').textContent = 'Escolher ataque';
+  document.getElementById('ast-dano').textContent = '';
+}
+
+function atualizarTagAtaque() {
+  const tag = document.getElementById('attack-selector-tag');
+  if (!tag) return;
+  if (combateState.ativo) {
+    tag.classList.add('visible');
+  } else {
+    tag.classList.remove('visible');
+    limparAtaqueSelecionado();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 function enviarMensagem() {
   const input = document.getElementById('chat-input');
   const texto = input.value;
@@ -5152,29 +5391,42 @@ function enviarMensagem() {
     const ehAtaque = !tevReacao && detectarAtaque(textoLimpo);
 
     if (ehAtaque) {
-      // ── Validação de Dano ──────────────────────────────────────────────────
-      // Só valida em combate formal ativo (não contra o Boneco de Treino solo)
-      if (combateState.ativo && combateState.oponente !== 'Boneco de Treino') {
-        const erroDano = validarDanoDeclarado(textoLimpo);
-        if (erroDano) {
-          mostrarToast(erroDano, 7000);
+      // ── Em combate formal: exige ataque selecionado via painel ────────────
+      if (combateState.ativo) {
+        if (!selectedAttack) {
+          mostrarToast('⚔️ Selecione um ataque antes de enviar! Clique na tag ⚔️ acima do campo de texto.', 5000);
           input.value = ''; input.style.height = 'auto';
-          return; // bloqueia o envio
+          return;
         }
+
+        // ── Sacrifício de Energia Atual ────────────────────────────────────
+        if (energySacrificeBonus > 0) {
+          state.energy.cur = Math.max(0, state.energy.cur - energySacrificeBonus);
+          renderScale2(); salvarFichaSilenciosa();
+          mostrarToast(`⚡🩸 −${energySacrificeBonus}⚡ sacrificada → +${energySacrificeBonus} dano.`, 3500);
+          energySacrificeBonus = 0;
+          const el = document.getElementById('cop-sac-e-val');
+          if (el) el.textContent = '0';
+          const btn = document.getElementById('cop-sac-energy');
+          if (btn) btn.classList.remove('active');
+        }
+
+        // ── Injeta o dano no texto da mensagem automaticamente ─────────────
+        // O receptor verá "X de dano" e receberá o prompt de reação.
+        const danoFinal = selectedAttack.dano;
+        const tipoAtq = selectedAttack.tipo === 'magico' ? 'mágico' : 'físico';
+        const ataqueLabel = selectedAttack.label.replace('🌟','').trim();
+        textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
+
+        if (!pendingAnimForNextMsg) pendingAnimForNextMsg = selectedAttack.tipo === 'magico' ? 'foco-ativo' : 'segundo-ataque';
+        limparAtaqueSelecionado();
+
+      } else {
+        // Combate informal (Boneco de Treino) — aceita texto livre
+        textoComDano = textoLimpo;
       }
 
-      // ── Sacrifício de Energia Atual ──────────────────────────────────────
-      if (energySacrificeBonus > 0) {
-        state.energy.cur = Math.max(0, state.energy.cur - energySacrificeBonus);
-        renderScale2(); salvarFichaSilenciosa();
-        mostrarToast(`⚡🩸 ${energySacrificeBonus} de energia sacrificada → +${energySacrificeBonus} de dano neste ataque.`, 4000);
-        energySacrificeBonus = 0;
-        const el = document.getElementById('cop-sac-e-val');
-        if (el) el.textContent = '0';
-        const btn = document.getElementById('cop-sac-energy');
-        if (btn) btn.classList.remove('active');
-      }
-
+      // ── Foco ──────────────────────────────────────────────────────────────
       let custoEnergia = 1;
       if (combateState.focoAtivo || (acaoCombateAtiva && acaoCombateAtiva.id === 'foco-ativo')) {
         custoEnergia = 0;
@@ -5184,15 +5436,17 @@ function enviarMensagem() {
         mostrarToast('🌟 Foco aplicado! Custo do ataque: 0⚡ · +2 dano bônus.', 4000);
       } else if (combateState.furtivo) {
         if (!pendingAnimForNextMsg) pendingAnimForNextMsg = 'furtivo';
-      } else {
-        if (!pendingAnimForNextMsg) pendingAnimForNextMsg = 'segundo-ataque';
       }
       if (custoEnergia > 0) gastarEnergiaDeAtaque();
       else atacouEsteTurno = true;
+    } else {
+      textoComDano = textoLimpo;
     }
 
     // Regen de Energia ao final do turno
     regenEnergiaFinaldeTurno();
+  } else {
+    textoComDano = textoLimpo;
   }
 
   // ── Snapshot de status (para exibição ao lado das msgs — captura APÓS as mecânicas) ──
@@ -5205,7 +5459,7 @@ function enviarMensagem() {
 
   socket.emit('chat-mensagem', {
     nome: usuarioAtual,
-    texto: textoLimpo,
+    texto: textoComDano !== undefined ? textoComDano : textoLimpo,
     tipo: ehForaDePersonagem ? 'ooc' : 'normal'
   });
 
@@ -5816,6 +6070,7 @@ function ativarCombate(oponente) {
   combateState.ativo = true;
   combateState.oponente = oponente;
   atualizarBarraCombate();
+  atualizarTagAtaque();
   // Mensagem de sistema local
   const chatEl = document.getElementById('chat-messages');
   if (chatEl) {
