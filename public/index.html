@@ -5662,10 +5662,17 @@ function selecionarAtaque(id, icon, label, dano, tipo, custo) {
 
 function limparAtaqueSelecionado() {
   selectedAttack = null;
-  const tag = document.getElementById('attack-selector-tag');
-  if (tag) tag.classList.remove('visible');
   document.getElementById('ast-label').textContent = 'Escolher ataque';
   document.getElementById('ast-dano').textContent = '';
+  // Mantém o botão visível durante o combate para o jogador selecionar o próximo ataque
+  const tag = document.getElementById('attack-selector-tag');
+  if (tag) {
+    if (combateState.ativo) {
+      tag.classList.add('visible');
+    } else {
+      tag.classList.remove('visible');
+    }
+  }
 }
 
 function atualizarTagAtaque() {
@@ -5712,16 +5719,18 @@ function enviarMensagem() {
     // Aplica reações defensivas pendentes (tags escolhidas acima do input)
     const tevReacao = aplicarReacoesPendentes();
 
-    const ehAtaque = !tevReacao && detectarAtaque(textoLimpo);
+    // ── Em combate formal: ataque é detectado EXCLUSIVAMENTE pelo painel de seleção.
+    // Palavras-chave de ataque no texto são ignoradas — apenas selectedAttack conta.
+    // Em combate informal (Boneco de Treino), mantém detecção por palavras.
+    const ehAtaque = !tevReacao && (
+      combateState.ativo
+        ? !!selectedAttack                     // combate formal: só painel
+        : detectarAtaque(textoLimpo)           // boneco / informal: palavras-chave
+    );
 
     if (ehAtaque) {
-      // ── Em combate formal: exige ataque selecionado via painel ────────────
       if (combateState.ativo) {
-        if (!selectedAttack) {
-          mostrarToast('⚔️ Selecione um ataque antes de enviar! Clique na tag ⚔️ acima do campo de texto.', 5000);
-          input.value = ''; input.style.height = 'auto';
-          return;
-        }
+        // selectedAttack garantido aqui (verificado acima)
 
         // ── Sacrifício de Energia Atual ────────────────────────────────────
         if (energySacrificeBonus > 0) {
@@ -5736,14 +5745,13 @@ function enviarMensagem() {
         }
 
         // ── Injeta o dano no texto da mensagem automaticamente ─────────────
-        // O receptor verá "X de dano" e receberá o prompt de reação.
         const danoFinal = selectedAttack.dano;
         const tipoAtq = selectedAttack.tipo === 'magico' ? 'mágico' : 'físico';
         const ataqueLabel = selectedAttack.label.replace('🌟','').trim();
         textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
 
         if (!pendingAnimForNextMsg) pendingAnimForNextMsg = selectedAttack.tipo === 'magico' ? 'foco-ativo' : 'segundo-ataque';
-        limparAtaqueSelecionado();
+        limparAtaqueSelecionado(); // limpa seleção mas mantém botão visível
 
       } else {
         // Combate informal (Boneco de Treino) — aceita texto livre
