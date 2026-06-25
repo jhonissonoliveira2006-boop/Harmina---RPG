@@ -295,8 +295,8 @@ function processarReacaoDoBoneco(mensagem) {
 // A chave da API fica EXCLUSIVAMENTE aqui, nunca é enviada ao cliente.
 // Configure via variável de ambiente: GEMINI_API_KEY=...
 // ═══════════════════════════════════════════
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const ARBITER_MODEL  = 'gemini-2.0-flash';
+const GEMINI_API_KEY  = process.env.GEMINI_API_KEY || '';
+const ARBITER_MODEL   = 'gemini-2.0-flash';
 const ARBITER_MAX_TOK = 800;
 const ARBITER_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${ARBITER_MODEL}:generateContent`;
 
@@ -342,10 +342,7 @@ FORMATO DE RESPOSTA: Responda SOMENTE com JSON válido, sem markdown, sem texto 
     body: JSON.stringify({
       system_instruction: { parts: [{ text: sistemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userContent }] }],
-      generationConfig: {
-        maxOutputTokens: ARBITER_MAX_TOK,
-        temperature: 0.2,
-      },
+      generationConfig: { maxOutputTokens: ARBITER_MAX_TOK, temperature: 0.2 },
     }),
   });
 
@@ -530,7 +527,7 @@ io.on('connection', (socket) => {
 
     // Valida chave
     if (!GEMINI_API_KEY) {
-      socket.emit('arbiter-resposta', { erro: 'Árbitro de IA não configurado no servidor. Defina a variável de ambiente GEMINI_API_KEY.' });
+      socket.emit('arbiter-resposta', { erro: 'Árbitro de IA não configurado. Defina GEMINI_API_KEY no servidor.' });
       return;
     }
 
