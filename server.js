@@ -291,6 +291,84 @@ function processarReacaoDoBoneco(mensagem) {
 }
 
 // ═══════════════════════════════════════════
+// ÁRBITRO NARRATIVO DE IA
+// A chave da API fica EXCLUSIVAMENTE aqui, nunca é enviada ao cliente.
+// Configure via variável de ambiente: ANTHROPIC_API_KEY=sk-ant-...
+// ═══════════════════════════════════════════
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const ARBITER_MODEL     = 'claude-sonnet-4-6';
+const ARBITER_MAX_TOK   = 800;
+const ARBITER_ENDPOINT  = 'https://api.anthropic.com/v1/messages';
+
+// Sistema de rate-limit simples: máx. 1 pedido a cada 4s por socket
+const arbiterCooldown = new Map(); // socketId → timestamp
+
+async function chamarArbitroIA(payload) {
+  const { mecanica, fichasCtx, historicoTxt, acoesTxt, decisaoAnterior, argumentoContestacao } = payload;
+
+  const sistemPrompt = `Você é o Árbitro Narrativo do sistema Hármina RPG — um árbitro imparcial que avalia solicitações de ativação de mecânicas narrativas durante combates sem mestre presencial.
+
+REGRAS GERAIS:
+- Mensagens iniciadas com "//" são fora do personagem e devem ser ignoradas.
+- Você NÃO decide vencedores, NÃO altera fichas, NÃO inventa fatos ausentes no histórico.
+- Avalie apenas coerência narrativa, plausibilidade no cenário e consistência com as regras.
+- Seja justo, transparente e explique sempre o motivo.
+
+SISTEMA HÁRMINA — REGRAS RESUMIDAS:
+- Furtividade: requer distração visual/auditiva, ambiente favorável, vantagem de Guarda.
+- Imobilização: requer Energia + Vita >= oponente, custo 2⚡.
+- Vantagem narrativa: requer preparação prévia, uso criativo de habilidades ou fraqueza do cenário.
+- Dons e Vocações: levados em conta para plausibilidade da ação.
+- Poder Único: habilidade especial do personagem — pode justificar ações extraordinárias.
+
+FORMATO DE RESPOSTA: Responda SOMENTE com JSON válido, sem markdown, sem texto adicional:
+{"aprovado": true/false, "confianca": 0.0-1.0, "mecanica": "nome da mecânica", "motivo": "explicação detalhada em português"}`;
+
+  let userContent = `FICHAS EM COMBATE:\n${(fichasCtx || []).join('\n') || '(nenhuma ficha ativa)'}\n\n`;
+  userContent += `HISTÓRICO COMPLETO DE AÇÕES NARRATIVAS:\n${historicoTxt || '(vazio)'}\n\n`;
+  userContent += `AÇÕES SELECIONADAS PARA AVALIAÇÃO:\n${acoesTxt || '(nenhuma selecionada)'}\n\n`;
+  userContent += `MECÂNICA SOLICITADA: ${mecanica}`;
+
+  if (decisaoAnterior && argumentoContestacao) {
+    userContent += `\n\nDECISÃO ANTERIOR: ${JSON.stringify(decisaoAnterior)}`;
+    userContent += `\n\nARGUMENTO DE CONTESTAÇÃO: ${argumentoContestacao}`;
+    userContent += `\n\nReavalie a decisão considerando o argumento acima. Mantenha, corrija ou revogue, sempre justificando.`;
+  }
+
+  // fetch nativo está disponível no Node.js 18+; use node-fetch se necessário
+  const resp = await fetch(ARBITER_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: ARBITER_MODEL,
+      max_tokens: ARBITER_MAX_TOK,
+      system: sistemPrompt,
+      messages: [{ role: 'user', content: userContent }],
+    }),
+  });
+
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => '');
+    throw new Error(`Anthropic API HTTP ${resp.status}: ${errBody.slice(0, 200)}`);
+  }
+
+  const data = await resp.json();
+  const rawText = (data.content || []).map(b => b.text || '').join('').trim();
+  const clean   = rawText.replace(/^```json?|```$/gm, '').trim();
+  const decisao = JSON.parse(clean);
+
+  if (typeof decisao.aprovado !== 'boolean' || typeof decisao.motivo !== 'string') {
+    throw new Error('Resposta da IA em formato inesperado.');
+  }
+
+  return decisao;
+}
+
+// ═══════════════════════════════════════════
 // SOCKET.IO
 // ═══════════════════════════════════════════
 io.on('connection', (socket) => {
@@ -436,6 +514,59 @@ io.on('connection', (socket) => {
     socket.emit('presenca-lista', lista);
   });
 
+  // ── ÁRBITRO DE IA: Solicitação ──────────────────────────────────────────
+  // O cliente envia apenas contexto narrativo (fichas, histórico, mecânica).
+  // A chave da API nunca sai deste arquivo — fica em process.env.ANTHROPIC_API_KEY.
+  socket.on('arbiter-solicitar', async (payload) => {
+    if (!socket.nomeJogador) return;
+
+    // Rate-limit: 1 pedido a cada 4 segundos por socket
+    const agora = Date.now();
+    const ultimo = arbiterCooldown.get(socket.id) || 0;
+    if (agora - ultimo < 4000) {
+      socket.emit('arbiter-resposta', { erro: 'Aguarde alguns segundos antes de solicitar outra avaliação.' });
+      return;
+    }
+    arbiterCooldown.set(socket.id, agora);
+
+    // Valida chave
+    if (!ANTHROPIC_API_KEY) {
+      socket.emit('arbiter-resposta', { erro: 'Árbitro de IA não configurado no servidor. Defina a variável de ambiente ANTHROPIC_API_KEY.' });
+      return;
+    }
+
+    // Valida payload mínimo
+    if (!payload || !textoValido(payload.mecanica, 200)) {
+      socket.emit('arbiter-resposta', { erro: 'Mecânica inválida na solicitação.' });
+      return;
+    }
+
+    // Sanitiza — remove campos desnecessários, limita tamanho
+    const payloadSeguro = {
+      mecanica:             String(payload.mecanica).slice(0, 200),
+      fichasCtx:            Array.isArray(payload.fichasCtx)
+                              ? payload.fichasCtx.map(s => String(s).slice(0, 500)).slice(0, 20)
+                              : [],
+      historicoTxt:         String(payload.historicoTxt || '').slice(0, 8000),
+      acoesTxt:             String(payload.acoesTxt || '').slice(0, 4000),
+      decisaoAnterior:      payload.decisaoAnterior || null,
+      argumentoContestacao: payload.argumentoContestacao
+                              ? String(payload.argumentoContestacao).slice(0, 1000)
+                              : null,
+    };
+
+    const eContestacao = !!(payloadSeguro.decisaoAnterior && payloadSeguro.argumentoContestacao);
+
+    try {
+      const decisao = await chamarArbitroIA(payloadSeguro);
+      socket.emit('arbiter-resposta', { decisao, eContestacao });
+      console.log(`⚖️ Árbitro [${socket.nomeJogador}]: ${decisao.aprovado ? '✅' : '❌'} "${payloadSeguro.mecanica}" (${Math.round((decisao.confianca || 0) * 100)}%)`);
+    } catch (err) {
+      console.error(`⚠️ Árbitro IA erro [${socket.nomeJogador}]:`, err.message);
+      socket.emit('arbiter-resposta', { erro: 'Erro ao consultar a IA. Tente novamente em instantes.' });
+    }
+  });
+
   // ── Desconexão ─────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     if (socket.nomeJogador) {
@@ -445,6 +576,7 @@ io.on('connection', (socket) => {
         jogadoresSocketMap.delete(chave);
       }
     }
+    arbiterCooldown.delete(socket.id);
     console.log(`👋 ${socket.nomeJogador || 'Anônimo'} saiu. (${io.engine.clientsCount} online)`);
     io.emit('presenca-atualizada', { total: io.engine.clientsCount });
   });
@@ -463,6 +595,12 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
   console.log(`🚀 Servidor Hármina rodando na porta ${PORT}!`);
+  if (!ANTHROPIC_API_KEY) {
+    console.warn('⚠️  ANTHROPIC_API_KEY não definida — Árbitro de IA desativado.');
+    console.warn('   Configure com: export ANTHROPIC_API_KEY=sk-ant-...');
+  } else {
+    console.log('⚖️  Árbitro Narrativo de IA: ativo.');
+  }
 });
 
 // ── Encerramento Gracioso ───────────────────────────────────────────────────
