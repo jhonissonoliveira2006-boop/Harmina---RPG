@@ -293,12 +293,12 @@ function processarReacaoDoBoneco(mensagem) {
 // ═══════════════════════════════════════════
 // ÁRBITRO NARRATIVO DE IA
 // A chave da API fica EXCLUSIVAMENTE aqui, nunca é enviada ao cliente.
-// Configure via variável de ambiente: ANTHROPIC_API_KEY=sk-ant-...
+// Configure via variável de ambiente: GEMINI_API_KEY=...
 // ═══════════════════════════════════════════
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const ARBITER_MODEL     = 'claude-sonnet-4-6';
+const GEMINI_API_KEY    = process.env.GEMINI_API_KEY || '';
+const ARBITER_MODEL     = 'gemini-2.0-flash';
 const ARBITER_MAX_TOK   = 800;
-const ARBITER_ENDPOINT  = 'https://api.anthropic.com/v1/messages';
+const ARBITER_ENDPOINT  = `https://generativelanguage.googleapis.com/v1beta/models/${ARBITER_MODEL}:generateContent`;
 
 // Sistema de rate-limit simples: máx. 1 pedido a cada 4s por socket
 const arbiterCooldown = new Map(); // socketId → timestamp
@@ -336,28 +336,28 @@ FORMATO DE RESPOSTA: Responda SOMENTE com JSON válido, sem markdown, sem texto 
   }
 
   // fetch nativo está disponível no Node.js 18+; use node-fetch se necessário
-  const resp = await fetch(ARBITER_ENDPOINT, {
+  const resp = await fetch(`${ARBITER_ENDPOINT}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: ARBITER_MODEL,
-      max_tokens: ARBITER_MAX_TOK,
-      system: sistemPrompt,
-      messages: [{ role: 'user', content: userContent }],
+      system_instruction: { parts: [{ text: sistemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userContent }] }],
+      generationConfig: {
+        maxOutputTokens: ARBITER_MAX_TOK,
+        temperature: 0.2,
+      },
     }),
   });
 
   if (!resp.ok) {
     const errBody = await resp.text().catch(() => '');
-    throw new Error(`Anthropic API HTTP ${resp.status}: ${errBody.slice(0, 200)}`);
+    throw new Error(`Gemini API HTTP ${resp.status}: ${errBody.slice(0, 200)}`);
   }
 
   const data = await resp.json();
-  const rawText = (data.content || []).map(b => b.text || '').join('').trim();
+  const rawText = ((data.candidates || [])[0]?.content?.parts || []).map(b => b.text || '').join('').trim();
   const clean   = rawText.replace(/^```json?|```$/gm, '').trim();
   const decisao = JSON.parse(clean);
 
@@ -530,8 +530,8 @@ io.on('connection', (socket) => {
     arbiterCooldown.set(socket.id, agora);
 
     // Valida chave
-    if (!ANTHROPIC_API_KEY) {
-      socket.emit('arbiter-resposta', { erro: 'Árbitro de IA não configurado no servidor. Defina a variável de ambiente ANTHROPIC_API_KEY.' });
+    if (!GEMINI_API_KEY) {
+      socket.emit('arbiter-resposta', { erro: 'Árbitro de IA não configurado no servidor. Defina a variável de ambiente GEMINI_API_KEY.' });
       return;
     }
 
@@ -595,11 +595,11 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
   console.log(`🚀 Servidor Hármina rodando na porta ${PORT}!`);
-  if (!ANTHROPIC_API_KEY) {
-    console.warn('⚠️  ANTHROPIC_API_KEY não definida — Árbitro de IA desativado.');
-    console.warn('   Configure com: export ANTHROPIC_API_KEY=sk-ant-...');
+  if (!GEMINI_API_KEY) {
+    console.warn('⚠️  GEMINI_API_KEY não definida — Árbitro de IA desativado.');
+    console.warn('   Configure com: export GEMINI_API_KEY=...');
   } else {
-    console.log('⚖️  Árbitro Narrativo de IA: ativo.');
+    console.log('⚖️  Árbitro Narrativo de IA (Gemini): ativo.');
   }
 });
 
