@@ -953,67 +953,6 @@ body::before {
   margin-top: 0.15rem; padding: 0 0.3rem;
 }
 
-/* ─── Botão de modo Off (OOC) ─── */
-.ooc-toggle-btn {
-  font-size: 1rem; background: rgba(201,162,39,0.08); border: 1px solid rgba(201,162,39,0.25);
-  border-radius: 8px; padding: 0.3rem 0.55rem; cursor: pointer; color: var(--chat-muted);
-  margin-left: 0.4rem; transition: all 0.18s; line-height: 1;
-}
-.ooc-toggle-btn.ativo {
-  background: rgba(201,162,39,0.28); border-color: var(--chat-action);
-  color: var(--chat-action); box-shadow: 0 0 0 2px rgba(201,162,39,0.18);
-}
-
-/* ─── Faixa de modo OOC ativo ─── */
-.ooc-mode-bar {
-  display: none; align-items: center; gap: 0.4rem; padding: 0.2rem 0.5rem;
-  background: rgba(201,162,39,0.12); border-radius: 6px; margin-bottom: 0.35rem;
-  font-family: var(--mono); font-size: 0.6rem; color: var(--chat-action); letter-spacing: 0.04em;
-}
-.ooc-mode-bar.show { display: flex; }
-
-/* ─── Menu de contexto do balão (copiar / responder) ─── */
-.bubble-ctx-menu {
-  position: absolute; z-index: 100; background: #1e1812; border: 1px solid rgba(201,162,39,0.35);
-  border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-  display: none; flex-direction: column; min-width: 130px; overflow: hidden;
-}
-.bubble-ctx-menu.open { display: flex; }
-.bubble-ctx-btn {
-  background: none; border: none; color: var(--parchment); font-family: var(--mono);
-  font-size: 0.68rem; padding: 0.55rem 0.85rem; text-align: left; cursor: pointer;
-  display: flex; align-items: center; gap: 0.45rem; letter-spacing: 0.03em;
-}
-.bubble-ctx-btn:hover { background: rgba(201,162,39,0.15); }
-
-/* ─── Preview de resposta acima do input ─── */
-.reply-preview {
-  display: none; align-items: flex-start; gap: 0.5rem;
-  background: rgba(201,162,39,0.08); border-left: 3px solid var(--chat-action);
-  border-radius: 0 6px 6px 0; padding: 0.35rem 0.6rem; margin-bottom: 0.3rem;
-}
-.reply-preview.show { display: flex; }
-.reply-preview-text {
-  flex: 1; font-family: var(--body); font-size: 0.78rem; color: var(--chat-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
-}
-.reply-preview-author {
-  font-family: var(--mono); font-size: 0.6rem; color: var(--chat-action); margin-bottom: 0.15rem;
-}
-.reply-preview-cancel {
-  background: none; border: none; color: var(--chat-muted); font-size: 1rem;
-  cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
-}
-/* ─── Citação dentro do balão de resposta ─── */
-.msg-reply-quote {
-  background: rgba(201,162,39,0.08); border-left: 2px solid var(--chat-action);
-  border-radius: 0 5px 5px 0; padding: 0.25rem 0.55rem; margin-bottom: 0.35rem;
-  font-family: var(--body); font-size: 0.75rem; color: var(--chat-muted); line-height: 1.35;
-}
-.msg-reply-quote-author {
-  font-family: var(--mono); font-size: 0.58rem; color: var(--chat-action); margin-bottom: 0.1rem;
-}
-
 /* ─── Bolha de novas mensagens ─── */
 .new-messages-pill {
   position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -4094,17 +4033,6 @@ renderPP();
         <div class="chat-composer">
           <div class="composer-toolbar">
             <button class="ficha-picker-btn" id="ficha-picker-btn" onclick="abrirSeletorFicha()">🗂️ <span id="ficha-picker-label">Escolher Ficha</span></button>
-            <button class="ooc-toggle-btn" id="ooc-toggle-btn" onclick="toggleModoOOC()" title="Falar fora do personagem (Off)">💬</button>
-          </div>
-          <!-- Faixa: modo OOC ativo -->
-          <div class="ooc-mode-bar" id="ooc-mode-bar">💬 Modo Off ativado — todas as mensagens começarão com //</div>
-          <!-- Preview de resposta -->
-          <div class="reply-preview" id="reply-preview">
-            <div style="flex:1;min-width:0;">
-              <div class="reply-preview-author" id="reply-preview-author"></div>
-              <div class="reply-preview-text" id="reply-preview-text"></div>
-            </div>
-            <button class="reply-preview-cancel" onclick="cancelarResposta()" title="Cancelar resposta">✕</button>
           </div>
           <div class="composer-hint" id="composer-hint">Use <code>//</code> para falar fora do personagem · ações com <code>"N de dano"</code> ou <code>"N de cura"</code> mirando um nome ou "inimigo/adversário" são reconhecidas automaticamente · fale com o <strong>Boneco de Treino</strong> pra testar sozinho</div>
           <!-- Painel ofensivo de combate (aparece quando combate está ativo) -->
@@ -4624,7 +4552,6 @@ function sair() {
   usuarioAtual = null;
   fichaAtivaChat = null;
   filaDeStatusPendentes = [];
-  filaDeCitacoesPendentes = [];
   const fichaBtn = document.getElementById('ficha-picker-label');
   if (fichaBtn) fichaBtn.textContent = 'Escolher Ficha';
   const fichaPickerBtn = document.getElementById('ficha-picker-btn');
@@ -4695,7 +4622,6 @@ const socket = io();
 let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz login/cadastro
 let fichaAtivaChat = null; // nome da ficha escolhida para narrar no chat (null = nenhuma)
 let filaDeStatusPendentes = []; // snapshots de status aguardando a confirmação (echo) do servidor, na ordem de envio
-let filaDeCitacoesPendentes = []; // citações de resposta pendentes, alinhadas com filaDeStatusPendentes
 
 // ─── Estado de Combate ────────────────────────────────────────────────────────
 let atacouEsteTurno = false;
@@ -4842,16 +4768,11 @@ function initChatSeDronar() {
     sinalizarDigitando();
   });
 
-  // Shift+Enter quebra linha; Enter simples agora apenas quebra linha também (envio só pelo botão)
+  // Enter envia, Shift+Enter quebra linha
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      // Insere uma quebra de linha manualmente
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      input.value = input.value.slice(0, start) + '\n' + input.value.slice(end);
-      input.selectionStart = input.selectionEnd = start + 1;
-      input.dispatchEvent(new Event('input'));
+      enviarMensagem();
     }
   });
 
@@ -5743,11 +5664,10 @@ function limparAtaqueSelecionado() {
   selectedAttack = null;
   document.getElementById('ast-label').textContent = 'Escolher ataque';
   document.getElementById('ast-dano').textContent = '';
-  // Mantém o botão visível durante o combate para o próximo ataque
   const tag = document.getElementById('attack-selector-tag');
   if (tag) {
     if (combateState.ativo) {
-      tag.classList.add('visible');
+      tag.classList.add('visible');   // mantém visível para o próximo ataque
     } else {
       tag.classList.remove('visible');
     }
@@ -5778,14 +5698,10 @@ function enviarMensagem() {
 
   // ── Fora de Personagem (OOC) ────────────────────────────────────────────
   const textoTrimmed = texto.trimStart();
-  // Modo OOC ativo: prefixar // automaticamente se não tiver ainda
-  const textoComOOC = (modoOOC && !/^\/\s*\//.test(textoTrimmed))
-    ? '// ' + textoTrimmed
-    : textoTrimmed;
-  const ehForaDePersonagem = /^\/\s*\//.test(textoComOOC);
+  const ehForaDePersonagem = /^\/\s*\//.test(textoTrimmed);
 
   // ── Mensagem Privada ──────────────────────────────────────────────────────
-  const pv = detectarComandoPV(textoComOOC);
+  const pv = detectarComandoPV(texto);
   if (pv) {
     adicionarMensagem({ autor: usuarioAtual, texto: pv.mensagem, tipo: 'pv', mine: true, pvDestinatario: pv.destinatario });
     socket.emit('chat-privado', { de: usuarioAtual, para: pv.destinatario, texto: pv.mensagem });
@@ -5794,7 +5710,7 @@ function enviarMensagem() {
     return;
   }
 
-  const textoLimpo = ehForaDePersonagem ? textoComOOC.replace(/^\/\s*\/{1,2}\s*/, '').trim() : textoComOOC.trim();
+  const textoLimpo = ehForaDePersonagem ? textoTrimmed.replace(/^\/\s*\/{1,2}\s*/, '').trim() : texto.trim();
   if (!textoLimpo) { input.value = ''; return; }
 
   // ── Mecânicas de Combate (apenas mensagens em personagem com ficha ativa) ─
@@ -5802,7 +5718,7 @@ function enviarMensagem() {
     // Aplica reações defensivas pendentes (tags escolhidas acima do input)
     const tevReacao = aplicarReacoesPendentes();
 
-    // Em combate FORMAL: ataque é detectado EXCLUSIVAMENTE pela seleção do painel.
+    // Em combate FORMAL: ataque é detectado EXCLUSIVAMENTE pelo painel (selectedAttack).
     // Em combate INFORMAL (Boneco de Treino): palavras-chave no texto.
     const ehAtaque = !tevReacao && (
       combateState.ativo ? !!selectedAttack : detectarAtaque(textoLimpo)
@@ -5810,6 +5726,8 @@ function enviarMensagem() {
 
     if (ehAtaque) {
       if (combateState.ativo) {
+        // selectedAttack garantido aqui — ehAtaque só é true se !!selectedAttack
+
         // ── Sacrifício de Energia Atual ────────────────────────────────────
         if (energySacrificeBonus > 0) {
           state.energy.cur = Math.max(0, state.energy.cur - energySacrificeBonus);
@@ -5822,14 +5740,15 @@ function enviarMensagem() {
           if (btn) btn.classList.remove('active');
         }
 
-        // ── Injeta o dano no texto automaticamente ─────────────────────────
+        // ── Injeta o dano no texto da mensagem automaticamente ─────────────
+        // O receptor verá "X de dano" e receberá o prompt de reação.
         const danoFinal = selectedAttack.dano;
         const tipoAtq = selectedAttack.tipo === 'magico' ? 'mágico' : 'físico';
         const ataqueLabel = selectedAttack.label.replace('🌟','').trim();
         textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
 
         if (!pendingAnimForNextMsg) pendingAnimForNextMsg = selectedAttack.tipo === 'magico' ? 'foco-ativo' : 'segundo-ataque';
-        limparAtaqueSelecionado(); // limpa seleção mas mantém botão visível durante combate
+        limparAtaqueSelecionado();
 
       } else {
         // Combate informal (Boneco de Treino) — aceita texto livre
@@ -5867,31 +5786,23 @@ function enviarMensagem() {
     } : null);
   }
 
-  // Captura citação antes de limpar
-  const replySnapshot = replyingTo ? { autor: replyingTo.autor, texto: replyingTo.texto } : null;
-
   socket.emit('chat-mensagem', {
     nome: usuarioAtual,
     texto: textoComDano !== undefined ? textoComDano : textoLimpo,
     tipo: ehForaDePersonagem ? 'ooc' : 'normal'
   });
 
-  // Guarda a citação para ser aplicada quando o eco do servidor chegar
-  if (replySnapshot) filaDeCitacoesPendentes.push(replySnapshot);
-
   input.value = '';
   input.style.height = 'auto';
   pararDeDigitar();
   socket.emit('parou-de-digitar', { nome: usuarioAtual });
-  cancelarResposta();
 }
 
-function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot, pvDestinatario, replyTo }) {
+function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot, pvDestinatario }) {
   const msg = {
     id: chatState.proximoId++,
     autor, texto, tipo, mine, statusSnapshot: statusSnapshot || null,
     pvDestinatario: pvDestinatario || null,
-    replyTo: replyTo || null,
     timestamp: new Date()
   };
   chatState.mensagens.push(msg);
@@ -5938,7 +5849,9 @@ function renderizarMensagem(msg) {
 
   row.className = classes;
 
-  // Barra de status local
+  // Barra de status: só aparece na minha própria mensagem, quando há uma ficha
+  // escolhida e a ação não é OOC. Ninguém além de mim vê isso (é montado aqui,
+  // no navegador, a partir de um snapshot puramente local).
   let statusHtml = '';
   if (msg.mine && msg.statusSnapshot) {
     const s = msg.statusSnapshot;
@@ -5950,35 +5863,15 @@ function renderizarMensagem(msg) {
     </div>`;
   }
 
-  // Bloco de citação (resposta)
-  let quoteHtml = '';
-  if (msg.replyTo) {
-    const resumo = msg.replyTo.texto.slice(0, 100) + (msg.replyTo.texto.length > 100 ? '…' : '');
-    quoteHtml = `<div class="msg-reply-quote">
-      <div class="msg-reply-quote-author">${escaparHtml(msg.replyTo.autor)}</div>
-      ${escaparHtml(resumo)}
-    </div>`;
-  }
-
   row.innerHTML = `
     <div class="msg-author">${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}</div>
     ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ${msg.mine ? '→ ' + escaparHtml(msg.pvDestinatario || '') : '← ' + escaparHtml(msg.autor)}</div>` : ''}
     ${statusHtml}
-    <div class="msg-bubble" data-msg-id="${msg.id}">${quoteHtml}${escaparHtml(msg.texto)}</div>
+    <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
     <div class="msg-time">${formatarHora(msg.timestamp)}</div>
   `;
-
-  // Clique no balão abre menu de contexto
-  const bubble = row.querySelector('.msg-bubble');
-  if (bubble) {
-    bubble.addEventListener('click', (e) => {
-      // Ignora cliques em botões dentro do balão
-      if (e.target.tagName === 'BUTTON') return;
-      abrirMenuContextoBolha(e, msg.id);
-    });
-  }
-
   container.appendChild(row);
+
   tentarAdicionarPromptDeMecanica(msg);
 }
 
@@ -6008,12 +5901,12 @@ const TERMOS_OPONENTE_GENERICOS = [
   'você', 'voce', 'vc', 'tu'
 ];
 
-// Tenta identificar dano ou cura numa frase de ação. Retorna { tipo, valor } ou null.
+// Tenta identificar dano ou cura numa frase de ação. Retorna { tipo, valor, injetado? } ou null.
 function detectarMecanica(texto) {
-  // ── PADRÃO INJETADO PELO SISTEMA (autoritativo) ───────────────────────────
+  // ── PADRÃO INJETADO PELO PAINEL (autoritativo) ────────────────────────────
   // Formato: ⟨NomeAtaque: N de dano físico⟩  ou  ⟨NomeAtaque: N de dano mágico⟩
-  const mInjetado = texto.match(/⟨[^⟩]+:\s*(\d+)\s*de\s*dano/i);
-  if (mInjetado) return { tipo: 'dano', valor: parseInt(mInjetado[1], 10), injetado: true };
+  const mInj = texto.match(/⟨[^⟩]+:\s*(\d+)\s*de\s*dano/i);
+  if (mInj) return { tipo: 'dano', valor: parseInt(mInj[1], 10), injetado: true };
 
   // Helper: normaliza sem acentos, para buscas fuzzy
   const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -6043,12 +5936,11 @@ function detectarMecanica(texto) {
   return null;
 }
 
-// A ação me menciona como alvo? Se o dano veio do padrão injetado (⟨...⟩),
-// sempre mostra o prompt — o sistema já validou que é um ataque formal.
-// Caso contrário, exige nome da ficha ou termo genérico de oponente.
+// A ação me menciona como alvo? Se o dano foi injetado pelo painel formal,
+// sempre exibe o prompt — o sistema já validou que é um ataque contra o oponente.
+// Caso contrário, exige nome da ficha ou termo genérico no texto.
 function mensagemMeAlveja(texto, mecanica) {
   if (!fichaAtivaChat) return false;
-  // Dano injetado pelo painel de ataque → sempre é contra o oponente
   if (mecanica && mecanica.injetado) return true;
   const textoLower = texto.toLowerCase();
   if (textoLower.includes(fichaAtivaChat.toLowerCase())) return true;
@@ -6864,19 +6756,17 @@ socket.on('historico-chat', (mensagens) => {
 socket.on('chat-mensagem', (dados) => {
   pararDeDigitar();
   const ehMinha = dados.nome === usuarioAtual;
+  // A fila só recebe entradas para mensagens 'normal' (não-OOC) — puxamos daqui
+  // na mesma ordem em que foram enviadas, alinhando com o eco do servidor.
   const snapshot = (ehMinha && dados.tipo !== 'ooc' && filaDeStatusPendentes.length > 0)
     ? filaDeStatusPendentes.shift()
-    : null;
-  const citacao = (ehMinha && filaDeCitacoesPendentes.length > 0)
-    ? filaDeCitacoesPendentes.shift()
     : null;
   adicionarMensagem({
     autor: dados.nome,
     texto: dados.texto,
     tipo: dados.tipo === 'ooc' ? 'ooc' : 'normal',
     mine: ehMinha,
-    statusSnapshot: snapshot,
-    replyTo: citacao || null
+    statusSnapshot: snapshot
   });
 });
 
@@ -6907,79 +6797,6 @@ socket.on('digitando', (dados) => {
 socket.on('parou-de-digitar', (dados) => {
   if (dados.nome !== usuarioAtual) pararDeDigitar();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MODO OOC (Off) — botão que prefixa // em todas as mensagens
-// ═══════════════════════════════════════════════════════════════════════════
-let modoOOC = false;
-
-function toggleModoOOC() {
-  modoOOC = !modoOOC;
-  const btn = document.getElementById('ooc-toggle-btn');
-  const bar = document.getElementById('ooc-mode-bar');
-  if (btn) btn.classList.toggle('ativo', modoOOC);
-  if (bar) bar.classList.toggle('show', modoOOC);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SISTEMA DE RESPOSTA A BALÕES — copiar e responder com citação
-// ═══════════════════════════════════════════════════════════════════════════
-let ctxMenuMsg = null;       // { autor, texto, id }
-let replyingTo  = null;      // { autor, texto }
-
-// Abre o menu de contexto ao clicar num balão
-function abrirMenuContextoBolha(evt, msgId) {
-  evt.stopPropagation();
-  const menu = document.getElementById('bubble-ctx-menu');
-  const all  = document.querySelectorAll('.msg-bubble');
-
-  // Encontra a msg no estado
-  const msg = chatState.mensagens.find(m => m.id === msgId);
-  if (!msg) return;
-  ctxMenuMsg = { autor: msg.autor, texto: msg.texto, id: msg.id };
-
-  // Posiciona o menu perto do clique
-  menu.style.top  = (evt.clientY + 6) + 'px';
-  menu.style.left = Math.min(evt.clientX, window.innerWidth - 150) + 'px';
-  menu.style.position = 'fixed';
-  menu.classList.add('open');
-
-  // Fecha ao clicar fora
-  setTimeout(() => document.addEventListener('click', fecharMenuContextoBolha, { once: true }), 10);
-}
-
-function fecharMenuContextoBolha() {
-  document.getElementById('bubble-ctx-menu').classList.remove('open');
-  ctxMenuMsg = null;
-}
-
-function bubbleCtxCopiar() {
-  if (!ctxMenuMsg) return;
-  navigator.clipboard.writeText(ctxMenuMsg.texto).catch(() => {});
-  mostrarToast('📋 Copiado!', 2000);
-  fecharMenuContextoBolha();
-}
-
-function bubbleCtxResponder() {
-  if (!ctxMenuMsg) return;
-  replyingTo = { autor: ctxMenuMsg.autor, texto: ctxMenuMsg.texto };
-  const pr   = document.getElementById('reply-preview');
-  const prA  = document.getElementById('reply-preview-author');
-  const prT  = document.getElementById('reply-preview-text');
-  if (pr && prA && prT) {
-    prA.textContent = replyingTo.autor;
-    prT.textContent = replyingTo.texto.slice(0, 120) + (replyingTo.texto.length > 120 ? '…' : '');
-    pr.classList.add('show');
-  }
-  fecharMenuContextoBolha();
-  setTimeout(() => document.getElementById('chat-input')?.focus(), 50);
-}
-
-function cancelarResposta() {
-  replyingTo = null;
-  const pr = document.getElementById('reply-preview');
-  if (pr) pr.classList.remove('show');
-}
 
 </script>
 
@@ -7012,12 +6829,6 @@ function cancelarResposta() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.7rem;" id="sac-of-opcoes"></div>
     <button onclick="fecharSacrificioOfensivo()" style="width:100%;font-family:var(--mono);font-size:0.65rem;background:none;border:1px solid rgba(255,255,255,0.12);color:#888;border-radius:6px;padding:0.35rem;cursor:pointer;">Cancelar</button>
   </div>
-</div>
-
-<!-- Menu de contexto do balão (copiar / responder) -->
-<div id="bubble-ctx-menu" class="bubble-ctx-menu">
-  <button class="bubble-ctx-btn" onclick="bubbleCtxCopiar()">📋 Copiar</button>
-  <button class="bubble-ctx-btn" onclick="bubbleCtxResponder()">↩️ Responder</button>
 </div>
 
 </body>
