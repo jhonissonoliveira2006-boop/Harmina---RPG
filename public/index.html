@@ -1371,6 +1371,258 @@ body::before {
   .msg-row { max-width: 88%; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   ÁRBITRO DE IA — ESTILOS
+   ═══════════════════════════════════════════════════════ */
+
+/* Botão ⚖️ ao lado dos 3 pontinhos */
+#ia-arbiter-btn {
+  background: none; border: none; color: var(--parchment, #f0e8d5);
+  font-size: 1.1rem; cursor: pointer; padding: 0.3rem 0.5rem;
+  border-radius: 4px; transition: background 0.2s; line-height: 1;
+  opacity: 0.85; position: relative;
+}
+#ia-arbiter-btn:hover { background: rgba(255,255,255,0.08); opacity: 1; }
+#ia-arbiter-btn .ia-badge {
+  position: absolute; top: 2px; right: 2px; width: 7px; height: 7px;
+  border-radius: 50%; background: #c9941a; display: none;
+}
+#ia-arbiter-btn .ia-badge.show { display: block; }
+
+/* Overlay e painel lateral */
+#ia-overlay {
+  position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.55);
+  display: none; justify-content: flex-end;
+  backdrop-filter: blur(2px);
+}
+#ia-overlay.open { display: flex; }
+
+#ia-panel {
+  width: min(400px, 100vw); height: 100dvh;
+  background: #1a1410; border-left: 1px solid rgba(201,162,39,0.3);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: ia-slide-in 0.22s ease;
+}
+@keyframes ia-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.ia-panel-header {
+  padding: 0.9rem 1.1rem; border-bottom: 1px solid rgba(201,162,39,0.2);
+  display: flex; justify-content: space-between; align-items: center;
+  background: #221c14; flex-shrink: 0;
+}
+.ia-panel-header h3 {
+  font-family: var(--serif); font-size: 0.95rem; color: var(--chat-action);
+  margin: 0; display: flex; align-items: center; gap: 0.4rem;
+}
+.ia-panel-close {
+  background: none; border: none; color: var(--chat-muted);
+  font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.4rem;
+  border-radius: 4px; transition: background 0.15s;
+}
+.ia-panel-close:hover { background: rgba(255,255,255,0.08); color: var(--parchment, #f0e8d5); }
+
+/* Fichas envolvidas no combate */
+.ia-fichas-section {
+  padding: 0.7rem 1rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.ia-fichas-label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em;
+  color: var(--chat-muted); text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.ia-ficha-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.ia-ficha-pill {
+  font-family: var(--mono); font-size: 0.65rem;
+  background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);
+  color: var(--chat-action); padding: 0.2rem 0.55rem; border-radius: 20px;
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.ia-ficha-pill.empty {
+  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1);
+  color: var(--chat-muted); font-style: italic;
+}
+
+/* Seleção de mensagens */
+.ia-msgs-section {
+  flex: 1; overflow-y: auto; padding: 0.6rem 1rem;
+  display: flex; flex-direction: column; gap: 0.35rem;
+}
+.ia-msgs-section::-webkit-scrollbar { width: 4px; }
+.ia-msgs-section::-webkit-scrollbar-thumb { background: rgba(201,162,39,0.2); border-radius: 2px; }
+
+.ia-msgs-label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em;
+  color: var(--chat-muted); text-transform: uppercase; margin-bottom: 0.25rem;
+  flex-shrink: 0;
+}
+.ia-msgs-hint {
+  font-family: var(--body); font-style: italic; font-size: 0.72rem;
+  color: var(--chat-muted); margin-bottom: 0.5rem;
+}
+.ia-msg-item {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer;
+  border: 1px solid transparent; transition: background 0.12s;
+  background: rgba(255,255,255,0.03);
+}
+.ia-msg-item:hover { background: rgba(255,255,255,0.06); }
+.ia-msg-item.selected {
+  background: rgba(201,162,39,0.12); border-color: rgba(201,162,39,0.4);
+}
+.ia-msg-item input[type=checkbox] {
+  margin-top: 2px; flex-shrink: 0; accent-color: var(--chat-action);
+  cursor: pointer;
+}
+.ia-msg-item-body { flex: 1; min-width: 0; }
+.ia-msg-item-autor {
+  font-family: var(--serif); font-size: 0.68rem; color: var(--chat-action);
+  font-weight: 600; margin-bottom: 0.1rem;
+}
+.ia-msg-item-texto {
+  font-family: var(--body); font-size: 0.8rem; color: rgba(240,232,213,0.75);
+  line-height: 1.35; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.ia-msg-empty {
+  font-family: var(--body); font-style: italic; font-size: 0.8rem;
+  color: var(--chat-muted); text-align: center; padding: 1.5rem 0;
+}
+
+/* Mecânica e solicitação */
+.ia-request-section {
+  padding: 0.7rem 1rem; border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.ia-mecanica-label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em;
+  color: var(--chat-muted); text-transform: uppercase; margin-bottom: 0.35rem;
+}
+.ia-mecanica-input {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 0.5rem 0.7rem; font-family: var(--body); font-size: 0.88rem;
+  color: var(--parchment, #f0e8d5); outline: none; resize: none;
+  transition: border-color 0.2s; line-height: 1.4; min-height: 48px; max-height: 90px;
+}
+.ia-mecanica-input:focus { border-color: rgba(201,162,39,0.5); }
+.ia-mecanica-input::placeholder { color: var(--chat-muted); }
+.ia-submit-btn {
+  width: 100%; margin-top: 0.5rem; background: var(--rust); color: var(--parchment);
+  border: none; border-radius: 6px; padding: 0.55rem; font-family: var(--serif);
+  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; transition: background 0.18s; display: flex; align-items: center;
+  justify-content: center; gap: 0.35rem;
+}
+.ia-submit-btn:hover { background: #5e2209; }
+.ia-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #5e2209; }
+
+/* Área de resultado */
+.ia-result-section {
+  padding: 0.7rem 1rem; border-top: 1px solid rgba(255,255,255,0.06);
+  display: none; flex-shrink: 0; max-height: 45vh; overflow-y: auto;
+}
+.ia-result-section.show { display: block; }
+.ia-result-section::-webkit-scrollbar { width: 4px; }
+.ia-result-section::-webkit-scrollbar-thumb { background: rgba(201,162,39,0.2); border-radius: 2px; }
+
+.ia-result-header {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.ia-result-header.aprovado { color: #86efac; }
+.ia-result-header.recusado { color: #f87171; }
+.ia-result-header.pendente { color: #fbbf24; }
+
+.ia-result-card {
+  background: rgba(255,255,255,0.04); border-radius: 8px;
+  padding: 0.75rem 0.9rem; border: 1px solid rgba(255,255,255,0.08);
+}
+.ia-result-verdict {
+  font-family: var(--serif); font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem;
+}
+.ia-result-verdict.ap { color: #86efac; }
+.ia-result-verdict.rec { color: #f87171; }
+
+.ia-result-mecanica {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--chat-action);
+  margin-bottom: 0.45rem; letter-spacing: 0.04em;
+}
+.ia-result-motivo {
+  font-family: var(--body); font-size: 0.85rem; color: rgba(240,232,213,0.85);
+  line-height: 1.5;
+}
+.ia-result-confianca {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--chat-muted);
+  margin-top: 0.5rem;
+}
+.ia-result-confianca span {
+  color: var(--chat-action); font-weight: 600;
+}
+
+/* Barra de progresso de confiança */
+.ia-confidence-bar {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08);
+  margin-top: 0.35rem; overflow: hidden;
+}
+.ia-confidence-fill {
+  height: 100%; border-radius: 2px; transition: width 0.5s ease;
+  background: linear-gradient(90deg, #c9941a, #86efac);
+}
+
+/* Contestação */
+.ia-contestar-btn {
+  width: 100%; margin-top: 0.5rem; background: transparent;
+  color: var(--chat-muted); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; padding: 0.4rem; font-family: var(--mono);
+  font-size: 0.65rem; letter-spacing: 0.06em; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center;
+  justify-content: center; gap: 0.3rem;
+}
+.ia-contestar-btn:hover { background: rgba(255,255,255,0.07); color: var(--parchment, #f0e8d5); border-color: rgba(255,255,255,0.3); }
+
+.ia-contestar-area { display: none; margin-top: 0.5rem; }
+.ia-contestar-area.show { display: block; }
+.ia-contestar-input {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 0.5rem 0.7rem; font-family: var(--body); font-size: 0.85rem;
+  color: var(--parchment, #f0e8d5); outline: none; resize: none; min-height: 60px;
+  transition: border-color 0.2s; line-height: 1.4;
+}
+.ia-contestar-input:focus { border-color: rgba(201,162,39,0.5); }
+.ia-contestar-input::placeholder { color: var(--chat-muted); }
+.ia-contestar-submit {
+  width: 100%; margin-top: 0.4rem; background: rgba(139,105,20,0.25);
+  color: var(--chat-action); border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 6px; padding: 0.4rem; font-family: var(--mono);
+  font-size: 0.65rem; letter-spacing: 0.06em; cursor: pointer;
+  transition: all 0.15s;
+}
+.ia-contestar-submit:hover { background: rgba(139,105,20,0.45); }
+.ia-contestar-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Loading spinner */
+.ia-loading {
+  display: none; text-align: center; padding: 1.2rem;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--chat-muted);
+  flex-direction: column; align-items: center; gap: 0.5rem;
+}
+.ia-loading.show { display: flex; }
+.ia-spinner {
+  width: 24px; height: 24px; border: 2px solid rgba(201,162,39,0.2);
+  border-top-color: var(--chat-action); border-radius: 50%;
+  animation: ia-spin 0.7s linear infinite;
+}
+@keyframes ia-spin { to { transform: rotate(360deg); } }
+
+/* Aviso de chave não configurada */
+.ia-no-key-warn {
+  background: rgba(180,40,30,0.15); border: 1px solid rgba(217,83,79,0.35);
+  border-radius: 8px; padding: 0.7rem 0.9rem; margin: 0.7rem 1rem;
+  font-family: var(--mono); font-size: 0.65rem; color: #f3a0a0; line-height: 1.5;
+  display: none;
+}
+.ia-no-key-warn.show { display: block; }
+
 </style>
 </head>
 <body>
@@ -3721,6 +3973,7 @@ renderPP();
         <div class="chat-topbar-sub" id="chat-presence">3 aventureiros à mesa</div>
       </div>
       <div class="chat-topbar-actions">
+        <button id="ia-arbiter-btn" onclick="abrirArbitroIA()" title="Árbitro de IA — Solicitar Avaliação Narrativa">⚖️<span class="ia-badge" id="ia-badge"></span></button>
         <button class="chat-icon-btn" id="chat-menu-btn" onclick="toggleChatMenu(event)" title="Mais opções">⋮</button>
         <div class="chat-menu" id="chat-menu">
           <div class="chat-menu-item" onclick="abrirRegistroAcoes()">📜 Registro de Ações</div>
@@ -3821,6 +4074,77 @@ renderPP();
       </div>
 
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     ÁRBITRO DE IA — PAINEL LATERAL
+     ═══════════════════════════════════════════════════════ -->
+<div id="ia-overlay" onclick="fecharArbitroIA(event)">
+  <div id="ia-panel" onclick="event.stopPropagation()">
+
+    <div class="ia-panel-header">
+      <h3>⚖️ Árbitro Narrativo de IA</h3>
+      <button class="ia-panel-close" onclick="fecharArbitroIA()">✕</button>
+    </div>
+
+    <!-- Fichas em combate -->
+    <div class="ia-fichas-section">
+      <div class="ia-fichas-label">Fichas em Combate</div>
+      <div class="ia-ficha-pills" id="ia-ficha-pills">
+        <div class="ia-ficha-pill empty">Nenhuma ficha selecionada</div>
+      </div>
+    </div>
+
+    <!-- Lista de mensagens selecionáveis -->
+    <div class="ia-msgs-section" id="ia-msgs-section">
+      <div class="ia-msgs-label">Selecionar Ações para Avaliação</div>
+      <div class="ia-msgs-hint">Marque as ações narrativas (sem //) que a IA deve analisar.</div>
+      <div id="ia-msgs-list">
+        <div class="ia-msg-empty">Nenhuma ação narrativa encontrada no chat.</div>
+      </div>
+    </div>
+
+    <!-- Mecânica solicitada -->
+    <div class="ia-request-section">
+      <div class="ia-mecanica-label">Mecânica a Ativar</div>
+      <textarea class="ia-mecanica-input" id="ia-mecanica-input"
+        placeholder="Ex: Furtividade · Vantagem narrativa · Imobilizar…" rows="2"></textarea>
+      <button class="ia-submit-btn" id="ia-submit-btn" onclick="solicitarAvaliacaoIA()">
+        ⚖️ Solicitar Avaliação
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div class="ia-loading" id="ia-loading">
+      <div class="ia-spinner"></div>
+      <span>A IA está analisando o cenário…</span>
+    </div>
+
+    <!-- Resultado -->
+    <div class="ia-result-section" id="ia-result-section">
+      <div class="ia-result-header" id="ia-result-header"></div>
+      <div class="ia-result-card">
+        <div class="ia-result-verdict" id="ia-result-verdict"></div>
+        <div class="ia-result-mecanica" id="ia-result-mecanica"></div>
+        <div class="ia-result-motivo" id="ia-result-motivo"></div>
+        <div class="ia-result-confianca" id="ia-result-confianca"></div>
+        <div class="ia-confidence-bar"><div class="ia-confidence-fill" id="ia-confidence-fill" style="width:0%"></div></div>
+      </div>
+
+      <!-- Contestação -->
+      <button class="ia-contestar-btn" id="ia-contestar-btn" onclick="mostrarContestacao()">
+        🗣️ Contestar Decisão
+      </button>
+      <div class="ia-contestar-area" id="ia-contestar-area">
+        <textarea class="ia-contestar-input" id="ia-contestar-input"
+          placeholder="Apresente seu argumento de contestação aqui…" rows="3"></textarea>
+        <button class="ia-contestar-submit" id="ia-contestar-submit" onclick="enviarContestacao()">
+          ⚖️ Enviar Contestação
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -6125,6 +6449,279 @@ socket.on('resposta-desafio', (dados) => {
 socket.on('combate-iniciado', (dados) => {
   ativarCombate(dados.oponente);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ÁRBITRO NARRATIVO DE IA — HÁRMINA RPG
+// A chamada à API Anthropic e a chave ficam EXCLUSIVAMENTE no servidor.
+// O frontend comunica via Socket.IO: emite 'arbiter-solicitar' e recebe
+// 'arbiter-resposta'. Nenhuma chave trafega no cliente.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Estado do árbitro
+const iaState = {
+  ultimaDecisao: null,      // { aprovado, confianca, mecanica, motivo }
+  acoesSelecionadas: [],    // ids das mensagens selecionadas
+  mecanicaSolicitada: '',
+};
+
+// ── Abrir / Fechar painel ──────────────────────────────────────────────────
+function abrirArbitroIA() {
+  _ia_renderizarPainel();
+  document.getElementById('ia-overlay').classList.add('open');
+  // Fecha o menu de 3 pontos se aberto
+  document.getElementById('chat-menu').classList.remove('open');
+}
+
+function fecharArbitroIA(evt) {
+  if (evt && evt.target !== document.getElementById('ia-overlay')) return;
+  document.getElementById('ia-overlay').classList.remove('open');
+}
+
+// ── Renderiza fichas em combate ────────────────────────────────────────────
+function _ia_renderizarPainel() {
+  _ia_renderizarFichas();
+  _ia_renderizarMensagens();
+}
+
+function _ia_renderizarFichas() {
+  const pillsEl = document.getElementById('ia-ficha-pills');
+  const fichas = [];
+
+  // Ficha do jogador local
+  if (fichaAtivaChat) fichas.push({ nome: fichaAtivaChat, tipo: 'minha', stats: _ia_resumirFicha(state) });
+
+  // Oponente em combate
+  if (combateState.ativo && combateState.oponente) {
+    fichas.push({ nome: combateState.oponente, tipo: 'oponente', stats: null });
+  }
+
+  if (fichas.length === 0) {
+    pillsEl.innerHTML = '<div class="ia-ficha-pill empty">Nenhuma ficha selecionada</div>';
+    return;
+  }
+
+  pillsEl.innerHTML = fichas.map(f => {
+    const statsStr = f.stats ? ` · ${f.stats}` : '';
+    return `<div class="ia-ficha-pill">📜 ${escaparHtml(f.nome)}${escaparHtml(statsStr)}</div>`;
+  }).join('');
+}
+
+function _ia_resumirFicha(s) {
+  if (!s) return '';
+  return `❤️${s.vita.cur}/${s.vita.max} 🔰${s.guard.cur}/${s.guard.max} ⚡${s.energy.cur}/${s.energy.max} 🔮${s.mana.cur}/${s.mana.max}`;
+}
+
+// ── Renderiza lista de mensagens selecionáveis ─────────────────────────────
+function _ia_renderizarMensagens() {
+  const listEl = document.getElementById('ia-msgs-list');
+  // Filtra apenas mensagens narrativas (não-OOC, não-sistema)
+  const msgs = chatState.mensagens.filter(m =>
+    m.tipo === 'normal' && !m.texto.startsWith('//') && m.autor !== 'Sistema'
+  );
+
+  if (msgs.length === 0) {
+    listEl.innerHTML = '<div class="ia-msg-empty">Nenhuma ação narrativa encontrada no chat.</div>';
+    return;
+  }
+
+  listEl.innerHTML = msgs.slice(-30).map(m => {
+    const sel = iaState.acoesSelecionadas.includes(m.id);
+    return `<label class="ia-msg-item ${sel ? 'selected' : ''}" for="ia-msg-${m.id}">
+      <input type="checkbox" id="ia-msg-${m.id}" ${sel ? 'checked' : ''}
+        onchange="_ia_toggleMensagem(${m.id}, this.checked)">
+      <div class="ia-msg-item-body">
+        <div class="ia-msg-item-autor">${escaparHtml(m.autor)}</div>
+        <div class="ia-msg-item-texto">${escaparHtml(m.texto)}</div>
+      </div>
+    </label>`;
+  }).join('');
+}
+
+function _ia_toggleMensagem(id, checked) {
+  if (checked) {
+    if (!iaState.acoesSelecionadas.includes(id)) iaState.acoesSelecionadas.push(id);
+  } else {
+    iaState.acoesSelecionadas = iaState.acoesSelecionadas.filter(x => x !== id);
+  }
+  // Re-renderiza sem fechar o painel
+  const listEl = document.getElementById('ia-msgs-list');
+  const msgs = chatState.mensagens.filter(m =>
+    m.tipo === 'normal' && !m.texto.startsWith('//') && m.autor !== 'Sistema'
+  );
+  listEl.innerHTML = msgs.slice(-30).map(m => {
+    const sel = iaState.acoesSelecionadas.includes(m.id);
+    return `<label class="ia-msg-item ${sel ? 'selected' : ''}" for="ia-msg-${m.id}">
+      <input type="checkbox" id="ia-msg-${m.id}" ${sel ? 'checked' : ''}
+        onchange="_ia_toggleMensagem(${m.id}, this.checked)">
+      <div class="ia-msg-item-body">
+        <div class="ia-msg-item-autor">${escaparHtml(m.autor)}</div>
+        <div class="ia-msg-item-texto">${escaparHtml(m.texto)}</div>
+      </div>
+    </label>`;
+  }).join('');
+}
+
+// ── Montar contexto para a IA ──────────────────────────────────────────────
+function _ia_montarContexto() {
+  // Fichas
+  const fichasCtx = [];
+  if (fichaAtivaChat) {
+    fichasCtx.push(`Jogador: ${fichaAtivaChat} | Status: ${_ia_resumirFicha(state)}`);
+    // Dons ativos
+    const don1 = (document.getElementById('don1-nome') || {}).value || '';
+    const don2 = (document.getElementById('don2-nome') || {}).value || '';
+    if (don1) fichasCtx.push(`Dom 1: ${don1}`);
+    if (don2) fichasCtx.push(`Dom 2: ${don2}`);
+    // Vocações
+    const voc1 = (document.getElementById('voc1-nome') || {}).value || '';
+    const voc2 = (document.getElementById('voc2-nome') || {}).value || '';
+    if (voc1) fichasCtx.push(`Vocação 1: ${voc1}`);
+    if (voc2) fichasCtx.push(`Vocação 2: ${voc2}`);
+    // Poder único
+    const poderNome = (document.getElementById('poder-nome') || {}).value || '';
+    if (poderNome) fichasCtx.push(`Poder Único: ${poderNome}`);
+    // Notas de condição
+    const notas = (document.getElementById('notes-condicoes') || {}).value || '';
+    if (notas) fichasCtx.push(`Condições ativas: ${notas}`);
+  }
+  if (combateState.ativo && combateState.oponente) {
+    fichasCtx.push(`Oponente em combate: ${combateState.oponente}`);
+    if (combateState.atordoado) fichasCtx.push('Estado: Jogador atordoado');
+    if (combateState.nocauteado) fichasCtx.push('Estado: Jogador nocauteado');
+  }
+
+  // Histórico completo de ações narrativas (últimas 40)
+  const todasAcoes = chatState.mensagens
+    .filter(m => m.tipo === 'normal' && !m.texto.startsWith('//'))
+    .slice(-40);
+
+  const historicoTxt = todasAcoes.map(m =>
+    `[${escaparHtmlPlain(m.autor)}]: ${escaparHtmlPlain(m.texto)}`
+  ).join('\n');
+
+  // Ações selecionadas
+  const acoesSel = chatState.mensagens.filter(m => iaState.acoesSelecionadas.includes(m.id));
+  const acoesTxt = acoesSel.map(m =>
+    `[${escaparHtmlPlain(m.autor)}]: ${escaparHtmlPlain(m.texto)}`
+  ).join('\n');
+
+  return { fichasCtx, historicoTxt, acoesTxt };
+}
+
+function escaparHtmlPlain(str) {
+  return String(str)
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+}
+
+// ── Solicitar avaliação ────────────────────────────────────────────────────
+// ── Solicitar avaliação — via Socket.IO (chave fica no servidor) ───────────
+async function solicitarAvaliacaoIA() {
+  const mecanica = document.getElementById('ia-mecanica-input').value.trim();
+  if (!mecanica) { mostrarToast('⚖️ Informe a mecânica que deseja ativar.', 3000); return; }
+  if (iaState.acoesSelecionadas.length === 0) { mostrarToast('⚖️ Selecione ao menos uma ação narrativa.', 3000); return; }
+
+  iaState.mecanicaSolicitada = mecanica;
+  iaState.ultimaDecisao = null;
+
+  document.getElementById('ia-submit-btn').disabled = true;
+  document.getElementById('ia-result-section').classList.remove('show');
+  document.getElementById('ia-loading').classList.add('show');
+  document.getElementById('ia-contestar-area').classList.remove('show');
+
+  const payload = _ia_montarPayload(mecanica, null, null);
+  socket.emit('arbiter-solicitar', payload);
+}
+
+// ── Enviar contestação — via Socket.IO ────────────────────────────────────
+async function enviarContestacao() {
+  const argumento = document.getElementById('ia-contestar-input').value.trim();
+  if (!argumento) { mostrarToast('⚖️ Descreva seu argumento de contestação.', 3000); return; }
+
+  document.getElementById('ia-contestar-submit').disabled = true;
+  document.getElementById('ia-loading').classList.add('show');
+  document.getElementById('ia-result-section').classList.remove('show');
+
+  const payload = _ia_montarPayload(
+    iaState.mecanicaSolicitada,
+    iaState.ultimaDecisao,
+    argumento
+  );
+  socket.emit('arbiter-solicitar', payload);
+}
+
+// ── Monta o payload de contexto para enviar ao servidor ───────────────────
+// (sem nenhuma chave — só dados narrativos)
+function _ia_montarPayload(mecanica, decisaoAnterior, argumentoContestacao) {
+  const { fichasCtx, historicoTxt, acoesTxt } = _ia_montarContexto();
+  return {
+    mecanica,
+    fichasCtx,
+    historicoTxt,
+    acoesTxt,
+    decisaoAnterior: decisaoAnterior || null,
+    argumentoContestacao: argumentoContestacao || null,
+  };
+}
+
+// ── Socket: recebe resposta do servidor após chamada à API ────────────────
+socket.on('arbiter-resposta', (dados) => {
+  document.getElementById('ia-submit-btn').disabled = false;
+  document.getElementById('ia-contestar-submit').disabled = false;
+  document.getElementById('ia-loading').classList.remove('show');
+
+  if (dados.erro) {
+    mostrarToast('⚖️ ' + dados.erro, 5000);
+    return;
+  }
+
+  if (dados.eContestacao) {
+    document.getElementById('ia-contestar-area').classList.remove('show');
+    document.getElementById('ia-contestar-input').value = '';
+  }
+
+  _ia_exibirResultado(dados.decisao);
+});
+
+// ── Exibir resultado ───────────────────────────────────────────────────────
+function _ia_exibirResultado(decisao) {
+  iaState.ultimaDecisao = decisao;
+
+  const secao = document.getElementById('ia-result-section');
+  const header = document.getElementById('ia-result-header');
+  const verdict = document.getElementById('ia-result-verdict');
+  const mecanicaEl = document.getElementById('ia-result-mecanica');
+  const motivoEl = document.getElementById('ia-result-motivo');
+  const confiancaEl = document.getElementById('ia-result-confianca');
+  const fill = document.getElementById('ia-confidence-fill');
+
+  const ap = decisao.aprovado;
+  const confianca = Math.max(0, Math.min(1, decisao.confianca || 0));
+  const pct = Math.round(confianca * 100);
+
+  header.className = `ia-result-header ${ap ? 'aprovado' : 'recusado'}`;
+  header.textContent = ap ? '✅ DECISÃO DO ÁRBITRO' : '❌ DECISÃO DO ÁRBITRO';
+
+  verdict.className = `ia-result-verdict ${ap ? 'ap' : 'rec'}`;
+  verdict.textContent = ap ? 'Aprovado' : 'Recusado';
+
+  mecanicaEl.textContent = `Mecânica: ${decisao.mecanica || iaState.mecanicaSolicitada}`;
+  motivoEl.textContent = decisao.motivo || '';
+  confiancaEl.innerHTML = `Confiança da IA: <span>${pct}%</span>`;
+
+  secao.classList.add('show');
+
+  // Anima barra de confiança
+  setTimeout(() => { fill.style.width = pct + '%'; }, 50);
+
+  // Ativa badge no botão
+  document.getElementById('ia-badge').classList.add('show');
+  setTimeout(() => document.getElementById('ia-badge').classList.remove('show'), 6000);
+}
+
+// ── Contestação ────────────────────────────────────────────────────────────
+function mostrarContestacao() {
+  document.getElementById('ia-contestar-area').classList.toggle('show');
+}
 
 socket.on('combate-encerrado', () => {
   if (combateState.ativo) {
