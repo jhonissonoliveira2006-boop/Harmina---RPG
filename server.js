@@ -295,10 +295,10 @@ function processarReacaoDoBoneco(mensagem) {
 // A chave da API fica EXCLUSIVAMENTE aqui, nunca é enviada ao cliente.
 // Configure via variável de ambiente: GEMINI_API_KEY=...
 // ═══════════════════════════════════════════
-const GEMINI_API_KEY    = process.env.GEMINI_API_KEY || '';
-const ARBITER_MODEL     = 'gemini-2.0-flash';
-const ARBITER_MAX_TOK   = 800;
-const ARBITER_ENDPOINT  = `https://generativelanguage.googleapis.com/v1beta/models/${ARBITER_MODEL}:generateContent`;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const ARBITER_MODEL  = 'gemini-2.0-flash';
+const ARBITER_MAX_TOK = 800;
+const ARBITER_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${ARBITER_MODEL}:generateContent`;
 
 // Sistema de rate-limit simples: máx. 1 pedido a cada 4s por socket
 const arbiterCooldown = new Map(); // socketId → timestamp
@@ -335,12 +335,10 @@ FORMATO DE RESPOSTA: Responda SOMENTE com JSON válido, sem markdown, sem texto 
     userContent += `\n\nReavalie a decisão considerando o argumento acima. Mantenha, corrija ou revogue, sempre justificando.`;
   }
 
-  // fetch nativo está disponível no Node.js 18+; use node-fetch se necessário
+  // fetch nativo está disponível no Node.js 18+
   const resp = await fetch(`${ARBITER_ENDPOINT}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: sistemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userContent }] }],
@@ -357,7 +355,8 @@ FORMATO DE RESPOSTA: Responda SOMENTE com JSON válido, sem markdown, sem texto 
   }
 
   const data = await resp.json();
-  const rawText = ((data.candidates || [])[0]?.content?.parts || []).map(b => b.text || '').join('').trim();
+  const rawText = ((data.candidates || [])[0]?.content?.parts || [])
+    .map(b => b.text || '').join('').trim();
   const clean   = rawText.replace(/^```json?|```$/gm, '').trim();
   const decisao = JSON.parse(clean);
 
@@ -516,7 +515,7 @@ io.on('connection', (socket) => {
 
   // ── ÁRBITRO DE IA: Solicitação ──────────────────────────────────────────
   // O cliente envia apenas contexto narrativo (fichas, histórico, mecânica).
-  // A chave da API nunca sai deste arquivo — fica em process.env.ANTHROPIC_API_KEY.
+  // A chave da API nunca sai deste arquivo — fica em process.env.GEMINI_API_KEY.
   socket.on('arbiter-solicitar', async (payload) => {
     if (!socket.nomeJogador) return;
 
