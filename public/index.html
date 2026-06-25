@@ -5905,7 +5905,8 @@ const TERMOS_OPONENTE_GENERICOS = [
 function detectarMecanica(texto) {
   // ── PADRÃO INJETADO PELO PAINEL (autoritativo) ────────────────────────────
   // Formato: ⟨NomeAtaque: N de dano físico⟩  ou  ⟨NomeAtaque: N de dano mágico⟩
-  const mInj = texto.match(/⟨[^⟩]+:\s*(\d+)\s*de\s*dano/i);
+  // Também aceita variantes com colchetes comuns caso o servidor altere os chars Unicode.
+  const mInj = texto.match(/[⟨\[<][^\]⟩>]+:\s*(\d+)\s*de\s*dano/i);
   if (mInj) return { tipo: 'dano', valor: parseInt(mInj[1], 10), injetado: true };
 
   // Helper: normaliza sem acentos, para buscas fuzzy
@@ -5938,10 +5939,13 @@ function detectarMecanica(texto) {
 
 // A ação me menciona como alvo? Se o dano foi injetado pelo painel formal,
 // sempre exibe o prompt — o sistema já validou que é um ataque contra o oponente.
+// Em combate formal ativo, qualquer mensagem de dano do oponente dispara o prompt.
 // Caso contrário, exige nome da ficha ou termo genérico no texto.
 function mensagemMeAlveja(texto, mecanica) {
   if (!fichaAtivaChat) return false;
   if (mecanica && mecanica.injetado) return true;
+  // Em combate ativo, qualquer menção de dano dispara o prompt (o oponente está declarado)
+  if (combateState && combateState.ativo) return true;
   const textoLower = texto.toLowerCase();
   if (textoLower.includes(fichaAtivaChat.toLowerCase())) return true;
   return TERMOS_OPONENTE_GENERICOS.some(termo => textoLower.includes(termo));
