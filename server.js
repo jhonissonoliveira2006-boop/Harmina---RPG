@@ -589,7 +589,7 @@ app.get('/health', (req, res) => {
 
 // ── Iniciar Servidor ────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
+http.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor Hármina rodando na porta ${PORT}!`);
   if (!GEMINI_API_KEY) {
     console.warn('⚠️  GEMINI_API_KEY não definida — Árbitro de IA desativado.');
