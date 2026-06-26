@@ -1316,6 +1316,97 @@ body::before {
 .cop-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .cop-btn.active { background: rgba(180,40,30,0.45); border-color: rgba(255,100,80,0.7); color: #fff; }
 
+/* ═══ MENU ÁRVORE DE AÇÕES ═══ */
+#acao-tree-root {
+  width: 100%; padding: 0.3rem 0.4rem 0.15rem;
+}
+.acao-tree-row {
+  display: flex; align-items: center; gap: 0.25rem;
+  margin-bottom: 0.18rem; min-height: 1.6rem;
+}
+.acao-tree-branch {
+  overflow: hidden;
+  animation: acao-branch-in 0.18s ease;
+}
+@keyframes acao-branch-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.acao-tree-line {
+  font-family: var(--mono); font-size: 0.6rem;
+  color: rgba(243,160,160,0.4); white-space: nowrap;
+  flex-shrink: 0; letter-spacing: -0.03em;
+  user-select: none; pointer-events: none;
+}
+.level-1 { padding-left: 0.5rem; }
+.level-2 { padding-left: 1.15rem; }
+.level-3 { padding-left: 1.8rem; }
+.acao-tree-btn {
+  font-family: var(--mono); font-size: 0.6rem;
+  background: rgba(180,40,30,0.14); border: 1px solid rgba(255,150,100,0.28);
+  color: #fbb; border-radius: 5px; padding: 0.18rem 0.45rem;
+  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  white-space: nowrap;
+}
+.acao-tree-btn:hover:not(:disabled) { background: rgba(180,40,30,0.35); border-color: rgba(255,120,80,0.55); }
+.acao-tree-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.acao-tree-btn.active { background: rgba(180,40,30,0.45); border-color: rgba(255,100,80,0.7); color: #fff; }
+.root-btn {
+  font-size: 0.65rem; font-weight: 600; padding: 0.22rem 0.6rem;
+  background: rgba(180,40,30,0.22); border-color: rgba(255,150,100,0.45);
+}
+.acao-chevron {
+  font-size: 0.5rem; opacity: 0.65; transition: transform 0.15s; display: inline-block;
+}
+.acao-chevron.open { transform: rotate(180deg); }
+.acao-help-btn {
+  font-family: var(--mono); font-size: 0.52rem; font-weight: 700;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.45); border-radius: 50%; width: 1.1rem; height: 1.1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.acao-help-btn:hover { background: rgba(201,162,39,0.25); color: var(--chat-action); border-color: rgba(201,162,39,0.5); }
+/* Tooltip de ajuda */
+#acao-help-tooltip {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
+}
+#acao-help-tooltip.open { display: flex; }
+#acao-help-box {
+  background: #1c1812; border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 10px; padding: 1rem 1.1rem; width: min(300px, 90vw);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+#acao-help-title {
+  font-family: var(--serif); font-size: 0.8rem; font-weight: 700;
+  color: var(--chat-action); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 0.6rem; padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(201,162,39,0.2);
+}
+#acao-help-body {
+  font-family: var(--body); font-size: 0.82rem; color: rgba(240,232,213,0.82);
+  line-height: 1.55; white-space: pre-line;
+}
+.acao-help-close {
+  margin-top: 0.8rem; width: 100%; font-family: var(--mono); font-size: 0.6rem;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.45); border-radius: 6px; padding: 0.3rem; cursor: pointer;
+}
+.acao-help-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+/* Dentro do painel, o attack-selector-wrap vira inline */
+#combat-offensive-panel #attack-selector-wrap {
+  position: relative; display: inline-flex; align-items: center; gap: 0.3rem; flex: 1;
+}
+#combat-offensive-panel #attack-selector-tag {
+  display: inline-flex;
+}
+#combat-offensive-panel #attack-panel {
+  bottom: calc(100% + 4px); left: 0;
+}
+
 /* ─── Overlay de Nocaute / Atordoamento ─── */
 #ko-overlay {
   display: none; position: fixed; inset: 0; z-index: 400;
@@ -1532,6 +1623,35 @@ body::before {
 .ia-result-header.aprovado { color: #86efac; }
 .ia-result-header.recusado { color: #f87171; }
 .ia-result-header.pendente { color: #fbbf24; }
+.ia-result-header.narrativo { color: var(--chat-action); }
+
+.ia-result-verdict.narrativo { display: none; }
+
+/* ═══ AÇÃO OCULTA — visual no bubble ═══ */
+.oculta-tag {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: rgba(99,60,180,0.18); border: 1px solid rgba(140,100,220,0.35);
+  border-radius: 4px; padding: 0.18rem 0.5rem;
+  font-family: var(--mono); font-size: 0.62rem; color: #c4b5fd;
+  margin-left: 0.4rem; vertical-align: middle;
+  cursor: default; user-select: none;
+}
+.oculta-tag.oculta-revelado {
+  background: rgba(60,180,100,0.15); border-color: rgba(80,200,120,0.35); color: #86efac;
+}
+.msg-oculta-velo {
+  display: inline-block; background: rgba(99,60,180,0.35); border-radius: 3px;
+  padding: 0 0.4rem; color: transparent; user-select: none; position: relative;
+  min-width: 3rem;
+}
+.msg-oculta-velo::after {
+  content: '◼◼◼◼◼'; position: absolute; left: 0.25rem; top: 0;
+  color: #c4b5fd; opacity: 0.7; letter-spacing: 0.1em; font-size: 0.7em;
+}
+.msg-oculta-revelada {
+  background: rgba(60,180,100,0.18); border-radius: 3px;
+  padding: 0 0.25rem; color: #86efac; font-style: italic;
+}
 
 .ia-result-card {
   background: rgba(255,255,255,0.04); border-radius: 8px;
@@ -4037,34 +4157,164 @@ renderPP();
           <div class="composer-hint" id="composer-hint">Use <code>//</code> para falar fora do personagem · ações com <code>"N de dano"</code> ou <code>"N de cura"</code> mirando um nome ou "inimigo/adversário" são reconhecidas automaticamente · fale com o <strong>Boneco de Treino</strong> pra testar sozinho</div>
           <!-- Painel ofensivo de combate (aparece quando combate está ativo) -->
           <div id="combat-offensive-panel">
-            <span class="cop-label">⚔️ Ações:</span>
-            <button class="cop-btn" id="cop-foco" onclick="ativarFocoCombate()" title="Não atacar este turno → próximo ataque: −1⚡ e +2 dano">🌟 Canalizar Foco</button>
-            <button class="cop-btn" id="cop-segundo" onclick="ativarSegundoAtaque()" title="Gastar +1⚡ para atacar uma segunda vez neste turno (máx. 1x por turno)">⚡⚔️ 2º Ataque (+1⚡)</button>
-            <button class="cop-btn" id="cop-sac-energy" onclick="ciclarSacrifEnergia()" title="Sacrificar energia ATUAL (não máx.) para +dano: 0→+1⚡→+2⚡ por turno">⚡🩸 Sacr.⚡ Atual (<span id="cop-sac-e-val">0</span>)</button>
-            <button class="cop-btn" id="cop-sacrificio-of" onclick="abrirSacrificiioOfensivo()" title="Sacrificar 1-2 pontos de um atributo para +1 dano por ponto (máx. 2 pts, 1 atributo)">🩸 Sacrifício (+dano)</button>
-            <button class="cop-btn" id="cop-furtivo" onclick="ativarFurtividade()" title="Entrar em furtividade se tiver mais Guarda que o oponente">👁️ Furtividade</button>
-            <button class="cop-btn" id="cop-imobilizar" onclick="ativarImobilizacao()" title="Imobilizar oponente (custo: 2⚡, requer Energia + Vita ≥ oponente)">🤼 Imobilizar (2⚡)</button>
-          </div>
+
+            <!-- ══ MENU ÁRVORE DE AÇÕES ══ -->
+            <div id="acao-tree-root">
+
+              <!-- Nível 0: botão raiz "Ação" -->
+              <div class="acao-tree-row level-0">
+                <button class="acao-tree-btn root-btn" id="btn-acao-raiz" onclick="acaoTreeToggle('cat')" title="Abrir menu de ações de combate">
+                  ⚔️ Ação <span class="acao-chevron" id="chev-cat">▾</span>
+                </button>
+                <button class="acao-help-btn" onclick="acaoHelp('root')" title="O que é Ação?">?</button>
+              </div>
+
+              <!-- Nível 1: categorias (oculto por padrão) -->
+              <div class="acao-tree-branch" id="branch-cat" style="display:none">
+
+                <!-- OFENSIVAS -->
+                <div class="acao-tree-row level-1">
+                  <span class="acao-tree-line">╰────── </span>
+                  <button class="acao-tree-btn" id="btn-cat-ofensivas" onclick="acaoTreeToggle('ofensivas')" title="Ações de ataque e pressão">
+                    ⚔️ Ofensivas <span class="acao-chevron" id="chev-ofensivas">▾</span>
+                  </button>
+                  <button class="acao-help-btn" onclick="acaoHelp('ofensivas')" title="O que são Ações Ofensivas?">?</button>
+                </div>
+
+                <div class="acao-tree-branch" id="branch-ofensivas" style="display:none">
+
+                  <!-- Ataque (abre o painel de seleção de ataque existente) -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <div id="attack-selector-wrap" style="display:inline-flex;align-items:center;gap:0.3rem;flex:1">
+                      <div id="attack-selector-tag" title="Escolher tipo de ataque" onclick="abrirPainelAtaque()">
+                        <span class="ast-icon">⚔️</span>
+                        <span id="ast-label">Ataque</span>
+                        <span class="ast-dano" id="ast-dano"></span>
+                        <span class="ast-chevron">▾</span>
+                      </div>
+                      <div id="attack-panel">
+                        <div class="ap-header">⚔️ Qual ataque usar?</div>
+                        <div id="attack-options-list"></div>
+                      </div>
+                    </div>
+                    <button class="acao-help-btn" onclick="acaoHelp('ataque')" title="O que é Ataque?">?</button>
+                  </div>
+
+                  <!-- Segundo Ataque -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-segundo" onclick="ativarSegundoAtaque()" title="Gastar +1⚡ para atacar uma segunda vez neste turno (máx. 1x por turno)">
+                      ⚡⚔️ 2º Ataque (+1⚡)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('segundo-ataque')" title="O que é 2º Ataque?">?</button>
+                  </div>
+
+                  <!-- Sacrifício Ofensivo -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-sacrificio-of" onclick="abrirSacrificiioOfensivo()" title="Sacrificar 1-2 pontos de um atributo para +1 dano por ponto (máx. 2 pts, 1 atributo)">
+                      🩸 Sacrifício Ofensivo
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('sacrificio-of')" title="O que é Sacrifício Ofensivo?">?</button>
+                  </div>
+
+                  <!-- Sacrifício de Energia -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-sac-energy" onclick="ciclarSacrifEnergia()" title="Sacrificar energia ATUAL (não máx.) para +dano: 0→+1⚡→+2⚡ por turno">
+                      ⚡🩸 Sacr.⚡ (<span id="cop-sac-e-val">0</span>)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('sac-energia')" title="O que é Sacrifício de Energia?">?</button>
+                  </div>
+
+                  <!-- Ação Oculta -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-oculta" onclick="ativarAcaoOculta()" title="Ocultar parte da ação com ( ) — custo: 2🔰 — o efeito é aplicado após a resposta do oponente">
+                      👁️‍🗨️ Ação Oculta (2🔰)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('acao-oculta')" title="O que é Ação Oculta?">?</button>
+                  </div>
+
+                </div><!-- /branch-ofensivas -->
+
+                <!-- DEFENSIVAS -->
+                <div class="acao-tree-row level-1">
+                  <span class="acao-tree-line">╰────── </span>
+                  <button class="acao-tree-btn" id="btn-cat-defensivas" onclick="acaoTreeToggle('defensivas')" title="Ações de proteção e resistência">
+                    🛡️ Defensivas <span class="acao-chevron" id="chev-defensivas">▾</span>
+                  </button>
+                  <button class="acao-help-btn" onclick="acaoHelp('defensivas')" title="O que são Ações Defensivas?">?</button>
+                </div>
+
+                <div class="acao-tree-branch" id="branch-defensivas" style="display:none">
+
+                  <!-- Furtividade (defensiva/evasão) -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-furtivo" onclick="ativarFurtividade()" title="Entrar em furtividade se tiver mais Guarda que o oponente">
+                      👁️ Furtividade
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('furtividade')" title="O que é Furtividade?">?</button>
+                  </div>
+
+                </div><!-- /branch-defensivas -->
+
+                <!-- ESTRATÉGICAS -->
+                <div class="acao-tree-row level-1">
+                  <span class="acao-tree-line">╰────── </span>
+                  <button class="acao-tree-btn" id="btn-cat-estrategicas" onclick="acaoTreeToggle('estrategicas')" title="Manobras e ações de controle">
+                    🌟 Estratégicas <span class="acao-chevron" id="chev-estrategicas">▾</span>
+                  </button>
+                  <button class="acao-help-btn" onclick="acaoHelp('estrategicas')" title="O que são Ações Estratégicas?">?</button>
+                </div>
+
+                <div class="acao-tree-branch" id="branch-estrategicas" style="display:none">
+
+                  <!-- Canalizar Foco -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-foco" onclick="ativarFocoCombate()" title="Não atacar este turno → próximo ataque: −1⚡ e +2 dano">
+                      🌟 Canalizar Foco
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('foco')" title="O que é Canalizar Foco?">?</button>
+                  </div>
+
+                  <!-- Imobilizar -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-imobilizar" onclick="ativarImobilizacao()" title="Imobilizar oponente (custo: 2⚡, requer Energia + Vita ≥ oponente)">
+                      🤼 Imobilizar (2⚡)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('imobilizar')" title="O que é Imobilizar?">?</button>
+                  </div>
+
+                </div><!-- /branch-estrategicas -->
+
+              </div><!-- /branch-cat -->
+
+            </div><!-- /acao-tree-root -->
+
+          </div><!-- /combat-offensive-panel -->
+
           <!-- Tags de reação pendente (cada reação escolhida aparece aqui como pílula removível) -->
           <div id="reaction-tags-bar"></div>
-          <!-- Seletor de ataque: tag clicável mostra dano disponível, abre painel de opções -->
-          <div id="attack-selector-wrap">
-            <div id="attack-selector-tag" title="Escolher tipo de ataque" onclick="abrirPainelAtaque()">
-              <span class="ast-icon">⚔️</span>
-              <span id="ast-label">Escolher ataque</span>
-              <span class="ast-dano" id="ast-dano"></span>
-              <span class="ast-chevron">▾</span>
-            </div>
-            <div id="attack-panel">
-              <div class="ap-header">⚔️ Qual ataque usar?</div>
-              <div id="attack-options-list"></div>
-            </div>
-          </div>
+
           <!-- Ação de combate ativa (ex: Foco, Esquiva pré-declarada) exibida como tag -->
           <div id="active-combat-action">
             <span class="aca-label" id="aca-label-text"></span>
             <span class="aca-cost" id="aca-label-cost"></span>
             <button class="aca-remove" onclick="desativarAcaoCombate()" title="Remover ação ativa">✕</button>
+          </div>
+
+          <!-- Tooltip de ajuda flutuante -->
+          <div id="acao-help-tooltip" onclick="fecharAcaoHelp()">
+            <div id="acao-help-box" onclick="event.stopPropagation()">
+              <div id="acao-help-title"></div>
+              <div id="acao-help-body"></div>
+              <button class="acao-help-close" onclick="fecharAcaoHelp()">✕ Fechar</button>
+            </div>
           </div>
           <div class="composer-row">
             <textarea id="chat-input" class="composer-input" placeholder="Escreva sua ação… · // para fora do personagem · #pv(nome) para sussurro privado" rows="1"></textarea>
@@ -4099,7 +4349,7 @@ renderPP();
     <!-- Lista de mensagens selecionáveis -->
     <div class="ia-msgs-section" id="ia-msgs-section">
       <div class="ia-msgs-label">Selecionar Ações para Avaliação</div>
-      <div class="ia-msgs-hint">Marque as ações narrativas (sem //) que a IA deve analisar.</div>
+      <div class="ia-msgs-hint">Marque ações narrativas para dar contexto à IA (opcional — a IA usa o histórico recente automaticamente).</div>
       <div id="ia-msgs-list">
         <div class="ia-msg-empty">Nenhuma ação narrativa encontrada no chat.</div>
       </div>
@@ -4107,11 +4357,11 @@ renderPP();
 
     <!-- Mecânica solicitada -->
     <div class="ia-request-section">
-      <div class="ia-mecanica-label">Mecânica a Ativar</div>
+      <div class="ia-mecanica-label">Comando ou Pergunta para o Árbitro</div>
       <textarea class="ia-mecanica-input" id="ia-mecanica-input"
-        placeholder="Ex: Furtividade · Vantagem narrativa · Imobilizar…" rows="2"></textarea>
+        placeholder="Ex: Furtividade · Posso usar magia aqui? · Qual o resultado do meu ataque? · Descreva o cenário atual…" rows="2"></textarea>
       <button class="ia-submit-btn" id="ia-submit-btn" onclick="solicitarAvaliacaoIA()">
-        ⚖️ Solicitar Avaliação
+        ⚖️ Consultar Árbitro de IA
       </button>
     </div>
 
@@ -4725,6 +4975,7 @@ const combateState = {
   imobilizado: false,       // está sendo imobilizado
   nocauteado: false,        // vita chegou a 0
   atordoado: false,         // perdeu turno por atordoamento
+  acaoOculta: false,        // ação oculta ativa neste turno
 };
 
 function resetarCombateState() {
@@ -4739,9 +4990,12 @@ function resetarCombateState() {
   combateState.imobilizado = false;
   combateState.nocauteado = false;
   combateState.atordoado = false;
+  combateState.acaoOculta = false;
   atacouEsteTurno = false;
   energySacrificeBonus = 0;
   desativarAcaoCombate();
+  _acaoOcultaPendente = null;
+  if (typeof _acaoTreeFecharTudo === 'function') _acaoTreeFecharTudo();
   atualizarBarraCombate();
   atualizarTagAtaque();
 }
@@ -5245,6 +5499,7 @@ const COMBAT_ANIM_CONFIGS = {
   'sac-of-energy':  { icon: '⚡⚔️',  label: 'Energia sacrificada',sound:'power',   sparks: '#fbbf24' },
   'sac-of-guard':   { icon: '🔰⚔️',  label: 'Guarda sacrificada',sound:'block',   sparks: '#86efac' },
   'sac-of-mana':    { icon: '🔮⚔️',  label: 'Magia sacrificada', sound:'focus',   sparks: '#c4b5fd' },
+  'acao-oculta':    { icon: '👁️‍🗨️',  label: 'Ação Oculta!',     sound: 'stealth', sparks: '#c4b5fd' },
 };
 
 // ─── Web Audio — sons procedurais ────────────────────────────────────────────
@@ -5639,7 +5894,7 @@ function abrirPainelAtaque() {
 
 function fecharPainelAtaqueClick(e) {
   const panel = document.getElementById('attack-panel');
-  const tag = document.getElementById('attack-selector-tag');
+  const tag   = document.getElementById('attack-selector-tag');
   if (panel && !panel.contains(e.target) && tag && !tag.contains(e.target)) {
     fecharPainelAtaque();
   }
@@ -5652,35 +5907,25 @@ function fecharPainelAtaque() {
 
 function selecionarAtaque(id, icon, label, dano, tipo, custo) {
   selectedAttack = { id, icon, label, dano, tipo, custo };
-  const tag = document.getElementById('attack-selector-tag');
   document.getElementById('ast-label').textContent = label;
   document.getElementById('ast-dano').textContent = `${dano} dano`;
-  tag.classList.add('visible');
   fecharPainelAtaque();
   mostrarToast(`⚔️ Ataque selecionado: <strong>${label}</strong> — ${dano} de dano.`, 3000);
 }
 
 function limparAtaqueSelecionado() {
   selectedAttack = null;
-  document.getElementById('ast-label').textContent = 'Escolher ataque';
-  document.getElementById('ast-dano').textContent = '';
-  const tag = document.getElementById('attack-selector-tag');
-  if (tag) {
-    if (combateState.ativo) {
-      tag.classList.add('visible');   // mantém visível para o próximo ataque
-    } else {
-      tag.classList.remove('visible');
-    }
-  }
+  const lbl = document.getElementById('ast-label');
+  const dano = document.getElementById('ast-dano');
+  if (lbl) lbl.textContent = 'Ataque';
+  if (dano) dano.textContent = '';
+  // tag agora vive dentro da árvore — sem toggle .visible
 }
 
 function atualizarTagAtaque() {
-  const tag = document.getElementById('attack-selector-tag');
-  if (!tag) return;
-  if (combateState.ativo) {
-    tag.classList.add('visible');
-  } else {
-    tag.classList.remove('visible');
+  // A visibilidade da árvore é controlada pelo combateState via atualizarBarraCombate.
+  // Aqui apenas reseta o label se o combate encerrou.
+  if (!combateState.ativo) {
     limparAtaqueSelecionado();
   }
 }
@@ -5745,10 +5990,31 @@ function enviarMensagem() {
         const danoFinal = selectedAttack.dano;
         const tipoAtq = selectedAttack.tipo === 'magico' ? 'mágico' : 'físico';
         const ataqueLabel = selectedAttack.label.replace('🌟','').trim();
-        textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
 
-        if (!pendingAnimForNextMsg) pendingAnimForNextMsg = selectedAttack.tipo === 'magico' ? 'foco-ativo' : 'segundo-ataque';
-        limparAtaqueSelecionado();
+        // ── Ação Oculta: processa ( ) antes de montar o texto final ──────
+        if (combateState.acaoOculta) {
+          const oculta = processarAcaoOculta(textoLimpo);
+          if (oculta) {
+            combateState.acaoOculta = false;
+            const btnOc = document.getElementById('cop-oculta');
+            if (btnOc) btnOc.classList.remove('active');
+            desativarAcaoCombate();
+            textoComDano = `${oculta.textoEnviado} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
+            window._acaoOcultaProximaMsgAtiva = { parteOculta: oculta.parteOculta };
+            limparAtaqueSelecionado();
+            if (!pendingAnimForNextMsg) pendingAnimForNextMsg = 'acao-oculta';
+            mostrarToast('👁️‍🗨️ Ação oculta enviada! A parte entre ( ) ficará velada até o oponente responder.', 5000);
+          } else {
+            // Sem ( ) no texto: cancela a oculta silenciosamente
+            combateState.acaoOculta = false;
+            textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
+            limparAtaqueSelecionado();
+          }
+        } else {
+          textoComDano = `${textoLimpo} ⟨${ataqueLabel}: ${danoFinal} de dano ${tipoAtq}⟩`;
+          if (!pendingAnimForNextMsg) pendingAnimForNextMsg = selectedAttack.tipo === 'magico' ? 'foco-ativo' : 'segundo-ataque';
+          limparAtaqueSelecionado();
+        }
 
       } else {
         // Combate informal (Boneco de Treino) — aceita texto livre
@@ -5807,6 +6073,29 @@ function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot, pvDestina
   };
   chatState.mensagens.push(msg);
   renderizarMensagem(msg);
+
+  // Ação Oculta: registra o msgId após renderização e aplica o span velado
+  if (msg.mine && window._acaoOcultaProximaMsgAtiva) {
+    const dados = window._acaoOcultaProximaMsgAtiva;
+    window._acaoOcultaProximaMsgAtiva = null;
+    _registrarAcaoOcultaPendente(msg.id, dados.parteOculta);
+    const row = document.getElementById(`msg-row-${msg.id}`);
+    if (row) {
+      const bubble = row.querySelector('.msg-bubble');
+      if (bubble) {
+        bubble.innerHTML = bubble.innerHTML.replace(
+          /\(👁️‍🗨️ ação oculta\)/g,
+          `<span class="msg-oculta-velo">(${escaparHtml(dados.parteOculta)})</span>` +
+          ` <span class="oculta-tag">👁️‍🗨️ oculto</span>`
+        );
+      }
+    }
+  }
+
+  // Ação Oculta: verifica se msg do oponente revela uma pendência
+  if (!msg.mine) {
+    _verificarRevelacaoOculta(msg);
+  }
 
   // Dispara animação de combate na própria mensagem quando tem reação pendente
   if (mine && pendingAnimForNextMsg) {
@@ -6329,7 +6618,202 @@ function ativarImobilizacao() {
   atualizarBarraCombate();
 }
 
-// ─── Barra de Desafio Recebido ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// MENU ÁRVORE DE AÇÕES — navegação hierárquica
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _acaoTreeAbertos = new Set(); // quais branches estão abertos
+
+function acaoTreeToggle(id) {
+  const branch = document.getElementById(`branch-${id}`);
+  const chev   = document.getElementById(`chev-${id}`);
+  if (!branch) return;
+
+  const estaAberto = _acaoTreeAbertos.has(id);
+
+  if (estaAberto) {
+    branch.style.display = 'none';
+    _acaoTreeAbertos.delete(id);
+    if (chev) chev.classList.remove('open');
+  } else {
+    branch.style.display = 'block';
+    _acaoTreeAbertos.add(id);
+    if (chev) chev.classList.add('open');
+  }
+}
+
+// Fecha tudo ao encerrar combate
+function _acaoTreeFecharTudo() {
+  ['cat','ofensivas','defensivas','estrategicas'].forEach(id => {
+    const branch = document.getElementById(`branch-${id}`);
+    const chev   = document.getElementById(`chev-${id}`);
+    if (branch) branch.style.display = 'none';
+    if (chev)   chev.classList.remove('open');
+  });
+  _acaoTreeAbertos.clear();
+}
+
+// ── Textos de ajuda ────────────────────────────────────────────────────────
+const _acaoHelpTextos = {
+  root: {
+    titulo: '⚔️ Ação',
+    corpo:  'Abre o menu de ações de combate.\n\nAs ações estão organizadas em categorias para facilitar a navegação:\n\n• Ofensivas — causar dano ou pressão\n• Defensivas — proteção e evasão\n• Estratégicas — manobras e controle'
+  },
+  ofensivas: {
+    titulo: '⚔️ Ofensivas',
+    corpo:  'Ações focadas em causar dano ou pressionar o adversário.\n\nExemplos:\n• Ataque (com arma ou desarmado)\n• 2º Ataque (custo extra de energia)\n• Sacrifício Ofensivo (troca atributos por dano)\n• Ação Oculta (esconde parte da ação)'
+  },
+  ataque: {
+    titulo: '⚔️ Ataque',
+    corpo:  'Realiza um ataque contra o alvo utilizando uma arma equipada, ataque desarmado (Corpo a Corpo) ou feitiço.\n\nCusto: 1⚡ de Energia.\n\nSelecione o tipo de ataque no painel que se abre.'
+  },
+  'segundo-ataque': {
+    titulo: '⚡⚔️ 2º Ataque',
+    corpo:  'Permite realizar um segundo ataque no mesmo turno.\n\nRequisitos:\n• Você já deve ter atacado neste turno\n• Custa +1⚡ de Energia adicional\n• Máximo de 1 uso por turno'
+  },
+  'sacrificio-of': {
+    titulo: '🩸 Sacrifício Ofensivo',
+    corpo:  'Sacrifica 1 ou 2 pontos de um único atributo (Vita, Energia, Guarda ou Magia) para causar +1 de dano por ponto sacrificado.\n\nLimite: máx. 2 pontos por ataque, de um único atributo.'
+  },
+  'sac-energia': {
+    titulo: '⚡🩸 Sacrifício de Energia Atual',
+    corpo:  'Sacrifica Energia atual (não máxima) para aumentar o dano do próximo ataque.\n\nCiclo: 0 → +1⚡ → +2⚡ → 0\n\nO bônus de dano é aplicado automaticamente ao enviar o ataque.'
+  },
+  'acao-oculta': {
+    titulo: '👁️‍🗨️ Ação Oculta',
+    corpo:  'Oculta parte da sua ação do oponente.\n\nComo usar:\n1. Ative Ação Oculta (custa 2🔰)\n2. Escreva sua ação e coloque a parte secreta entre ( )\n   Ex.: "Avanço e (desfiro um soco certeiro)"\n\nEfeito:\n• O oponente vê apenas o que está fora dos parênteses\n• Após ele responder, a parte oculta é revelada\n• Se ele não se defendeu, o dano é aplicado automaticamente'
+  },
+  defensivas: {
+    titulo: '🛡️ Defensivas',
+    corpo:  'Ações focadas em proteção, evasão ou resistência ao dano.\n\nReações a ataques recebidos aparecem automaticamente no chat quando você é alvo — não precisam ser ativadas aqui.'
+  },
+  furtividade: {
+    titulo: '👁️ Furtividade',
+    corpo:  'Entra em modo furtivo.\n\nEfeito: seu próximo ataque causa dano direto à Vitalidade do alvo, ignorando completamente a Guarda.\n\nRequisito: Guarda atual > 0.\n\nNarrativamente, requer algum tipo de distração ou posicionamento favorável durante o combate.'
+  },
+  estrategicas: {
+    titulo: '🌟 Estratégicas',
+    corpo:  'Manobras que alteram o estado do combate sem atacar diretamente.\n\nExemplos:\n• Canalizar Foco — potencializa o próximo ataque\n• Imobilizar — remove a mobilidade do oponente'
+  },
+  foco: {
+    titulo: '🌟 Canalizar Foco',
+    corpo:  'O personagem concentra toda sua energia sem atacar neste turno.\n\nEfeito no próximo ataque:\n• Custo reduzido em −1⚡ (pode chegar a 0)\n• +2 de dano\n\nRequisito: não pode ter atacado neste turno.'
+  },
+  imobilizar: {
+    titulo: '🤼 Imobilizar',
+    corpo:  'Tenta imobilizar o oponente, impedindo seus movimentos.\n\nCusto: 2⚡ de Energia.\n\nCondição narrativa: sua Energia + Vitalidade atual deve ser ≥ à do oponente para ter sucesso.\n\nManutenção: 1⚡ por turno se o oponente tentar escapar.'
+  },
+};
+
+function acaoHelp(id) {
+  const dados = _acaoHelpTextos[id];
+  if (!dados) return;
+  document.getElementById('acao-help-title').textContent = dados.titulo;
+  document.getElementById('acao-help-body').textContent  = dados.corpo;
+  document.getElementById('acao-help-tooltip').classList.add('open');
+}
+
+function fecharAcaoHelp() {
+  document.getElementById('acao-help-tooltip').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AÇÃO OCULTA
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ativarAcaoOculta() {
+  if (!combateState.ativo) {
+    mostrarToast('👁️‍🗨️ Ação Oculta só está disponível em combate formal.', 3500);
+    return;
+  }
+  if (combateState.acaoOculta) {
+    combateState.acaoOculta = false;
+    desativarAcaoCombate();
+    const btn = document.getElementById('cop-oculta');
+    if (btn) btn.classList.remove('active');
+    mostrarToast('👁️‍🗨️ Ação Oculta desativada.', 2500);
+    atualizarBarraCombate();
+    return;
+  }
+  if (state.guard.cur < 2) {
+    mostrarToast('🔰 Guarda insuficiente — Ação Oculta requer 2🔰.', 3500);
+    return;
+  }
+  state.guard.cur = Math.max(0, state.guard.cur - 2);
+  combateState.acaoOculta = true;
+  renderScale1(); salvarFichaSilenciosa();
+  ativarAcaoCombate('acao-oculta', '👁️‍🗨️ Ação Oculta ativa — use ( ) no texto', '−2🔰', '');
+  mostrarToast('👁️‍🗨️ Ação Oculta ativa! −2🔰. Escreva sua ação e coloque a parte oculta entre ( ). Ela ficará velada até o oponente responder.', 7000);
+  const btn = document.getElementById('cop-oculta');
+  if (btn) btn.classList.add('active');
+  atualizarBarraCombate();
+}
+
+function processarAcaoOculta(textoLimpo) {
+  const regex = /\(([^)]+)\)/;
+  const match = textoLimpo.match(regex);
+  if (!match) return null;
+  const parteOculta = match[1].trim();
+  const textoEnviado = textoLimpo.replace(regex, '(👁️‍🗨️ ação oculta)');
+  return { textoEnviado, parteOculta };
+}
+
+let _acaoOcultaPendente = null;
+
+function _registrarAcaoOcultaPendente(msgId, parteOculta) {
+  _acaoOcultaPendente = { msgId, parteOculta };
+}
+
+function _verificarRevelacaoOculta(msg) {
+  if (!_acaoOcultaPendente) return;
+  if (msg.mine || msg.tipo !== 'normal') return;
+
+  const pendencia = _acaoOcultaPendente;
+  _acaoOcultaPendente = null;
+
+  // Revela o span velado na mensagem original
+  const rowOrigem = document.getElementById(`msg-row-${pendencia.msgId}`);
+  if (rowOrigem) {
+    const velo = rowOrigem.querySelector('.msg-oculta-velo');
+    if (velo) { velo.className = 'msg-oculta-revelada'; velo.textContent = pendencia.parteOculta; }
+    const tag = rowOrigem.querySelector('.oculta-tag');
+    if (tag)  { tag.classList.add('oculta-revelado'); tag.innerHTML = '👁️ revelado'; }
+  }
+
+  // Detecta dano na parte oculta e aplica se oponente não se defendeu
+  const detectado = detectarMecanica(pendencia.parteOculta);
+  const seDefendeu = _oponenteUsouDefesa(msg.texto);
+
+  if (detectado && detectado.tipo === 'dano') {
+    if (seDefendeu) {
+      mostrarToast('👁️‍🗨️ Ação oculta revelada! O oponente se defendeu — dano pode ser reduzido pelo prompt de reação.', 6000);
+    } else {
+      const dano = detectado.valor;
+      const guardaAntes = state.guard.cur;
+      const cg = Math.min(state.guard.cur, dano);
+      state.guard.cur -= cg;
+      const cv = Math.min(state.vita.cur, dano - cg);
+      state.vita.cur -= cv;
+      renderScale1(); salvarFichaSilenciosa();
+      verificarAtordoamentoEKO('Ação Oculta', guardaAntes);
+      mostrarToast(`👁️‍🗨️ Ação oculta revelada! O oponente não se defendeu. ${dano} de dano: 🔰−${cg} · ❤️−${cv}.`, 7000);
+    }
+  } else {
+    mostrarToast(`👁️‍🗨️ Ação oculta revelada: "${pendencia.parteOculta}"`, 5000);
+  }
+
+  triggerCombatAnimation(pendencia.msgId, 'acao-oculta');
+}
+
+function _oponenteUsouDefesa(texto) {
+  const t = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return [
+    'esquiv','defend','bloquei','paro','pari','aparo','afasto',
+    'recuo','recuei','desvio','desviei','evito','evitei',
+    'postura','guarda','escudo','intercepto','interceptei',
+    'protejo','protegi','cobertura','rolei','me jogo'
+  ].some(k => t.includes(k));
+}
 let desafioDeQuem = null;
 
 function mostrarDesafioRecebido(de) {
@@ -6483,7 +6967,7 @@ function abrirArbitroIA() {
 }
 
 function fecharArbitroIA(evt) {
-  if (evt && evt.target !== document.getElementById('ia-overlay')) return;
+  if (evt && evt.target !== document.getElementById('ia-overlay') && evt.target !== document.querySelector('.ia-panel-close')) return;
   document.getElementById('ia-overlay').classList.remove('open');
 }
 
@@ -6623,12 +7107,10 @@ function escaparHtmlPlain(str) {
     .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
 }
 
-// ── Solicitar avaliação ────────────────────────────────────────────────────
 // ── Solicitar avaliação — via Socket.IO (chave fica no servidor) ───────────
 async function solicitarAvaliacaoIA() {
   const mecanica = document.getElementById('ia-mecanica-input').value.trim();
-  if (!mecanica) { mostrarToast('⚖️ Informe a mecânica que deseja ativar.', 3000); return; }
-  if (iaState.acoesSelecionadas.length === 0) { mostrarToast('⚖️ Selecione ao menos uma ação narrativa.', 3000); return; }
+  if (!mecanica) { mostrarToast('⚖️ Informe o comando ou pergunta para o Árbitro de IA.', 3000); return; }
 
   iaState.mecanicaSolicitada = mecanica;
   iaState.ultimaDecisao = null;
@@ -6689,7 +7171,9 @@ socket.on('arbiter-resposta', (dados) => {
     document.getElementById('ia-contestar-input').value = '';
   }
 
-  _ia_exibirResultado(dados.decisao);
+  // Aceita tanto { decisao: {...} } quanto { decisao: "texto livre" } ou { texto: "..." }
+  const payload = dados.decisao !== undefined ? dados.decisao : (dados.texto || dados);
+  _ia_exibirResultado(payload);
 });
 
 // ── Exibir resultado ───────────────────────────────────────────────────────
@@ -6704,6 +7188,25 @@ function _ia_exibirResultado(decisao) {
   const confiancaEl = document.getElementById('ia-result-confianca');
   const fill = document.getElementById('ia-confidence-fill');
 
+  // ── Resposta livre (texto narrativo da IA) ────────────────────────────
+  // Se a decisão vier como string ou não tiver campo 'aprovado', exibe modo livre
+  if (typeof decisao === 'string' || decisao.aprovado === undefined) {
+    const texto = typeof decisao === 'string' ? decisao : (decisao.resposta || decisao.motivo || decisao.texto || JSON.stringify(decisao));
+    header.className = 'ia-result-header narrativo';
+    header.textContent = '⚖️ ÁRBITRO NARRATIVO';
+    verdict.className = 'ia-result-verdict narrativo';
+    verdict.textContent = '';
+    mecanicaEl.textContent = `Sobre: ${iaState.mecanicaSolicitada}`;
+    motivoEl.textContent = texto;
+    confiancaEl.innerHTML = '';
+    fill.style.width = '0%';
+    secao.classList.add('show');
+    document.getElementById('ia-badge').classList.add('show');
+    setTimeout(() => document.getElementById('ia-badge').classList.remove('show'), 6000);
+    return;
+  }
+
+  // ── Resposta estruturada (aprovado / recusado) ────────────────────────
   const ap = decisao.aprovado;
   const confianca = Math.max(0, Math.min(1, decisao.confianca || 0));
   const pct = Math.round(confianca * 100);
