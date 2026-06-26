@@ -1101,63 +1101,6 @@ body::before {
 .msg-dano-prompt .opt-cost {
   display: inline-block; margin-left: 0.2rem; opacity: 0.75; font-size: 0.56rem;
 }
-
-/* ─── Painel de Reação dentro da Árvore de Ações ─── */
-#reacao-panel-tree {
-  display: none; flex-direction: column; gap: 0.3rem;
-  padding: 0.4rem 0.5rem 0.4rem 1.6rem; /* recuo igual ao level-2 */
-  animation: tag-pop-in 0.2s ease both;
-}
-#reacao-panel-tree.visible { display: flex; }
-#reacao-panel-tree .rpt-header {
-  font-family: var(--mono); font-size: 0.62rem; color: #f3a0a0;
-  font-weight: 600; margin-bottom: 0.15rem;
-}
-#reacao-panel-tree .rpt-info {
-  font-family: var(--mono); font-size: 0.56rem; color: #f3a0a0; opacity: 0.8;
-  margin-bottom: 0.1rem;
-}
-#reacao-panel-tree .rpt-section-label {
-  font-family: var(--mono); font-size: 0.56rem; color: #7bc4f7;
-  text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; margin-bottom: 0.1rem;
-}
-#reacao-panel-tree .rpt-options {
-  display: flex; flex-wrap: wrap; gap: 0.3rem;
-}
-#reacao-panel-tree button.rpt-btn {
-  font-family: var(--mono); font-size: 0.6rem; border-radius: 5px;
-  padding: 0.25rem 0.55rem; cursor: pointer;
-  border: 1px solid rgba(100,160,255,0.35);
-  background: rgba(59,107,214,0.18); color: #aac4ff;
-  transition: background 0.15s, opacity 0.15s;
-}
-#reacao-panel-tree button.rpt-btn:hover:not(:disabled) { background: rgba(59,107,214,0.42); }
-#reacao-panel-tree button.rpt-btn:disabled {
-  opacity: 0.38; cursor: not-allowed; filter: grayscale(0.6);
-  border-color: rgba(120,120,120,0.3); color: #777; background: rgba(80,80,80,0.1);
-}
-#reacao-panel-tree button.rpt-btn.destaque {
-  border-color: #7bc4f7; background: rgba(59,107,214,0.35);
-}
-#reacao-panel-tree button.rpt-btn.rpt-ignorar {
-  background: transparent; border-color: rgba(255,255,255,0.15); color: #888;
-}
-#reacao-panel-tree button.rpt-btn.rpt-ignorar:hover { background: rgba(255,255,255,0.08); color: #ccc; }
-#reacao-panel-tree .rpt-opt-cost {
-  display: inline-block; margin-left: 0.18rem; opacity: 0.72; font-size: 0.54rem;
-}
-/* Indicador compacto na mensagem (só header, sem botões) */
-.msg-dano-prompt-mini {
-  font-family: var(--mono); font-size: 0.62rem; color: #f3a0a0;
-  background: rgba(180,40,30,0.14); border: 1px solid rgba(217,83,79,0.3);
-  border-radius: 6px; padding: 0.28rem 0.55rem; margin-top: 0.25rem;
-  display: flex; align-items: center; gap: 0.35rem;
-}
-.msg-dano-prompt-mini .mpm-arrow {
-  font-size: 0.58rem; color: #7bc4f7; animation: mpm-pulse 1.2s ease-in-out infinite;
-}
-@keyframes mpm-pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
-
 /* ─── Seletor de Ataque — tag e painel flutuante ─── */
 #attack-selector-wrap { position: relative; }
 #attack-selector-tag {
@@ -4321,9 +4264,6 @@ renderPP();
                     <button class="acao-help-btn" onclick="acaoHelp('furtividade')" title="O que é Furtividade?">?</button>
                   </div>
 
-                  <!-- REAÇÕES DE COMBATE (injetadas dinamicamente quando atacado) -->
-                  <div id="reacao-panel-tree"></div>
-
                 </div><!-- /branch-defensivas -->
 
                 <!-- ESTRATÉGICAS -->
@@ -5547,17 +5487,11 @@ function fecharOverlayKO() {
 }
 
 function fecharPromptDano(msgId) {
+  // Remove prompt inline de cura (se existir)
   const el = document.getElementById(`mec-prompt-${msgId}`);
   if (el) el.remove();
-  // Limpa também o mini-indicador na mensagem e o painel na árvore de ações
-  const mini = document.getElementById(`mec-mini-${msgId}`);
-  if (mini) mini.remove();
-  const panel = document.getElementById('reacao-panel-tree');
-  if (panel && panel.dataset.msgId === String(msgId)) {
-    panel.innerHTML = '';
-    panel.classList.remove('visible');
-    panel.removeAttribute('data-msg-id');
-  }
+  // Remove blocos de reação injetados na árvore de ações
+  document.querySelectorAll('.reacao-dano-inject').forEach(el => el.remove());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -6377,11 +6311,10 @@ function tentarAdicionarPromptDeMecanica(msg) {
   const row = document.getElementById(`msg-row-${msg.id}`);
   if (!row) return;
 
-  const autorSafe = escaparHtml(msg.autor);
-  const autorEscaped = msg.autor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
+  // ── Cura: mantém o prompt inline original ──────────────────────────────
   if (mecanica.tipo === 'cura') {
-    // Cura: mantém o prompt compacto na própria mensagem (não é uma reação de combate)
+    const autorSafe = escaparHtml(msg.autor);
+    const autorEscaped = msg.autor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     const prompt = document.createElement('div');
     prompt.className = 'msg-dano-prompt';
     prompt.id = `mec-prompt-${msg.id}`;
@@ -6395,79 +6328,106 @@ function tentarAdicionarPromptDeMecanica(msg) {
     return;
   }
 
-  // ── DANO: mini-indicador na mensagem + botões dentro da árvore de ações ──
+  // ── Dano: injeta reações na Árvore de Ações (sem prompt inline) ────────
+  injetarReacoesNaArvore(msg.id, msg.autor, mecanica.valor, detectarCustoAtaque(msg.texto));
+}
 
-  // 1. Indicador compacto na mensagem (sem botões — só notifica)
-  const mini = document.createElement('div');
-  mini.className = 'msg-dano-prompt-mini';
-  mini.id = `mec-mini-${msg.id}`;
-  mini.innerHTML = `⚔️ <strong>${autorSafe}</strong> causa <strong>${mecanica.valor}</strong> de dano. <span class="mpm-arrow">→ Reagir em Ações › Defensivas</span>`;
-  row.appendChild(mini);
+// ─── Injeção de reações na Árvore de Ações ───────────────────────────────────
+// Chamada por tentarAdicionarPromptDeMecanica quando detecta dano.
+// Remove injeções antigas, gera novos botões e os insere nas branches corretas.
+function injetarReacoesNaArvore(msgId, autorOrigem, dano, custoAtaque) {
+  // Remove qualquer bloco de reação já injetado anteriormente
+  document.querySelectorAll('.reacao-dano-inject').forEach(el => el.remove());
 
-  // 2. Injetar botões de reação dentro do reacao-panel-tree (branch-defensivas)
-  const custoAtaque = detectarCustoAtaque(msg.texto);
-  const opcoes = obterOpcoesReaçãoADano(mecanica.valor, custoAtaque);
-  const temAcaoAtiva = acaoCombateAtiva !== null;
+  const autorEscaped = autorOrigem.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const opcoes = obterOpcoesReaçãoADano(dano, custoAtaque);
 
-  // Categoriza as opções por seção dentro do painel
+  // Mapeamento de opção → branch da árvore
   // Defensivas: receber, postura-def, esquiva, sacrificio-def, dano-direto, sacrificio-guarda-def
-  // Ofensiva: interceptar
-  // Estratégica: canalizar-foco
-  const CATEGORIAS_REACAO = {
-    'receber':               'def',
-    'postura-def':           'def',
-    'esquiva':               'def',
-    'sacrificio-def':        'def',
-    'dano-direto':           'def',
-    'sacrificio-guarda-def': 'def',
-    'interceptar':           'of',
-    'canalizar-foco':        'est',
+  // Ofensivas:  interceptar
+  // Estratégicas: canalizar-foco
+  const mapa = {
+    'receber':               'branch-defensivas',
+    'postura-def':           'branch-defensivas',
+    'esquiva':               'branch-defensivas',
+    'sacrificio-def':        'branch-defensivas',
+    'dano-direto':           'branch-defensivas',
+    'sacrificio-guarda-def': 'branch-defensivas',
+    'interceptar':           'branch-ofensivas',
+    'canalizar-foco':        'branch-estrategicas',
   };
 
-  const infoCusto = custoAtaque > 1
-    ? `<div class="rpt-info">⚡ Custo do ataque detectado: ${custoAtaque} (Esquiva custa ${custoAtaque+1}⚡)</div>`
-    : '';
-  const avisoAcaoAtiva = temAcaoAtiva
-    ? `<div class="rpt-info" style="color:#7bc4f7;">🛡️ Ação ativa: <strong>${escaparHtml(acaoCombateAtiva.label)}</strong></div>`
-    : '';
-
-  let defHtml = '', ofHtml = '', estHtml = '';
+  // Agrupa por branch
+  const porBranch = {};
   for (const op of opcoes) {
-    const disponivel = op.verificar();
-    const disabled = disponivel ? '' : 'disabled';
-    const destaque = (temAcaoAtiva && acaoCombateAtiva.id === op.id) ? ' destaque' : '';
-    const custoHtml = op.custo ? `<span class="rpt-opt-cost">[${op.custo}]</span>` : '';
-    const titulo = op.descricao.replace(/"/g, '&quot;');
-    const btn = `<button class="rpt-btn${destaque}" ${disabled} title="${titulo}"
-      onclick="selecionarReacao(${msg.id}, '${op.id}', ${mecanica.valor}, '${autorEscaped}', ${custoAtaque})"
-    >${op.icon} ${escaparHtml(op.label)}${custoHtml}</button>`;
-    const cat = CATEGORIAS_REACAO[op.id] || 'def';
-    if (cat === 'of')  ofHtml  += btn;
-    else if (cat === 'est') estHtml += btn;
-    else defHtml += btn;
+    const branchId = mapa[op.id];
+    if (!branchId) continue;
+    if (!porBranch[branchId]) porBranch[branchId] = [];
+    porBranch[branchId].push(op);
   }
 
-  const ignorarBtn = `<button class="rpt-btn rpt-ignorar" onclick="fecharPromptDano(${msg.id})">✕ Ignorar</button>`;
+  const temAcaoAtiva = acaoCombateAtiva !== null;
 
-  let html = `<div class="rpt-header">⚔️ <strong>${autorSafe}</strong> causa <strong>${mecanica.valor}</strong> de dano — como reagir?</div>`;
-  html += infoCusto + avisoAcaoAtiva;
-  if (defHtml)  html += `<div class="rpt-section-label">🛡️ Defensivas</div><div class="rpt-options">${defHtml}</div>`;
-  if (ofHtml)   html += `<div class="rpt-section-label">⚔️ Ofensivas</div><div class="rpt-options">${ofHtml}</div>`;
-  if (estHtml)  html += `<div class="rpt-section-label">🌟 Estratégicas</div><div class="rpt-options">${estHtml}</div>`;
-  html += `<div class="rpt-options" style="margin-top:0.2rem;">${ignorarBtn}</div>`;
+  for (const [branchId, ops] of Object.entries(porBranch)) {
+    const branch = document.getElementById(branchId);
+    if (!branch) continue;
 
-  const panel = document.getElementById('reacao-panel-tree');
-  if (panel) {
-    panel.innerHTML = html;
-    panel.dataset.msgId = String(msg.id);
-    panel.classList.add('visible');
+    // Contêiner agrupado para facilitar remoção futura
+    const container = document.createElement('div');
+    container.className = 'reacao-dano-inject';
+    container.style.cssText = 'border-top:1px solid rgba(255,200,100,0.18);margin-top:0.2rem;padding-top:0.2rem;';
+
+    // Cabeçalho indicativo
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:0.58rem;color:#f3a0a0;padding:0.1rem 0 0.15rem 1.6rem;letter-spacing:0.03em;';
+    header.textContent = `⚔️ Reagir ao dano (${dano}) de ${escaparHtml(autorOrigem)}:`;
+    container.appendChild(header);
+
+    for (const op of ops) {
+      const disponivel = op.verificar();
+      const row = document.createElement('div');
+      row.className = 'acao-tree-row level-2';
+
+      const line = document.createElement('span');
+      line.className = 'acao-tree-line';
+      line.textContent = '╰────── ';
+
+      const btn = document.createElement('button');
+      btn.className = 'acao-tree-btn cop-btn reacao-dano-btn';
+      if (!disponivel) {
+        btn.disabled = true;
+        btn.style.opacity = '0.45';
+      }
+      if (temAcaoAtiva && acaoCombateAtiva.id === op.id) {
+        btn.style.borderColor = '#7bc4f7';
+        btn.style.background = 'rgba(59,107,214,0.35)';
+      }
+      const custoHtml = op.custo ? ` <span style="font-size:0.6rem;opacity:0.75;">[${op.custo}]</span>` : '';
+      btn.innerHTML = `${op.icon} ${escaparHtml(op.label)}${custoHtml}`;
+      btn.title = op.descricao;
+      btn.setAttribute('onclick',
+        `selecionarReacao(${msgId}, '${op.id}', ${dano}, '${autorEscaped}', ${custoAtaque})`
+      );
+
+      row.appendChild(line);
+      row.appendChild(btn);
+      container.appendChild(row);
+    }
+
+    branch.appendChild(container);
   }
 
-  // 3. Abre automaticamente a árvore de ações → Defensivas
-  // Garante que o branch-cat e branch-defensivas estejam abertos
-  if (typeof _acaoTreeAbertos !== 'undefined') {
-    if (!_acaoTreeAbertos.has('cat')) acaoTreeToggle('cat');
-    if (!_acaoTreeAbertos.has('defensivas')) acaoTreeToggle('defensivas');
+  // Abre automaticamente o menu Defensivas se estava oculto, para o jogador ver
+  const branchDef = document.getElementById('branch-defensivas');
+  if (branchDef && branchDef.style.display === 'none') {
+    // Abre cat e defensivas via acaoTreeToggle se a função estiver disponível
+    const branchCat = document.getElementById('branch-cat');
+    if (branchCat) branchCat.style.display = '';
+    branchDef.style.display = '';
+    const chevCat = document.getElementById('chev-cat');
+    if (chevCat) chevCat.textContent = '▴';
+    const chevDef = document.getElementById('chev-defensivas');
+    if (chevDef) chevDef.textContent = '▴';
   }
 }
 
