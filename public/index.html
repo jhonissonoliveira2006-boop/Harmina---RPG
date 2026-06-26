@@ -4228,15 +4228,6 @@ renderPP();
                     <button class="acao-help-btn" onclick="acaoHelp('sac-energia')" title="O que é Sacrifício de Energia?">?</button>
                   </div>
 
-                  <!-- Ação Oculta -->
-                  <div class="acao-tree-row level-2">
-                    <span class="acao-tree-line">╰────── </span>
-                    <button class="acao-tree-btn cop-btn" id="cop-oculta" onclick="ativarAcaoOculta()" title="Ocultar parte da ação com ( ) — custo: 2🔰 — o efeito é aplicado após a resposta do oponente">
-                      👁️‍🗨️ Ação Oculta (2🔰)
-                    </button>
-                    <button class="acao-help-btn" onclick="acaoHelp('acao-oculta')" title="O que é Ação Oculta?">?</button>
-                  </div>
-
                 </div><!-- /branch-ofensivas -->
 
                 <!-- DEFENSIVAS -->
@@ -4288,6 +4279,15 @@ renderPP();
                       🤼 Imobilizar (2⚡)
                     </button>
                     <button class="acao-help-btn" onclick="acaoHelp('imobilizar')" title="O que é Imobilizar?">?</button>
+                  </div>
+
+                  <!-- Ação Oculta -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-oculta" onclick="ativarAcaoOculta()" title="Ocultar parte da ação com ( ) — custo: 2🔰 — o efeito é aplicado após a resposta do oponente">
+                      👁️‍🗨️ Ação Oculta (2🔰)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('acao-oculta')" title="O que é Ação Oculta?">?</button>
                   </div>
 
                 </div><!-- /branch-estrategicas -->
@@ -5824,21 +5824,47 @@ function obterOpcoesDeAtaque() {
     });
   });
 
-  // ── Feitiços (Magia) ───────────────────────────────────────────────────
+  // ── Feitiços (Magia) — requer Grimório no inventário ──────────────────
   const m = state.mana.max;
   const manaAtual = state.mana.cur;
   if (m >= 1) {
-    const danoMagia = Math.max(1, Math.floor(m / 3) + 1);
-    opcoes.push({
-      id: 'feitico',
-      icon: '🔮',
-      label: 'Feitiço',
-      dano: danoMagia,
-      tipo: 'magico',
-      custo: '1⚡ + 1🔮',
-      tip: `Dano mágico: ${Math.floor(m/3)} (magia÷3) +1 = ${danoMagia}`,
-      disponivel: state.energy.cur >= 1 && manaAtual >= 1
+    // Verifica se o jogador possui um Grimório (qualquer slot do inventário)
+    let temGrimorio = false;
+    const invSlots = document.querySelectorAll('#inventario-grid .inv-slot input[type="text"]');
+    invSlots.forEach(inp => {
+      if (/grim[oó]rio/i.test(inp.value || '')) temGrimorio = true;
     });
+    // Também verifica na tabela de equipamentos (caso apareça lá)
+    document.querySelectorAll('#equip-body tr').forEach(tr => {
+      const inputs = tr.querySelectorAll('td input');
+      if (inputs.length >= 1 && /grim[oó]rio/i.test(inputs[0].value || '')) temGrimorio = true;
+    });
+
+    const danoMagia = Math.max(1, Math.floor(m / 3) + 1);
+    if (temGrimorio) {
+      opcoes.push({
+        id: 'feitico',
+        icon: '🔮',
+        label: 'Feitiço',
+        dano: danoMagia,
+        tipo: 'magico',
+        custo: '1⚡ + 1🔮',
+        tip: `Dano mágico: ${Math.floor(m/3)} (magia÷3) +1 = ${danoMagia}`,
+        disponivel: state.energy.cur >= 1 && manaAtual >= 1
+      });
+    } else {
+      // Mostra opção desativada para indicar que existe mas requer Grimório
+      opcoes.push({
+        id: 'feitico',
+        icon: '🔮',
+        label: 'Feitiço',
+        dano: danoMagia,
+        tipo: 'magico',
+        custo: '1⚡ + 1🔮',
+        tip: `Requer Grimório no inventário`,
+        disponivel: false
+      });
+    }
   }
 
   // ── Com Foco ativo: todas as opções ganham +2 ──────────────────────────
@@ -6661,7 +6687,7 @@ const _acaoHelpTextos = {
   },
   ofensivas: {
     titulo: '⚔️ Ofensivas',
-    corpo:  'Ações focadas em causar dano ou pressionar o adversário.\n\nExemplos:\n• Ataque (com arma ou desarmado)\n• 2º Ataque (custo extra de energia)\n• Sacrifício Ofensivo (troca atributos por dano)\n• Ação Oculta (esconde parte da ação)'
+    corpo:  'Ações focadas em causar dano ou pressionar o adversário.\n\nExemplos:\n• Ataque (com arma ou desarmado)\n• 2º Ataque (custo extra de energia)\n• Sacrifício Ofensivo (troca atributos por dano)'
   },
   ataque: {
     titulo: '⚔️ Ataque',
@@ -6693,7 +6719,7 @@ const _acaoHelpTextos = {
   },
   estrategicas: {
     titulo: '🌟 Estratégicas',
-    corpo:  'Manobras que alteram o estado do combate sem atacar diretamente.\n\nExemplos:\n• Canalizar Foco — potencializa o próximo ataque\n• Imobilizar — remove a mobilidade do oponente'
+    corpo:  'Manobras que alteram o estado do combate sem atacar diretamente.\n\nExemplos:\n• Canalizar Foco — potencializa o próximo ataque\n• Imobilizar — remove a mobilidade do oponente\n• Ação Oculta — esconde parte da ação do oponente'
   },
   foco: {
     titulo: '🌟 Canalizar Foco',
