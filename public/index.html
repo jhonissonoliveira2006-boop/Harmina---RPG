@@ -1403,8 +1403,13 @@ body::before {
 #combat-offensive-panel #attack-selector-tag {
   display: inline-flex;
 }
+/* O painel abre para baixo — overflow:hidden nos branches impede abertura para cima */
 #combat-offensive-panel #attack-panel {
-  bottom: calc(100% + 4px); left: 0;
+  top: calc(100% + 4px); bottom: auto; left: 0;
+}
+/* Permite que o dropdown de ataque saia dos limites do branch */
+#branch-ofensivas {
+  overflow: visible;
 }
 
 /* ─── Overlay de Nocaute / Atordoamento ─── */
@@ -4201,6 +4206,15 @@ renderPP();
                     <button class="acao-help-btn" onclick="acaoHelp('ataque')" title="O que é Ataque?">?</button>
                   </div>
 
+                  <!-- Intimidar -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-intimidar" onclick="abrirIntimidacao()" title="Revelar um atributo para intimidar o oponente — se efetivo, ele perde 1 turno">
+                      😤 Intimidar
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('intimidar')" title="O que é Intimidação?">?</button>
+                  </div>
+
                   <!-- Segundo Ataque -->
                   <div class="acao-tree-row level-2">
                     <span class="acao-tree-line">╰────── </span>
@@ -4976,6 +4990,8 @@ const combateState = {
   nocauteado: false,        // vita chegou a 0
   atordoado: false,         // perdeu turno por atordoamento
   acaoOculta: false,        // ação oculta ativa neste turno
+  intimidando: false,        // intimidação ativa neste turno
+  hesitante: false,          // perdeu este turno por intimidação
 };
 
 function resetarCombateState() {
@@ -4991,6 +5007,8 @@ function resetarCombateState() {
   combateState.nocauteado = false;
   combateState.atordoado = false;
   combateState.acaoOculta = false;
+  combateState.intimidando = false;
+  combateState.hesitante = false;
   atacouEsteTurno = false;
   energySacrificeBonus = 0;
   desativarAcaoCombate();
@@ -5500,6 +5518,7 @@ const COMBAT_ANIM_CONFIGS = {
   'sac-of-guard':   { icon: '🔰⚔️',  label: 'Guarda sacrificada',sound:'block',   sparks: '#86efac' },
   'sac-of-mana':    { icon: '🔮⚔️',  label: 'Magia sacrificada', sound:'focus',   sparks: '#c4b5fd' },
   'acao-oculta':    { icon: '👁️‍🗨️',  label: 'Ação Oculta!',     sound: 'stealth', sparks: '#c4b5fd' },
+  'intimidando':    { icon: '😤',     label: 'Intimidação!',     sound: 'thud',    sparks: '#86efac' },
 };
 
 // ─── Web Audio — sons procedurais ────────────────────────────────────────────
@@ -6061,7 +6080,19 @@ function enviarMensagem() {
       if (custoEnergia > 0) gastarEnergiaDeAtaque();
       else atacouEsteTurno = true;
     } else {
-      textoComDano = textoLimpo;
+      // ── Intimidação ativa: injeta a tag de intimidação no texto ──────────
+      if (combateState.intimidando && window._intimidacaoPendente) {
+        const intim = window._intimidacaoPendente;
+        textoComDano = `${textoLimpo} ⟨😤 Intimidação: ${intim.atributoLabel} revelado — valor ${intim.valor}⟩`;
+        combateState.intimidando = false;
+        window._intimidacaoPendente = null;
+        desativarAcaoCombate();
+        const btnInt = document.getElementById('cop-intimidar');
+        if (btnInt) btnInt.classList.remove('active');
+        pendingAnimForNextMsg = 'intimidando';
+      } else {
+        textoComDano = textoLimpo;
+      }
     }
 
     // Regen de Energia ao final do turno
@@ -6644,6 +6675,77 @@ function ativarImobilizacao() {
   atualizarBarraCombate();
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTIMIDAÇÃO
+// O jogador revela um atributo. Se maior que qualquer atributo do oponente,
+// o alvo fica Hesitante (perde 1 turno). O oponente pode rebater exibindo
+// um atributo igual ou maior para se livrar sem contra-intimidar.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function abrirIntimidacao() {
+  if (!combateState.ativo) {
+    mostrarToast('😤 Intimidação só está disponível em combate formal.', 3500);
+    return;
+  }
+  const s = state;
+  const atributos = [
+    { label: '❤️ Vitalidade', valor: s.vita.cur,   id: 'vita'   },
+    { label: '🔰 Guarda',     valor: s.guard.cur,  id: 'guard'  },
+    { label: '⚡ Energia',    valor: s.energy.cur, id: 'energy' },
+    { label: '🔮 Magia',      valor: s.mana.cur,   id: 'mana'   },
+    { label: '✨ Poder',      valor: s.pp.cur,     id: 'pp'     },
+  ];
+
+  const grid = document.getElementById('intimidacao-opcoes');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  for (const atr of atributos) {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'font-family:var(--mono);font-size:0.65rem;padding:0.45rem 0.35rem;border-radius:6px;cursor:pointer;border:1px solid rgba(80,180,40,0.4);background:rgba(40,120,20,0.2);color:#a0f0a0;text-align:left;';
+    btn.innerHTML = `${atr.label}<br><span style="font-size:0.8em;color:#6fcf6f;">Valor atual: <strong style="color:#fff">${atr.valor}</strong></span>`;
+    btn.onclick = () => executarIntimidacao(atr.id, atr.label, atr.valor);
+    grid.appendChild(btn);
+  }
+
+  document.getElementById('intimidacao-overlay').style.display = 'flex';
+}
+
+function fecharIntimidacao(e) {
+  if (e && e.target !== document.getElementById('intimidacao-overlay')) return;
+  document.getElementById('intimidacao-overlay').style.display = 'none';
+}
+
+function executarIntimidacao(atributoId, atributoLabel, valor) {
+  fecharIntimidacao();
+  const nomes = { vita:'Vitalidade', guard:'Guarda', energy:'Energia', mana:'Magia', pp:'Poder' };
+  combateState.intimidando = true;
+  atacouEsteTurno = true;
+
+  // Monta o texto narrativo que o sistema injeta na mensagem
+  const textoIntimidacao = `[INTIMIDAÇÃO: revela ${atributoLabel} — valor ${valor}]`;
+  // Injeta na caixa de texto como contexto de ação (igual ao foco/imobilização)
+  ativarAcaoCombate(
+    'intimidando',
+    `😤 Intimidação declarada — ${atributoLabel}: ${valor}`,
+    '',
+    ''
+  );
+
+  pendingAnimForNextMsg = 'intimidando';
+  mostrarToast(
+    `😤 Intimidação ativa! Você revela ${atributoLabel} (${valor}). Narre a intimidação na mensagem. ` +
+    `O sistema incluirá automaticamente o valor revelado. ` +
+    `Se seu valor superar QUALQUER atributo do oponente, ele fica Hesitante (perde 1 turno).`,
+    8000
+  );
+
+  // Guarda para injeção no próximo envio
+  window._intimidacaoPendente = { atributoId, atributoLabel, valor };
+  atualizarBarraCombate();
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MENU ÁRVORE DE AÇÕES — navegação hierárquica
 // ═══════════════════════════════════════════════════════════════════════════
@@ -6687,7 +6789,7 @@ const _acaoHelpTextos = {
   },
   ofensivas: {
     titulo: '⚔️ Ofensivas',
-    corpo:  'Ações focadas em causar dano ou pressionar o adversário.\n\nExemplos:\n• Ataque (com arma ou desarmado)\n• 2º Ataque (custo extra de energia)\n• Sacrifício Ofensivo (troca atributos por dano)'
+    corpo:  'Ações focadas em causar dano ou pressionar o adversário.\n\nExemplos:\n• Ataque (com arma ou desarmado)\n• 2º Ataque (custo extra de energia)\n• Sacrifício Ofensivo (troca atributos por dano)\n• Intimidar (revelar atributo para fazer o oponente hesitar)'
   },
   ataque: {
     titulo: '⚔️ Ataque',
@@ -6728,6 +6830,10 @@ const _acaoHelpTextos = {
   imobilizar: {
     titulo: '🤼 Imobilizar',
     corpo:  'Tenta imobilizar o oponente, impedindo seus movimentos.\n\nCusto: 2⚡ de Energia.\n\nCondição narrativa: sua Energia + Vitalidade atual deve ser ≥ à do oponente para ter sucesso.\n\nManutenção: 1⚡ por turno se o oponente tentar escapar.'
+  },
+  intimidar: {
+    titulo: '😤 Intimidação',
+    corpo:  'Revele um de seus atributos para intimidar o oponente.\n\nComo funciona:\n• Escolha um atributo (Vita, Guarda, Energia, Magia ou Poder) e revele seu valor atual\n• Se esse valor for maior que QUALQUER UM dos atributos do oponente, a intimidação é efetiva\n• O alvo fica HESITANTE: perde 1 turno sem agir\n\nComo rebater:\n• O oponente pode exibir qualquer atributo seu igual ou maior para se livrar da condição\n• Se rebater com sucesso, apenas fica livre — não intimida de volta'
   },
 };
 
@@ -7361,6 +7467,15 @@ socket.on('parou-de-digitar', (dados) => {
     <p style="font-family:var(--mono);font-size:0.63rem;color:#c0a0a0;margin-bottom:0.8rem;">Sacrifique 1 ou 2 pontos de <strong>um único atributo</strong> para causar +1 de dano por ponto. Máx. 2 pts por ataque.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.7rem;" id="sac-of-opcoes"></div>
     <button onclick="fecharSacrificioOfensivo()" style="width:100%;font-family:var(--mono);font-size:0.65rem;background:none;border:1px solid rgba(255,255,255,0.12);color:#888;border-radius:6px;padding:0.35rem;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<div id="intimidacao-overlay" onclick="fecharIntimidacao(event)" style="display:none;position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+  <div style="background:#0f1a0a;border:1px solid rgba(80,180,40,0.4);border-radius:12px;padding:1.2rem 1.4rem;width:min(340px,92vw);box-shadow:0 8px 32px rgba(0,0,0,0.7);">
+    <h3 style="font-family:var(--serif);font-size:0.95rem;color:#a0f3a0;margin-bottom:0.4rem;">😤 Intimidação</h3>
+    <p style="font-family:var(--mono);font-size:0.62rem;color:#90c090;margin-bottom:0.8rem;line-height:1.5;">Revele um de seus atributos. Para intimidar, ele precisa superar <strong>qualquer</strong> um dos atributos do oponente. Se efetivo, o alvo fica <strong>hesitante — perde 1 turno sem agir</strong>.<br><br>O oponente pode rebater exibindo qualquer atributo igual ou maior para se livrar.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.7rem;" id="intimidacao-opcoes"></div>
+    <button onclick="fecharIntimidacao()" style="width:100%;font-family:var(--mono);font-size:0.65rem;background:none;border:1px solid rgba(255,255,255,0.12);color:#888;border-radius:6px;padding:0.35rem;cursor:pointer;">Cancelar</button>
   </div>
 </div>
 
