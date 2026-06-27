@@ -255,14 +255,16 @@ body::before {
 }
 /* Avatar no chat */
 .msg-avatar {
-  width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  width: 30px; height: 30px; border-radius: 50%; overflow: hidden;
   border: 1.5px solid rgba(139,105,20,0.4); flex-shrink: 0;
   background: rgba(139,105,20,0.1); display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif); font-size: 0.85rem; font-weight: 700; color: var(--burnish);
+  font-family: var(--serif); font-size: 0.8rem; font-weight: 700; color: var(--burnish);
+  position: absolute; bottom: 100%; margin-bottom: 3px;
 }
 .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.msg-row.mine .msg-row-inner { flex-direction: row-reverse; }
-.msg-row-inner { display: flex; align-items: flex-end; gap: 0.5rem; }
+.msg-row.mine .msg-avatar  { right: 0; }
+.msg-row.theirs .msg-avatar { left: 0; }
+.msg-row-inner { position: relative; display: flex; flex-direction: column; padding-bottom: 0; }
 
 /* View de Perfil */
 #view-perfil {
@@ -2021,7 +2023,7 @@ body::before {
     </div>
     <div class="avatar-editor-controls">
       <label>Zoom</label>
-      <input type="range" id="avatar-zoom" min="1" max="4" step="0.01" value="1">
+      <input type="range" id="avatar-zoom" min="0.2" max="4" step="0.01" value="1">
     </div>
     <div style="font-family:var(--mono);font-size:0.56rem;color:#999;text-align:center;margin-bottom:0.8rem;letter-spacing:0.05em;">Arraste para reposicionar · Deslize para ajustar o zoom</div>
     <div class="avatar-editor-btns">
@@ -4252,6 +4254,7 @@ renderPP();
 
     <div class="chat-topbar">
       <button class="chat-back-btn" onclick="voltarAoMenu()" title="Voltar ao Menu">‹</button>
+      <button id="ooc-toggle-btn" onclick="toggleModoOOC()" title="Alternar modo Fora de Personagem" style="background:none;border:1px solid rgba(240,232,213,0.2);color:var(--parchment,#f0e8d5);font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;padding:0.28rem 0.55rem;border-radius:4px;cursor:pointer;transition:all 0.18s;white-space:nowrap;flex-shrink:0;">Off</button>
       <div class="chat-topbar-info">
         <div class="chat-topbar-title">Mesa de Hármina</div>
         <div class="chat-topbar-sub" id="chat-presence">3 aventureiros à mesa</div>
@@ -5098,12 +5101,12 @@ function carregarImagemEditor(e) {
     const img = new Image();
     img.onload = () => {
       _avatarImg = img;
-      _avatarZoom = 1;
+      const scale = Math.min(AVATAR_SIZE / img.width, AVATAR_SIZE / img.height) * 0.9;
+      _avatarZoom = scale;
       // Center image
-      const scale = Math.max(AVATAR_SIZE / img.width, AVATAR_SIZE / img.height);
       _avatarOffsetX = (AVATAR_SIZE - img.width * scale) / 2;
       _avatarOffsetY = (AVATAR_SIZE - img.height * scale) / 2;
-      document.getElementById('avatar-zoom').value = 1;
+      document.getElementById('avatar-zoom').value = scale;
       document.getElementById('avatar-editor-overlay').classList.add('open');
       _desenharAvatarCanvas();
       _setupAvatarDrag();
@@ -5228,6 +5231,21 @@ const socket = io();
 let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz login/cadastro
 let fichaAtivaChat = null; // nome da ficha escolhida para narrar no chat (null = nenhuma)
 let filaDeStatusPendentes = []; // snapshots de status aguardando a confirmação (echo) do servidor, na ordem de envio
+
+// ─── Modo OOC global (botão "Off" no topbar) ─────────────────────────────────
+let modoOOCAtivo = false;
+
+function toggleModoOOC() {
+  modoOOCAtivo = !modoOOCAtivo;
+  const btn = document.getElementById('ooc-toggle-btn');
+  if (btn) {
+    btn.textContent = modoOOCAtivo ? '💬 Off' : 'Off';
+    btn.style.background = modoOOCAtivo ? 'rgba(201,162,39,0.22)' : 'none';
+    btn.style.borderColor = modoOOCAtivo ? 'var(--chat-action)' : 'rgba(240,232,213,0.2)';
+    btn.style.color = modoOOCAtivo ? 'var(--chat-action)' : 'var(--parchment,#f0e8d5)';
+  }
+  mostrarToast(modoOOCAtivo ? '💬 Modo fora de personagem <strong>ativado</strong>.' : '💬 Modo fora de personagem <strong>desativado</strong>.', 2500);
+}
 
 // ─── Estado de Combate ────────────────────────────────────────────────────────
 let atacouEsteTurno = false;
@@ -6333,7 +6351,7 @@ function enviarMensagem() {
 
   // ── Fora de Personagem (OOC) ────────────────────────────────────────────
   const textoTrimmed = texto.trimStart();
-  const ehForaDePersonagem = /^\/\s*\//.test(textoTrimmed);
+  const ehForaDePersonagem = modoOOCAtivo || /^\/\s*\//.test(textoTrimmed);
 
   // ── Mensagem Privada ──────────────────────────────────────────────────────
   const pv = detectarComandoPV(texto);
@@ -6563,27 +6581,23 @@ function renderizarMensagem(msg) {
   if (msg.mine) {
     row.innerHTML = `
       <div class="msg-row-inner">
-        <div style="display:flex;flex-direction:column;align-items:flex-end;flex:1;min-width:0;">
-          <div class="msg-author">${authorLabel}</div>
-          ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado → ${escaparHtml(msg.pvDestinatario || '')}</div>` : ''}
-          ${statusHtml}
-          <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
-          <div class="msg-time">${formatarHora(msg.timestamp)}</div>
-        </div>
         ${avatarHtml}
+        <div class="msg-author">${authorLabel}</div>
+        ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado → ${escaparHtml(msg.pvDestinatario || '')}</div>` : ''}
+        ${statusHtml}
+        <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
+        <div class="msg-time">${formatarHora(msg.timestamp)}</div>
       </div>
     `;
   } else {
     row.innerHTML = `
       <div class="msg-row-inner">
         ${avatarHtml}
-        <div style="display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0;">
-          <div class="msg-author">${authorLabel}</div>
-          ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ← ${escaparHtml(msg.autor)}</div>` : ''}
-          ${statusHtml}
-          <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
-          <div class="msg-time">${formatarHora(msg.timestamp)}</div>
-        </div>
+        <div class="msg-author">${authorLabel}</div>
+        ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ← ${escaparHtml(msg.autor)}</div>` : ''}
+        ${statusHtml}
+        <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
+        <div class="msg-time">${formatarHora(msg.timestamp)}</div>
       </div>
     `;
   }
