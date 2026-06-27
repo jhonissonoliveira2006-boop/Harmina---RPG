@@ -242,6 +242,103 @@ body::before {
 .welcome-signout:hover { color: var(--rust); }
 
 /* ═══════════════════════════════════════════
+   PERFIL — Foto de Perfil
+   ═══════════════════════════════════════════ */
+.profile-avatar-circle {
+  width: 48px; height: 48px; border-radius: 50%; overflow: hidden;
+  border: 2px solid var(--burnish); flex-shrink: 0;
+  background: rgba(139,105,20,0.12); display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 1.2rem; font-weight: 700; color: var(--burnish);
+}
+.profile-avatar-circle img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+/* Avatar no chat */
+.msg-avatar {
+  width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  border: 1.5px solid rgba(139,105,20,0.4); flex-shrink: 0;
+  background: rgba(139,105,20,0.1); display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 0.85rem; font-weight: 700; color: var(--burnish);
+}
+.msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.msg-row.mine .msg-row-inner { flex-direction: row-reverse; }
+.msg-row-inner { display: flex; align-items: flex-end; gap: 0.5rem; }
+
+/* View de Perfil */
+#view-perfil {
+  display: none;
+}
+#view-perfil.active { display: block; }
+.profile-section-title {
+  font-family: var(--serif); font-size: 1rem; font-weight: 700;
+  color: var(--rust); letter-spacing: 0.04em; text-transform: uppercase;
+  margin-bottom: 1rem; text-align: center;
+}
+.profile-avatar-preview {
+  width: 100px; height: 100px; border-radius: 50%; overflow: hidden;
+  border: 3px solid var(--burnish); margin: 0 auto 1.2rem;
+  background: rgba(139,105,20,0.1); display: flex; align-items: center;
+  justify-content: center; font-family: var(--serif); font-size: 2.5rem;
+  font-weight: 700; color: var(--burnish); cursor: pointer;
+  transition: border-color 0.2s;
+  position: relative;
+}
+.profile-avatar-preview:hover { border-color: var(--rust); }
+.profile-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.45); opacity: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; transition: opacity 0.2s;
+}
+.profile-avatar-preview:hover .profile-avatar-overlay { opacity: 1; }
+
+/* Editor de Imagem */
+#avatar-editor-overlay {
+  position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.8);
+  display: none; align-items: center; justify-content: center; padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+#avatar-editor-overlay.open { display: flex; }
+#avatar-editor-box {
+  background: var(--parchment); border: 2px solid var(--burnish); border-radius: 4px;
+  padding: 1.4rem; width: min(340px, 96vw);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+#avatar-editor-box h3 {
+  font-family: var(--serif); font-size: 1rem; color: var(--rust);
+  margin: 0 0 0.8rem; text-align: center; letter-spacing: 0.06em; text-transform: uppercase;
+}
+#avatar-canvas-wrap {
+  width: 240px; height: 240px; margin: 0 auto 0.8rem;
+  overflow: hidden; border-radius: 50%; border: 3px solid var(--burnish);
+  position: relative; background: #ccc; cursor: grab;
+  user-select: none; -webkit-user-select: none;
+}
+#avatar-canvas-wrap:active { cursor: grabbing; }
+#avatar-canvas-wrap canvas {
+  position: absolute;
+  top: 0; left: 0;
+}
+.avatar-editor-controls {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.avatar-editor-controls label {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em;
+  color: var(--burnish); text-transform: uppercase;
+}
+.avatar-editor-controls input[type=range] {
+  width: 100px; accent-color: var(--rust);
+}
+.avatar-editor-btns {
+  display: flex; gap: 0.6rem;
+}
+.avatar-editor-btns .btn {
+  flex: 1; font-size: 0.7rem; padding: 0.65rem 0.5rem;
+}
+
+/* ═══════════════════════════════════════════
    TOAST
    ═══════════════════════════════════════════ */
 .toast {
@@ -1865,12 +1962,74 @@ body::before {
           </div>
           <div class="welcome-card-arrow">›</div>
         </div>
+
+        <div class="welcome-card" onclick="abrirPerfil()">
+          <div class="welcome-card-icon" id="welcome-avatar-icon">👤</div>
+          <div class="welcome-card-text">
+            <div class="welcome-card-title">Perfil</div>
+            <div class="welcome-card-desc">Edite sua foto de perfil</div>
+          </div>
+          <div class="welcome-card-arrow">›</div>
+        </div>
       </div>
 
       <div class="welcome-signout" onclick="sair()">Encerrar sessão</div>
     </div>
   </div>
 
+  <div class="view" id="view-perfil">
+    <div class="panel">
+      <div class="form-header">
+        <div class="form-eyebrow">Sua Identidade</div>
+        <div class="form-title">Perfil</div>
+        <div class="form-sub">Clique na imagem para alterar sua foto</div>
+      </div>
+
+      <div class="profile-avatar-preview" id="perfil-avatar-preview" onclick="abrirEditorAvatar()">
+        <span id="perfil-avatar-initial">?</span>
+        <div class="profile-avatar-overlay">✏️</div>
+      </div>
+
+      <div style="text-align:center; margin-bottom:1.4rem;">
+        <div style="font-family:var(--serif);font-size:1.1rem;font-weight:700;color:var(--ink);" id="perfil-nome-display">—</div>
+        <div style="font-family:var(--mono);font-size:0.58rem;letter-spacing:0.1em;color:var(--burnish);text-transform:uppercase;margin-top:0.3rem;">Aventureiro Registrado</div>
+      </div>
+
+      <div style="text-align:center;margin-bottom:0.6rem;">
+        <button class="btn btn-secondary" onclick="abrirEditorAvatar()" style="font-size:0.68rem;padding:0.6rem 1.4rem;">
+          📷 Alterar Foto de Perfil
+        </button>
+      </div>
+      <div style="text-align:center;">
+        <button class="btn" onclick="removerFotoPerfil()" id="btn-remover-foto" style="font-size:0.62rem;padding:0.5rem 1.2rem;color:#999;border-color:rgba(0,0,0,0.15);display:none;">
+          🗑️ Remover foto
+        </button>
+      </div>
+
+      <div class="link-back" onclick="voltarAoMenu()" style="margin-top:1.8rem;">‹ Voltar ao Menu</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Editor de Avatar -->
+<div id="avatar-editor-overlay">
+  <div id="avatar-editor-box">
+    <h3>Enquadrar Foto</h3>
+    <div id="avatar-canvas-wrap">
+      <canvas id="avatar-canvas"></canvas>
+    </div>
+    <div class="avatar-editor-controls">
+      <label>Zoom</label>
+      <input type="range" id="avatar-zoom" min="1" max="4" step="0.01" value="1">
+    </div>
+    <div style="font-family:var(--mono);font-size:0.56rem;color:#999;text-align:center;margin-bottom:0.8rem;letter-spacing:0.05em;">Arraste para reposicionar · Deslize para ajustar o zoom</div>
+    <div class="avatar-editor-btns">
+      <button class="btn btn-secondary" onclick="fecharEditorAvatar()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAvatar()">Confirmar</button>
+    </div>
+    <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="carregarImagemEditor(event)">
+  </div>
 </div>
 
 <div class="view" id="view-ficha">
@@ -4728,7 +4887,7 @@ function excluirFichaChat(nome) {
 // ═══════════════════════════════════════════
 function irPara(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const map = { portal: 'view-portal', cadastro: 'view-cadastro', login: 'view-login', boasvindas: 'view-boasvindas', ficha: 'view-ficha', chat: 'view-chat' };
+  const map = { portal: 'view-portal', cadastro: 'view-cadastro', login: 'view-login', boasvindas: 'view-boasvindas', ficha: 'view-ficha', chat: 'view-chat', perfil: 'view-perfil' };
   document.getElementById(map[viewId]).classList.add('active');
   if (viewId === 'cadastro') {
     setTimeout(() => document.getElementById('input-user').focus(), 350);
@@ -4809,6 +4968,7 @@ function entrarComSessao(usuario) {
   document.getElementById('welcome-name').textContent = usuario;
   document.getElementById('welcome-phrase').textContent = fraseBoasVindas[Math.floor(Math.random() * fraseBoasVindas.length)];
   irPara('boasvindas');
+  atualizarWelcomeAvatar();
   mostrarToast(`Bem-vindo, <strong>${usuario}</strong>!`);
 }
 
@@ -4846,6 +5006,188 @@ function abrirChat() {
 function voltarAoMenu() {
   irPara('boasvindas');
   window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// ═══════════════════════════════════════════
+// PERFIL — FOTO DE PERFIL
+// ═══════════════════════════════════════════
+const STORAGE_AVATAR_PREFIX = 'harmina-avatar:';
+
+function salvarAvatarLocal(usuario, dataUrl) {
+  try { localStorage.setItem(STORAGE_AVATAR_PREFIX + usuario.toLowerCase(), dataUrl); } catch(e) {}
+}
+
+function carregarAvatarLocal(usuario) {
+  try { return localStorage.getItem(STORAGE_AVATAR_PREFIX + (usuario||'').toLowerCase()) || null; } catch(e) { return null; }
+}
+
+function removerAvatarLocal(usuario) {
+  try { localStorage.removeItem(STORAGE_AVATAR_PREFIX + usuario.toLowerCase()); } catch(e) {}
+}
+
+// Retorna data URL do avatar de um usuário do chat, ou null
+function obterAvatarDoChat(nomeUsuario, isMine) {
+  if (isMine && usuarioAtual) return carregarAvatarLocal(usuarioAtual);
+  // Para outros jogadores, não temos acesso ao avatar (é local no dispositivo deles)
+  return null;
+}
+
+function abrirPerfil() {
+  if (!usuarioAtual) return;
+  document.getElementById('perfil-nome-display').textContent = usuarioAtual;
+  document.getElementById('perfil-avatar-initial').textContent = usuarioAtual[0].toUpperCase();
+  const avatar = carregarAvatarLocal(usuarioAtual);
+  const preview = document.getElementById('perfil-avatar-preview');
+  if (avatar) {
+    preview.innerHTML = `<img src="${avatar}" alt=""><div class="profile-avatar-overlay">✏️</div>`;
+    document.getElementById('btn-remover-foto').style.display = '';
+  } else {
+    preview.innerHTML = `<span id="perfil-avatar-initial">${usuarioAtual[0].toUpperCase()}</span><div class="profile-avatar-overlay">✏️</div>`;
+    document.getElementById('btn-remover-foto').style.display = 'none';
+  }
+  // Atualiza ícone na tela de boas vindas
+  atualizarWelcomeAvatar();
+  irPara('perfil');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function removerFotoPerfil() {
+  if (!usuarioAtual) return;
+  removerAvatarLocal(usuarioAtual);
+  const preview = document.getElementById('perfil-avatar-preview');
+  const initial = usuarioAtual[0].toUpperCase();
+  preview.innerHTML = `<span id="perfil-avatar-initial">${initial}</span><div class="profile-avatar-overlay">✏️</div>`;
+  document.getElementById('btn-remover-foto').style.display = 'none';
+  atualizarWelcomeAvatar();
+  mostrarToast('🗑️ Foto de perfil removida.');
+}
+
+function atualizarWelcomeAvatar() {
+  if (!usuarioAtual) return;
+  const icon = document.getElementById('welcome-avatar-icon');
+  if (!icon) return;
+  const avatar = carregarAvatarLocal(usuarioAtual);
+  if (avatar) {
+    icon.innerHTML = `<img src="${avatar}" style="width:44px;height:44px;object-fit:cover;border-radius:50%;" alt="">`;
+    icon.style.border = 'none';
+    icon.style.background = 'none';
+  } else {
+    icon.innerHTML = '👤';
+    icon.style.border = '';
+    icon.style.background = '';
+  }
+}
+
+// ── Editor de Avatar ─────────────────────────────────────────────────────────
+let _avatarImg = null;
+let _avatarOffsetX = 0, _avatarOffsetY = 0;
+let _avatarStartX = 0, _avatarStartY = 0;
+let _avatarDragging = false;
+let _avatarZoom = 1;
+const AVATAR_SIZE = 240;
+
+function abrirEditorAvatar() {
+  document.getElementById('avatar-file-input').click();
+}
+
+function carregarImagemEditor(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      _avatarImg = img;
+      _avatarZoom = 1;
+      // Center image
+      const scale = Math.max(AVATAR_SIZE / img.width, AVATAR_SIZE / img.height);
+      _avatarOffsetX = (AVATAR_SIZE - img.width * scale) / 2;
+      _avatarOffsetY = (AVATAR_SIZE - img.height * scale) / 2;
+      document.getElementById('avatar-zoom').value = 1;
+      document.getElementById('avatar-editor-overlay').classList.add('open');
+      _desenharAvatarCanvas();
+      _setupAvatarDrag();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  // reset input so same file can be re-selected
+  e.target.value = '';
+}
+
+function _desenharAvatarCanvas() {
+  const canvas = document.getElementById('avatar-canvas');
+  canvas.width = AVATAR_SIZE;
+  canvas.height = AVATAR_SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, AVATAR_SIZE, AVATAR_SIZE);
+  if (!_avatarImg) return;
+  const zoom = _avatarZoom;
+  const w = _avatarImg.width * zoom;
+  const h = _avatarImg.height * zoom;
+  ctx.drawImage(_avatarImg, _avatarOffsetX, _avatarOffsetY, w, h);
+}
+
+function _setupAvatarDrag() {
+  const wrap = document.getElementById('avatar-canvas-wrap');
+  wrap.onmousedown = e => {
+    _avatarDragging = true;
+    _avatarStartX = e.clientX - _avatarOffsetX;
+    _avatarStartY = e.clientY - _avatarOffsetY;
+    e.preventDefault();
+  };
+  wrap.ontouchstart = e => {
+    _avatarDragging = true;
+    _avatarStartX = e.touches[0].clientX - _avatarOffsetX;
+    _avatarStartY = e.touches[0].clientY - _avatarOffsetY;
+    e.preventDefault();
+  };
+  document.onmousemove = e => {
+    if (!_avatarDragging) return;
+    _avatarOffsetX = e.clientX - _avatarStartX;
+    _avatarOffsetY = e.clientY - _avatarStartY;
+    _desenharAvatarCanvas();
+  };
+  document.ontouchmove = e => {
+    if (!_avatarDragging) return;
+    _avatarOffsetX = e.touches[0].clientX - _avatarStartX;
+    _avatarOffsetY = e.touches[0].clientY - _avatarStartY;
+    _desenharAvatarCanvas();
+    e.preventDefault();
+  };
+  document.onmouseup = () => { _avatarDragging = false; };
+  document.ontouchend = () => { _avatarDragging = false; };
+
+  document.getElementById('avatar-zoom').oninput = function() {
+    const oldZoom = _avatarZoom;
+    _avatarZoom = parseFloat(this.value);
+    // Scale around center of canvas
+    const cx = AVATAR_SIZE / 2;
+    const cy = AVATAR_SIZE / 2;
+    _avatarOffsetX = cx - (_avatarZoom / oldZoom) * (cx - _avatarOffsetX);
+    _avatarOffsetY = cy - (_avatarZoom / oldZoom) * (cy - _avatarOffsetY);
+    _desenharAvatarCanvas();
+  };
+}
+
+function fecharEditorAvatar() {
+  document.getElementById('avatar-editor-overlay').classList.remove('open');
+  _avatarImg = null;
+}
+
+function confirmarAvatar() {
+  const canvas = document.getElementById('avatar-canvas');
+  // Exporta como JPEG pequeno para economizar storage
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  salvarAvatarLocal(usuarioAtual, dataUrl);
+  fecharEditorAvatar();
+
+  // Atualiza a tela de perfil
+  const preview = document.getElementById('perfil-avatar-preview');
+  preview.innerHTML = `<img src="${dataUrl}" alt=""><div class="profile-avatar-overlay">✏️</div>`;
+  document.getElementById('btn-remover-foto').style.display = '';
+  atualizarWelcomeAvatar();
+  mostrarToast('✅ Foto de perfil salva!');
 }
 
 // ═══════════════════════════════════════════
@@ -6212,13 +6554,39 @@ function renderizarMensagem(msg) {
     </div>`;
   }
 
-  row.innerHTML = `
-    <div class="msg-author">${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}</div>
-    ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ${msg.mine ? '→ ' + escaparHtml(msg.pvDestinatario || '') : '← ' + escaparHtml(msg.autor)}</div>` : ''}
-    ${statusHtml}
-    <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
-    <div class="msg-time">${formatarHora(msg.timestamp)}</div>
-  `;
+  // Avatar HTML
+  const avatarDataUrl = obterAvatarDoChat(msg.autor, msg.mine);
+  const avatarHtml = `<div class="msg-avatar">${avatarDataUrl ? `<img src="${avatarDataUrl}" alt="">` : escaparHtml((msg.autor||'?')[0].toUpperCase())}</div>`;
+
+  const authorLabel = `${msg.tipo === 'ooc' ? '💬 fora do personagem · ' : ''}${escaparHtml(msg.autor)}`;
+
+  if (msg.mine) {
+    row.innerHTML = `
+      <div class="msg-row-inner">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;flex:1;min-width:0;">
+          <div class="msg-author">${authorLabel}</div>
+          ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado → ${escaparHtml(msg.pvDestinatario || '')}</div>` : ''}
+          ${statusHtml}
+          <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
+          <div class="msg-time">${formatarHora(msg.timestamp)}</div>
+        </div>
+        ${avatarHtml}
+      </div>
+    `;
+  } else {
+    row.innerHTML = `
+      <div class="msg-row-inner">
+        ${avatarHtml}
+        <div style="display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0;">
+          <div class="msg-author">${authorLabel}</div>
+          ${msg.tipo === 'pv' ? `<div class="pv-badge">🔒 sussurro privado ← ${escaparHtml(msg.autor)}</div>` : ''}
+          ${statusHtml}
+          <div class="msg-bubble">${escaparHtml(msg.texto)}</div>
+          <div class="msg-time">${formatarHora(msg.timestamp)}</div>
+        </div>
+      </div>
+    `;
+  }
   container.appendChild(row);
 
   tentarAdicionarPromptDeMecanica(msg);
