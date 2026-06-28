@@ -1847,6 +1847,110 @@ body::before {
 }
 .ia-no-key-warn.show { display: block; }
 
+/* ═══════════════════════════════════════════════════════
+   OVERLAY DE INICIATIVA DE COMBATE
+   ═══════════════════════════════════════════════════════ */
+#iniciativa-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+}
+#iniciativa-overlay.visible { opacity: 1; pointer-events: auto; }
+
+/* Vinheta de bordas */
+#iniciativa-overlay::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.82) 100%);
+  opacity: 0; transition: opacity 0.5s;
+}
+#iniciativa-overlay.vignette-on::before { opacity: 1; }
+
+/* Shake da tela */
+@keyframes screen-shake {
+  0%,100% { transform: translate(0,0); }
+  15%      { transform: translate(-6px, 3px); }
+  30%      { transform: translate(5px,-4px); }
+  45%      { transform: translate(-4px, 5px); }
+  60%      { transform: translate(6px,-2px); }
+  75%      { transform: translate(-3px, 4px); }
+  90%      { transform: translate(4px,-3px); }
+}
+#iniciativa-overlay.shake { animation: screen-shake 0.4s ease; }
+
+/* Container cinza-escuro central */
+.iniciativa-box {
+  background: rgba(22,18,12,0.96);
+  border: 1px solid rgba(139,105,20,0.4);
+  border-radius: 8px;
+  padding: 1.6rem 2rem;
+  width: min(340px, 92vw);
+  box-shadow: 0 0 0 1px rgba(139,105,20,0.15), 0 20px 60px rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.8rem; position: relative;
+}
+
+/* Perfis dos jogadores */
+.init-player {
+  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+  flex: 1; transition: all 0.5s cubic-bezier(.22,.68,0,1.2);
+}
+.init-player.hidden { opacity: 0; transform: scale(0.7); pointer-events: none; }
+.init-player.winner {
+  transform: scale(1.15);
+}
+.init-avatar {
+  width: 56px; height: 56px; border-radius: 50%; overflow: hidden;
+  border: 2px solid var(--burnish);
+  background: rgba(139,105,20,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 1.4rem; font-weight: 700; color: var(--burnish);
+}
+.init-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.init-name {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em;
+  color: rgba(240,232,213,0.7); text-transform: uppercase; text-align: center;
+  max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.init-winner-label {
+  font-family: var(--serif); font-size: 0.65rem; color: var(--gold);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  opacity: 0; transition: opacity 0.4s;
+  text-align: center; margin-top: 0.1rem;
+}
+.init-player.winner .init-winner-label { opacity: 1; }
+
+/* Centro: espadas / seta */
+.init-center {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 0.25rem; min-width: 64px;
+  position: relative;
+}
+.init-swords {
+  font-size: 2.4rem; line-height: 1;
+  opacity: 0; transform: scale(3);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(.22,.68,0,1.2);
+}
+.init-swords.visible { opacity: 1; transform: scale(1); }
+.init-swords.gone { opacity: 0; transform: scale(0.4); transition: opacity 0.25s, transform 0.25s; }
+
+/* Seta de roleta */
+.init-arrow-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  opacity: 0; transition: opacity 0.3s;
+}
+.init-arrow-wrap.visible { opacity: 1; }
+.init-lightning {
+  font-size: 1rem; line-height: 1;
+}
+.init-arrow {
+  font-size: 2rem; line-height: 1;
+  transition: transform 0.08s cubic-bezier(.22,.68,0,1.2);
+  display: block;
+}
+.init-arrow.left  { transform: scaleX(-1); }
+.init-arrow.right { transform: scaleX(1); }
+
 </style>
 </head>
 <body>
@@ -7465,6 +7569,179 @@ function enviarDesafio(para) {
   mostrarToast(`⚔️ Desafio enviado para <strong>${escaparHtml(para)}</strong>. Aguardando resposta…`, 5000);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ANIMAÇÃO DE INICIATIVA DE COMBATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function playSoundIniciativa(tipo) {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const mg = ctx.createGain();
+    mg.connect(ctx.destination);
+    mg.gain.setValueAtTime(0.28, now);
+
+    if (tipo === 'clash-iniciativa') {
+      // Choque metálico intenso — como clash mas mais grave e dramático
+      for (let i = 0; i < 5; i++) {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.connect(g); g.connect(mg);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(900 - i * 120, now + i * 0.035);
+        o.frequency.exponentialRampToValueAtTime(180, now + 0.5 + i * 0.035);
+        g.gain.setValueAtTime(0.25, now + i * 0.035);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.55 + i * 0.035);
+        o.start(now + i * 0.035); o.stop(now + 0.6 + i * 0.035);
+      }
+    } else if (tipo === 'roulette-tick') {
+      // Estalo seco de plástico
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.12));
+      const src = ctx.createBufferSource();
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'highpass'; filt.frequency.value = 1800;
+      const g = ctx.createGain();
+      src.buffer = buf;
+      src.connect(filt); filt.connect(g); g.connect(mg);
+      g.gain.setValueAtTime(0.55, now);
+      src.start(now);
+    } else if (tipo === 'lock') {
+      // Trave final — bipe ascendente + impacto
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.connect(g); g.connect(mg);
+      o.type = 'square';
+      o.frequency.setValueAtTime(320, now);
+      o.frequency.exponentialRampToValueAtTime(640, now + 0.12);
+      g.gain.setValueAtTime(0.2, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      o.start(now); o.stop(now + 0.35);
+
+      const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(mg);
+      o2.type = 'sine'; o2.frequency.setValueAtTime(200, now + 0.13);
+      o2.frequency.exponentialRampToValueAtTime(80, now + 0.45);
+      g2.gain.setValueAtTime(0.35, now + 0.13); g2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      o2.start(now + 0.13); o2.stop(now + 0.5);
+    }
+  } catch(e) {}
+}
+
+function exibirIniciativa(nomeA, energiaA, nomeB, oponente) {
+  const overlay   = document.getElementById('iniciativa-overlay');
+  const swords    = document.getElementById('init-swords');
+  const arrowWrap = document.getElementById('init-arrow-wrap');
+  const arrow     = document.getElementById('init-arrow');
+  const playerA   = document.getElementById('init-player-a');
+  const playerB   = document.getElementById('init-player-b');
+  const nameA     = document.getElementById('init-name-a');
+  const nameB     = document.getElementById('init-name-b');
+  const avatarA   = document.getElementById('init-avatar-a');
+
+  // Nomes
+  nameA.textContent = nomeA || '—';
+  nameB.textContent = nomeB;
+
+  // Avatar do jogador local (usa foto se disponível)
+  const avatarUrl = usuarioAtual ? carregarAvatarLocal(usuarioAtual) : null;
+  if (avatarUrl) {
+    avatarA.innerHTML = `<img src="${avatarUrl}" alt="">`;
+  } else {
+    avatarA.textContent = (nomeA || '?')[0].toUpperCase();
+  }
+
+  // Reset estado
+  swords.className = 'init-swords';
+  arrowWrap.className = 'init-arrow-wrap';
+  arrow.className = 'init-arrow right';
+  playerA.className = 'init-player';
+  playerB.className = 'init-player';
+  overlay.classList.remove('vignette-on', 'shake', 'visible');
+
+  // Fase 1 — mostrar overlay + fade-in das espadas (grande → pequeno)
+  requestAnimationFrame(() => {
+    overlay.classList.add('visible');
+    setTimeout(() => {
+      swords.classList.add('visible');
+      playSoundIniciativa('clash-iniciativa');
+
+      // Fase 2 — impacto: shake + vinheta (300ms após espada chegar)
+      setTimeout(() => {
+        overlay.classList.add('vignette-on', 'shake');
+
+        // Fase 3 — espadas somem, seta aparece (600ms depois)
+        setTimeout(() => {
+          swords.classList.add('gone');
+
+          setTimeout(() => {
+            arrowWrap.classList.add('visible');
+
+            // Fase 4 — roleta: alterna por ~2s com ritmo variável
+            let elapsed = 0;
+            let dir = Math.random() < 0.5 ? 'left' : 'right';
+            let totalMs = 2000;
+            let tick = 0;
+
+            function proximoTick() {
+              if (elapsed >= totalMs) {
+                // Fase 5 — trava: quem tem maior energia vence
+                // energiaA = energia do jogador local; sem dado do oponente → se boneco usa 0
+                const energiaB = 0; // Boneco de treino tem 0 de energia; jogador real não temos dado local
+                // Para combates reais o critério é: oponente sem dados → jogador local vence como desempate
+                const venceuA = energiaA >= energiaB;
+                dir = venceuA ? 'right' : 'left'; // right = aponta para B (oponente), left = aponta para A (local)
+                // Semanticamente: seta right = oponente age depois (eu ajo primeiro); left = oponente age primeiro
+                // Conforme spec: seta aponta para quem age primeiro
+                // Maior energia age primeiro → se venceuA, seta aponta para A (esquerda)
+                const setaParaA = venceuA;
+                arrow.className = 'init-arrow ' + (setaParaA ? 'left' : 'right');
+                playSoundIniciativa('lock');
+
+                // Fase 6 — destaque do vencedor
+                setTimeout(() => {
+                  overlay.classList.remove('vignette-on');
+                  if (setaParaA) {
+                    playerA.classList.add('winner');
+                    playerB.classList.add('hidden');
+                  } else {
+                    playerB.classList.add('winner');
+                    playerA.classList.add('hidden');
+                  }
+
+                  // Fecha após 2.5s
+                  setTimeout(() => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => {
+                      // Limpa classes para próxima vez
+                      swords.classList.remove('visible','gone');
+                      arrowWrap.classList.remove('visible');
+                      overlay.classList.remove('vignette-on','shake');
+                      playerA.className = 'init-player';
+                      playerB.className = 'init-player';
+                    }, 400);
+                  }, 2500);
+                }, 600);
+                return;
+              }
+
+              // Ritmo variável: começa rápido, desacelera no final
+              const progresso = elapsed / totalMs;
+              const intervalo = 80 + progresso * progresso * 340; // 80ms → ~420ms
+              playSoundIniciativa('roulette-tick');
+              dir = dir === 'left' ? 'right' : 'left';
+              arrow.className = 'init-arrow ' + dir;
+              elapsed += intervalo;
+              tick++;
+              setTimeout(proximoTick, intervalo);
+            }
+
+            proximoTick();
+          }, 200);
+        }, 600);
+      }, 300);
+    }, 80);
+  });
+}
+
 // ─── Ativar / Encerrar Combate ───────────────────────────────────────────
 function ativarCombate(oponente) {
   resetarCombateState();
@@ -7480,6 +7757,11 @@ function ativarCombate(oponente) {
     div.innerHTML = `⚔️ Combate iniciado contra <strong>${escaparHtml(oponente)}</strong>`;
     chatEl.appendChild(div);
   }
+  // Animação de iniciativa
+  const nomeLocal = fichaAtivaChat || usuarioAtual || '?';
+  const energiaLocal = state && state.energy ? state.energy.cur : 0;
+  const nomeOponente = oponente || '???';
+  exibirIniciativa(nomeLocal, energiaLocal, nomeOponente, oponente);
 }
 
 function encerrarCombate() {
@@ -7832,257 +8114,6 @@ socket.on('presenca-lista', (lista) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ANIMAÇÃO DE INICIATIVA DE COMBATE
-// Exibe a sequência: espadas → screen-shake → roleta de seta → vencedor
-// ═══════════════════════════════════════════════════════════════════════════
-
-function _iniAudioBip(freq, dur, vol) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = 'square';
-    gain.gain.setValueAtTime(vol || 0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.08));
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + (dur || 0.08));
-  } catch(e) {}
-}
-
-function _iniAudioImpacto() {
-  // Som de "combate iniciado" — dingle metálico em duas notas
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const t = ctx.currentTime;
-    [[880, 0, 0.22], [1100, 0.08, 0.18], [660, 0.15, 0.12]].forEach(([f, delay, vol]) => {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.connect(g); g.connect(ctx.destination);
-      osc.frequency.value = f; osc.type = 'triangle';
-      g.gain.setValueAtTime(vol, t + delay);
-      g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.35);
-      osc.start(t + delay); osc.stop(t + delay + 0.4);
-    });
-  } catch(e) {}
-}
-
-function _iniAudioEstalo() {
-  // Estalo de plástico a cada troca de lado da seta
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    const src = ctx.createBufferSource();
-    const g = ctx.createGain();
-    src.buffer = buf; src.connect(g); g.connect(ctx.destination);
-    g.gain.value = 0.28;
-    src.start(); src.stop(ctx.currentTime + 0.04);
-  } catch(e) {}
-}
-
-function _iniScreenShake(el, ms) {
-  const dur = ms || 400;
-  const start = performance.now();
-  let frame;
-  function shake(now) {
-    const elapsed = now - start;
-    if (elapsed >= dur) { el.style.transform = ''; return; }
-    const amp = 6 * (1 - elapsed / dur);
-    const dx = (Math.random() - 0.5) * amp;
-    const dy = (Math.random() - 0.5) * amp;
-    el.style.transform = `translate(${dx}px,${dy}px)`;
-    frame = requestAnimationFrame(shake);
-  }
-  frame = requestAnimationFrame(shake);
-  return () => { cancelAnimationFrame(frame); el.style.transform = ''; };
-}
-
-function mostrarIniciativaCombate(nomeA, energiaA, nomeB, energiaB, avatarA, avatarB) {
-  const overlay   = document.getElementById('iniciativa-overlay');
-  const vignette  = document.getElementById('iniciativa-vignette');
-  const box       = document.getElementById('iniciativa-box');
-  const swords    = document.getElementById('ini-swords');
-  const arrowWrap = document.getElementById('ini-arrow-wrap');
-  const arrow     = document.getElementById('ini-arrow');
-  const playerA   = document.getElementById('ini-player-a');
-  const playerB   = document.getElementById('ini-player-b');
-  const resultMsg = document.getElementById('ini-result-msg');
-  const resultSub = document.getElementById('ini-result-sub');
-  const avatarAEl = document.getElementById('ini-avatar-a');
-  const avatarBEl = document.getElementById('ini-avatar-b');
-  const nameAEl   = document.getElementById('ini-name-a');
-  const nameBEl   = document.getElementById('ini-name-b');
-  const energyAEl = document.getElementById('ini-energy-a').querySelector('span');
-  const energyBEl = document.getElementById('ini-energy-b').querySelector('span');
-
-  // Reset visual
-  swords.style.opacity = '0';
-  swords.style.transform = 'scale(3)';
-  swords.style.transition = 'none';
-  arrowWrap.style.display = 'none';
-  playerA.style.opacity = '1';
-  playerA.style.transform = '';
-  playerB.style.opacity = '1';
-  playerB.style.transform = '';
-  resultMsg.style.display = 'none';
-  resultSub.style.display = 'none';
-  vignette.style.opacity = '0';
-  box.style.transform = '';
-
-  // Preenche dados dos jogadores
-  function montarAvatar(el, avatar, nome) {
-    if (avatar) {
-      el.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;">`;
-    } else {
-      el.textContent = (nome || '?')[0].toUpperCase();
-    }
-  }
-  montarAvatar(avatarAEl, avatarA, nomeA);
-  montarAvatar(avatarBEl, avatarB, nomeB);
-  nameAEl.textContent = nomeA || 'Você';
-  nameBEl.textContent = nomeB || 'Oponente';
-  energyAEl.textContent = energiaA;
-  energyBEl.textContent = energiaB;
-
-  // Layout em linha
-  box.style.display = 'flex';
-  box.style.alignItems = 'center';
-  box.style.justifyContent = 'center';
-  box.style.gap = '0.8rem';
-  box.style.flexWrap = 'wrap';
-  box.style.flexDirection = 'row';
-
-  // Mostra overlay
-  overlay.style.display = 'flex';
-
-  // ── Fase 1: Fade-in + scale das espadas ──────────────────────────────────
-  setTimeout(() => {
-    swords.style.transition = 'opacity 0.35s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1)';
-    swords.style.opacity = '1';
-    swords.style.transform = 'scale(1)';
-
-    // ── Fase 2: Impacto no tamanho final ─────────────────────────────────
-    setTimeout(() => {
-      _iniAudioImpacto();
-      vignette.style.opacity = '1';
-      _iniScreenShake(box, 420);
-
-      // ── Fase 3: Espadas somem, seta aparece ──────────────────────────
-      setTimeout(() => {
-        vignette.style.opacity = '0';
-        swords.style.transition = 'opacity 0.25s';
-        swords.style.opacity = '0';
-
-        setTimeout(() => {
-          swords.style.display = 'none';
-          arrowWrap.style.display = 'flex';
-
-          // ── Fase 4: Roleta — 2 segundos de alternância ────────────────
-          let apontandoDireita = Math.random() < 0.5;
-          arrow.textContent = apontandoDireita ? '➡️' : '⬅️';
-          let tempoRoleta = 0;
-          const DURACAO_ROLETA = 2000;
-          let intervaloAtual = 160; // começa rápido
-
-          function proxTroca() {
-            if (tempoRoleta >= DURACAO_ROLETA) {
-              // ── Fase 5: Trava no vencedor ──────────────────────────
-              const localVence = energiaA >= energiaB;
-              arrow.textContent = localVence ? '⬅️' : '➡️'; // ⬅️ aponta para A (esq), ➡️ aponta para B (dir)
-              _iniAudioBip(900, 0.15, 0.25);
-
-              setTimeout(() => {
-                arrowWrap.style.display = 'none';
-                // Muda layout para coluna para exibir resultado
-                box.style.flexDirection = 'column';
-                box.style.gap = '0.6rem';
-
-                if (localVence) {
-                  // Jogador local vence: esconde B, centraliza A
-                  playerB.style.opacity = '0';
-                  playerB.style.transform = 'scale(0.6)';
-                  playerA.style.transform = 'scale(1.15)';
-                } else {
-                  // Oponente vence: esconde A, centraliza B
-                  playerA.style.opacity = '0';
-                  playerA.style.transform = 'scale(0.6)';
-                  playerB.style.transform = 'scale(1.15)';
-                }
-
-                resultMsg.textContent = '⚡ Primeiro a Agir';
-                resultMsg.style.display = 'block';
-                resultSub.textContent = localVence ? (nomeA || 'Você') : (nomeB || 'Oponente');
-                resultSub.style.display = 'block';
-
-                // Fecha overlay após 2.2 segundos
-                setTimeout(() => {
-                  overlay.style.opacity = '0';
-                  overlay.style.transition = 'opacity 0.4s';
-                  setTimeout(() => {
-                    overlay.style.display = 'none';
-                    overlay.style.opacity = '';
-                    overlay.style.transition = '';
-                    swords.style.display = '';
-                  }, 420);
-                }, 2200);
-              }, 300);
-              return;
-            }
-
-            apontandoDireita = !apontandoDireita;
-            arrow.textContent = apontandoDireita ? '➡️' : '⬅️';
-            _iniAudioEstalo();
-
-            // Velocidade variável: acelera no início, desacelera perto do fim
-            const progresso = tempoRoleta / DURACAO_ROLETA;
-            if (progresso < 0.3) {
-              intervaloAtual = Math.max(60, intervaloAtual - 15);
-            } else if (progresso > 0.7) {
-              intervaloAtual = Math.min(260, intervaloAtual + 20);
-            }
-
-            tempoRoleta += intervaloAtual;
-            setTimeout(proxTroca, intervaloAtual);
-          }
-
-          setTimeout(proxTroca, intervaloAtual);
-        }, 280);
-      }, 600);
-    }, 580);
-  }, 60);
-}
-
-// Sobrescreve ativarCombate para disparar a animação de iniciativa antes de ativar o estado
-const _ativarCombateOriginal = ativarCombate;
-function ativarCombate(oponente) {
-  // Coleta dados do jogador local
-  const energiaLocal = fichaAtivaChat ? (state.energy ? state.energy.cur : 0) : 0;
-  const nomeLocal = fichaAtivaChat || usuarioAtual || 'Você';
-  const avatarLocal = (typeof carregarAvatarLocal === 'function' && usuarioAtual) ? carregarAvatarLocal(usuarioAtual) : null;
-
-  // Oponente: energia desconhecida no cliente (usa 0 como fallback; servidor pode enviar depois)
-  // Nota: em combate real o servidor poderia enviar a energia do oponente via socket;
-  // aqui usamos 0 como fallback honesto — a seta ainda gira e cria suspense visual.
-  const energiaOponente = (window._iniEnergiaOponente !== undefined) ? window._iniEnergiaOponente : 0;
-  window._iniEnergiaOponente = undefined;
-
-  const avatarOponente = null; // sem acesso ao avatar remoto no cliente
-
-  mostrarIniciativaCombate(
-    nomeLocal, energiaLocal,
-    oponente, energiaOponente,
-    avatarLocal, avatarOponente
-  );
-
-  // Ativa o combate de verdade em paralelo (a UI de combate fica disponível imediatamente)
-  _ativarCombateOriginal(oponente);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
 socket.on('login-erro', (msg) => {
   mostrarToast(msg);
 });
@@ -8172,46 +8203,40 @@ socket.on('parou-de-digitar', (dados) => {
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════
-     OVERLAY DE INICIATIVA DE COMBATE
-     ═══════════════════════════════════════════════════════════════════════ -->
-<div id="iniciativa-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;backdrop-filter:blur(3px);">
-  <!-- Vignette de escurecimento das bordas -->
-  <div id="iniciativa-vignette" style="position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);transition:opacity 0.4s;z-index:1;"></div>
-  <!-- Container principal -->
-  <div id="iniciativa-box" style="position:relative;z-index:2;background:linear-gradient(145deg,#1a1512,#221c14);border:1px solid rgba(201,162,39,0.35);border-radius:8px;padding:1.8rem 2rem;width:min(360px,92vw);box-shadow:0 0 0 1px rgba(139,105,20,0.15),0 20px 60px rgba(0,0,0,0.8);text-align:center;">
-    <!-- Perfil Jogador A (local) -->
-    <div id="ini-player-a" style="display:inline-flex;flex-direction:column;align-items:center;gap:0.4rem;transition:all 0.5s ease;">
-      <div id="ini-avatar-a" style="width:56px;height:56px;border-radius:50%;border:2px solid rgba(201,162,39,0.6);background:rgba(139,105,20,0.2);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:1.4rem;font-weight:700;color:#c9941a;overflow:hidden;"></div>
-      <div id="ini-name-a" style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:rgba(240,232,213,0.7);text-transform:uppercase;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-      <div id="ini-energy-a" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#f59e0b;">⚡<span></span></div>
-    </div>
-    <!-- Elemento central: espadas / seta -->
-    <div id="ini-center" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:80px;vertical-align:middle;">
-      <div id="ini-swords" style="font-size:2.8rem;opacity:0;transform:scale(3);transition:none;filter:drop-shadow(0 0 12px rgba(201,162,39,0.7));">⚔️</div>
-      <div id="ini-arrow-wrap" style="display:none;flex-direction:column;align-items:center;gap:2px;">
-        <div id="ini-raio" style="font-size:1rem;filter:drop-shadow(0 0 6px rgba(245,158,11,0.9));">⚡</div>
-        <div id="ini-arrow" style="font-size:2.2rem;transition:transform 0.07s;filter:drop-shadow(0 0 8px rgba(201,162,39,0.8));">➡️</div>
-      </div>
-    </div>
-    <!-- Perfil Jogador B (oponente) -->
-    <div id="ini-player-b" style="display:inline-flex;flex-direction:column;align-items:center;gap:0.4rem;transition:all 0.5s ease;">
-      <div id="ini-avatar-b" style="width:56px;height:56px;border-radius:50%;border:2px solid rgba(201,162,39,0.6);background:rgba(139,105,20,0.2);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:1.4rem;font-weight:700;color:#c9941a;overflow:hidden;"></div>
-      <div id="ini-name-b" style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:rgba(240,232,213,0.7);text-transform:uppercase;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-      <div id="ini-energy-b" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#f59e0b;">⚡<span></span></div>
-    </div>
-    <!-- Mensagem de resultado -->
-    <div id="ini-result-msg" style="display:none;margin-top:1.2rem;font-family:'Cinzel',serif;font-size:0.9rem;font-weight:700;letter-spacing:0.08em;color:#c9941a;text-shadow:0 0 12px rgba(201,162,39,0.5);"></div>
-    <div id="ini-result-sub" style="display:none;margin-top:0.3rem;font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(240,232,213,0.55);"></div>
-  </div>
-</div>
-
 <div id="intimidacao-overlay" onclick="fecharIntimidacao(event)" style="display:none;position:fixed;inset:0;z-index:350;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
   <div style="background:#0f1a0a;border:1px solid rgba(80,180,40,0.4);border-radius:12px;padding:1.2rem 1.4rem;width:min(340px,92vw);box-shadow:0 8px 32px rgba(0,0,0,0.7);">
     <h3 style="font-family:var(--serif);font-size:0.95rem;color:#a0f3a0;margin-bottom:0.4rem;">😤 Intimidação</h3>
     <p style="font-family:var(--mono);font-size:0.62rem;color:#90c090;margin-bottom:0.8rem;line-height:1.5;">Revele um de seus atributos. Para intimidar, ele precisa superar <strong>qualquer</strong> um dos atributos do oponente. Se efetivo, o alvo fica <strong>hesitante — perde 1 turno sem agir</strong>.<br><br>O oponente pode rebater exibindo qualquer atributo igual ou maior para se livrar.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.7rem;" id="intimidacao-opcoes"></div>
     <button onclick="fecharIntimidacao()" style="width:100%;font-family:var(--mono);font-size:0.65rem;background:none;border:1px solid rgba(255,255,255,0.12);color:#888;border-radius:6px;padding:0.35rem;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══ OVERLAY DE INICIATIVA DE COMBATE ═══ -->
+<div id="iniciativa-overlay">
+  <div class="iniciativa-box">
+    <!-- Jogador A (local) -->
+    <div class="init-player" id="init-player-a">
+      <div class="init-avatar" id="init-avatar-a">?</div>
+      <div class="init-name" id="init-name-a">—</div>
+      <div class="init-winner-label">Primeiro a Agir</div>
+    </div>
+
+    <!-- Centro -->
+    <div class="init-center">
+      <div class="init-swords" id="init-swords">⚔️</div>
+      <div class="init-arrow-wrap" id="init-arrow-wrap">
+        <div class="init-lightning">⚡</div>
+        <span class="init-arrow right" id="init-arrow">➡️</span>
+      </div>
+    </div>
+
+    <!-- Jogador B (oponente) -->
+    <div class="init-player" id="init-player-b">
+      <div class="init-avatar" id="init-avatar-b">⚔️</div>
+      <div class="init-name" id="init-name-b">—</div>
+      <div class="init-winner-label">Primeiro a Agir</div>
+    </div>
   </div>
 </div>
 
