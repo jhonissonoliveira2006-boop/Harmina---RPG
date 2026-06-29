@@ -1546,6 +1546,163 @@ body::before {
   font-size: 0.8rem; line-height: 1; padding: 0 0.1rem; margin-left: 0.2rem;
 }
 #active-combat-action .aca-remove:hover { color: #ff4444; }
+/* ═══════════════════════════════════════════════════════
+   MAPA DE COMBATE — ESTILOS
+   ═══════════════════════════════════════════════════════ */
+
+/* Botão de acesso ao mapa (visível só em combate) */
+#btn-mapa-combate {
+  display: none;
+  width: calc(100% - 2rem);
+  margin: 0.35rem 1rem 0;
+  background: rgba(180,100,20,0.18);
+  border: 1px solid rgba(201,162,39,0.45);
+  border-radius: 6px;
+  color: var(--chat-action);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.38rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.18s;
+  text-align: center;
+}
+#btn-mapa-combate:hover { background: rgba(180,100,20,0.32); }
+#btn-mapa-combate.visible { display: block; }
+
+/* Overlay do mapa */
+#mapa-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,0.75);
+  display: none; align-items: center; justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+#mapa-overlay.open { display: flex; }
+
+/* Box principal do mapa */
+#mapa-box {
+  background: #16120b;
+  border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 10px;
+  width: min(420px, 96vw);
+  padding: 1rem 1rem 1.2rem;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; gap: 0.8rem;
+}
+
+#mapa-header {
+  display: flex; justify-content: space-between; align-items: center;
+}
+#mapa-header h3 {
+  font-family: var(--serif); font-size: 0.95rem; color: var(--chat-action); margin: 0;
+  letter-spacing: 0.06em;
+}
+#mapa-fechar {
+  background: none; border: none; color: var(--chat-muted);
+  font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.4rem;
+  border-radius: 4px; transition: background 0.15s;
+}
+#mapa-fechar:hover { background: rgba(255,255,255,0.08); color: var(--parchment,#f0e8d5); }
+
+/* Legenda do mapa */
+#mapa-legenda {
+  display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 0.58rem; color: var(--chat-muted);
+}
+#mapa-legenda span { display: flex; align-items: center; gap: 0.2rem; }
+
+/* Grid 4×4 */
+#mapa-grid-wrap {
+  position: relative;
+}
+#mapa-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 1;
+}
+.mapa-cell {
+  border: 1px solid rgba(201,162,39,0.2);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.025);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 0;
+  aspect-ratio: 1;
+}
+.mapa-cell:hover { background: rgba(201,162,39,0.08); border-color: rgba(201,162,39,0.45); }
+.mapa-cell.selected-dest {
+  background: rgba(201,162,39,0.18); border-color: rgba(201,162,39,0.8);
+  box-shadow: 0 0 8px rgba(201,162,39,0.3);
+}
+.mapa-cell.ocupado-eu { cursor: default; }
+.mapa-cell.ocupado-oponente { cursor: default; }
+
+/* Peça de xadrez dentro da célula */
+.mapa-peca {
+  font-size: clamp(1.1rem, 5vw, 1.6rem);
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+  transition: transform 0.2s;
+}
+.mapa-peca.branca { filter: brightness(1.1) drop-shadow(0 1px 4px rgba(255,255,255,0.5)); }
+.mapa-peca.preta  { filter: brightness(0.3) drop-shadow(0 1px 4px rgba(0,0,0,0.8)); }
+
+.mapa-nome {
+  font-family: var(--mono); font-size: 0.42rem; letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.7); text-align: center; line-height: 1;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0 2px;
+}
+
+/* SVG de seta de rota */
+#mapa-rota-svg {
+  position: absolute; inset: 0; pointer-events: none;
+  width: 100%; height: 100%;
+}
+
+/* Info de custo de energia da rota */
+#mapa-rota-info {
+  display: none;
+  align-items: center; gap: 0.35rem;
+  font-family: var(--mono); font-size: 0.65rem;
+  color: #facc15;
+  background: rgba(250,204,21,0.1);
+  border: 1px solid rgba(250,204,21,0.3);
+  border-radius: 6px; padding: 0.35rem 0.7rem;
+}
+#mapa-rota-info.visible { display: flex; }
+#mapa-rota-info .rota-icon { font-size: 0.9rem; }
+
+/* Botão confirmar movimento */
+#mapa-confirmar-mover {
+  display: none;
+  width: 100%;
+  background: rgba(111,140,90,0.25);
+  border: 1px solid rgba(111,140,90,0.6);
+  color: #b6e0a0;
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.5rem; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s;
+}
+#mapa-confirmar-mover:hover { background: rgba(111,140,90,0.42); }
+#mapa-confirmar-mover.visible { display: block; }
+
+/* Nota de regras no rodapé do mapa */
+#mapa-regras-nota {
+  font-family: var(--body); font-style: italic; font-size: 0.7rem;
+  color: var(--chat-muted); line-height: 1.5;
+  border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.6rem;
+}
+
 /* ─── Energy cost toast indicator ─── */
 .energy-spent-badge {
   display: inline-flex; align-items: center; gap: 0.25rem;
@@ -4387,6 +4544,9 @@ renderPP();
       <button class="cb-end" onclick="encerrarCombate()">Encerrar Combate</button>
     </div>
 
+    <!-- Botão Mapa de Combate (visível só em combate ativo) -->
+    <button id="btn-mapa-combate" onclick="abrirMapaCombate()">🗺️ Mapa de Combate</button>
+
     <!-- Barra de Desafio Recebido -->
     <div id="desafio-recebido-bar">
       <span>⚔️</span>
@@ -4542,6 +4702,24 @@ renderPP();
                 </div>
 
                 <div class="acao-tree-branch" id="branch-estrategicas" style="display:none">
+
+                  <!-- Mover-se (abre o Mapa de Batalha) -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-mover" onclick="ativarMovimento()" title="Gastar ⚡ para se mover no grid — máx. 3 quadrados por turno">
+                      🚶 Mover-se (1⚡/quadrado)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('mover')" title="Como funciona a movimentação?">?</button>
+                  </div>
+
+                  <!-- Arremessar Item -->
+                  <div class="acao-tree-row level-2">
+                    <span class="acao-tree-line">╰────── </span>
+                    <button class="acao-tree-btn cop-btn" id="cop-arremessar" onclick="ativarArremesso()" title="Arremessar item ou arma a distância — custo: 2⚡">
+                      🪃 Arremessar (2⚡)
+                    </button>
+                    <button class="acao-help-btn" onclick="acaoHelp('arremesso')" title="Como funciona o Arremesso?">?</button>
+                  </div>
 
                   <!-- Canalizar Foco -->
                   <div class="acao-tree-row level-2">
@@ -7065,10 +7243,16 @@ function atualizarBarraCombate() {
   if (!combateState.ativo) {
     bar.classList.remove('visible');
     if (panel) panel.classList.remove('visible');
+    // Esconde botão do mapa quando fora de combate
+    const btnMapa = document.getElementById('btn-mapa-combate');
+    if (btnMapa) btnMapa.classList.remove('visible');
     return;
   }
   bar.classList.add('visible');
   if (panel) panel.classList.add('visible');
+  // Exibe botão do mapa durante combate ativo
+  const btnMapa = document.getElementById('btn-mapa-combate');
+  if (btnMapa) btnMapa.classList.add('visible');
   document.getElementById('cb-vs-nome').textContent = combateState.oponente || '???';
   // Badges de estado
   const badges = [];
@@ -8101,6 +8285,424 @@ function mostrarContestacao() {
   document.getElementById('ia-contestar-area').classList.toggle('show');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SISTEMA DE MAPA DE COMBATE (GRID 4×4)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Peças de xadrez disponíveis (emoji Unicode)
+const PECAS_XADREZ = {
+  peao:   { branca: '♙', preta: '♟' },
+  cavalo: { branca: '♘', preta: '♞' },
+  torre:  { branca: '♖', preta: '♜' },
+  bispo:  { branca: '♗', preta: '♝' },
+  rainha: { branca: '♕', preta: '♛' },
+  rei:    { branca: '♔', preta: '♚' },
+};
+
+// Estado do mapa
+const mapaState = {
+  aberto: false,
+  modoMovimento: false,    // true quando o jogador clicou "Mover-se"
+  modoArremesso: false,    // true quando o jogador clicou "Arremessar"
+
+  // Posições no grid 4×4: { row: 0-3, col: 0-3 }
+  posEu: { row: 1, col: 1 },          // jogador local (branco)
+  posOponente: { row: 2, col: 2 },    // oponente (preto)
+
+  destinoSelecionado: null,           // { row, col } do quadrado de destino clicado
+
+  pecaEu: 'peao',                     // id da peça escolhida pelo jogador local
+  pecaOponente: 'peao',               // id da peça do oponente
+
+  nomeEu: '—',
+  nomeOponente: '—',
+};
+
+// Posição inicial: jogadores nos quadrados centrais separados por 2 quadrados
+function inicializarMapaState() {
+  // Posição padrão: jogador em [1,0], oponente em [2,3] (diagonal central com 3 de distância)
+  // Mais intuitivo: eu na esquerda central, oponente na direita central
+  mapaState.posEu       = { row: 1, col: 0 };
+  mapaState.posOponente = { row: 1, col: 3 };
+  mapaState.destinoSelecionado = null;
+
+  // Sincroniza nomes com o combate ativo
+  mapaState.nomeEu       = usuarioAtual || 'Você';
+  mapaState.nomeOponente = (combateState && combateState.oponente) ? combateState.oponente : 'Oponente';
+
+  // Peça do jogador: lê do seletor de xadrez na ficha (campo chess-piece.active)
+  const pecaAtivaEl = document.querySelector('.chess-piece.active');
+  if (pecaAtivaEl) {
+    const ds = pecaAtivaEl.dataset.piece;
+    if (ds && PECAS_XADREZ[ds]) mapaState.pecaEu = ds;
+  }
+}
+
+// ── Cálculo de distância em Chebyshev (movimento em qualquer direção conta 1) ──
+function distanciaGrid(a, b) {
+  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
+}
+
+// ── Custo de energia para mover do posEu até destino ──
+function custoMovimento(dest) {
+  return distanciaGrid(mapaState.posEu, dest);
+}
+
+// ── Abrir mapa de combate ──
+function abrirMapaCombate(modoMov) {
+  if (!combateState.ativo) {
+    mostrarToast('⚔️ O mapa só está disponível em combate ativo.', 3500);
+    return;
+  }
+  mapaState.modoMovimento = !!modoMov;
+  mapaState.modoArremesso = false;
+  mapaState.destinoSelecionado = null;
+  mapaState.aberto = true;
+  renderizarMapaGrid();
+  document.getElementById('mapa-overlay').classList.add('open');
+}
+
+// ── Fechar mapa ──
+function fecharMapaCombate(e) {
+  if (e && e.target !== document.getElementById('mapa-overlay')) return;
+  document.getElementById('mapa-overlay').classList.remove('open');
+  mapaState.aberto = false;
+  mapaState.destinoSelecionado = null;
+  mapaState.modoMovimento = false;
+  mapaState.modoArremesso = false;
+  limparRotaSVG();
+  document.getElementById('mapa-rota-info').classList.remove('visible');
+  document.getElementById('mapa-confirmar-mover').classList.remove('visible');
+}
+
+// ── Renderizar grid 4×4 ──
+function renderizarMapaGrid() {
+  const grid = document.getElementById('mapa-grid');
+  grid.innerHTML = '';
+  limparRotaSVG();
+
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'mapa-cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      const ehEu       = mapaState.posEu.row === r && mapaState.posEu.col === c;
+      const ehOponente = mapaState.posOponente.row === r && mapaState.posOponente.col === c;
+
+      if (ehEu) {
+        cell.classList.add('ocupado-eu');
+        const pecaInfo = PECAS_XADREZ[mapaState.pecaEu] || PECAS_XADREZ.peao;
+        cell.innerHTML = `<span class="mapa-peca branca">${pecaInfo.branca}</span><span class="mapa-nome">${mapaState.nomeEu}</span>`;
+      } else if (ehOponente) {
+        cell.classList.add('ocupado-oponente');
+        const pecaInfo = PECAS_XADREZ[mapaState.pecaOponente] || PECAS_XADREZ.peao;
+        cell.innerHTML = `<span class="mapa-peca preta">${pecaInfo.preta}</span><span class="mapa-nome">${mapaState.nomeOponente}</span>`;
+      }
+
+      // Marca destino selecionado
+      if (mapaState.destinoSelecionado &&
+          mapaState.destinoSelecionado.row === r &&
+          mapaState.destinoSelecionado.col === c) {
+        cell.classList.add('selected-dest');
+      }
+
+      if (!ehOponente) {
+        cell.addEventListener('click', () => clicarCelulaGrid(r, c));
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // Atualiza legenda de distância
+  const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
+  const legendaDist = document.getElementById('mapa-legenda-dist');
+  if (legendaDist) {
+    const turnos = dist >= 2 ? 'à distância (1 turno para se aproximar)' : 'adjacente (corpo a corpo)';
+    legendaDist.textContent = `Distância: ${dist} quadrado(s) — ${turnos}`;
+  }
+
+  // Redesenha seta se havia destino selecionado
+  if (mapaState.destinoSelecionado) {
+    desenharRotaSVG(mapaState.posEu, mapaState.destinoSelecionado);
+    atualizarInfoRota(mapaState.destinoSelecionado);
+  }
+}
+
+// ── Clique em célula do grid ──
+function clicarCelulaGrid(row, col) {
+  const ehEu = mapaState.posEu.row === row && mapaState.posEu.col === col;
+
+  // Clicar na própria célula: cancela seleção ativa
+  if (ehEu) {
+    mapaState.destinoSelecionado = null;
+    limparRotaSVG();
+    document.getElementById('mapa-rota-info').classList.remove('visible');
+    document.getElementById('mapa-confirmar-mover').classList.remove('visible');
+    renderizarMapaGrid();
+    return;
+  }
+
+  // Clicar no destino já selecionado: desmarcar
+  if (mapaState.destinoSelecionado &&
+      mapaState.destinoSelecionado.row === row &&
+      mapaState.destinoSelecionado.col === col) {
+    mapaState.destinoSelecionado = null;
+    limparRotaSVG();
+    document.getElementById('mapa-rota-info').classList.remove('visible');
+    document.getElementById('mapa-confirmar-mover').classList.remove('visible');
+    renderizarMapaGrid();
+    return;
+  }
+
+  // Selecionar novo destino
+  const custo = custoMovimento({ row, col });
+  if (custo > 3) {
+    mostrarToast('🚶 Movimento máximo: 3 quadrados por turno.', 3000);
+    return;
+  }
+
+  mapaState.destinoSelecionado = { row, col };
+  renderizarMapaGrid();
+  desenharRotaSVG(mapaState.posEu, { row, col });
+  atualizarInfoRota({ row, col });
+}
+
+// ── Atualizar painel de info da rota ──
+function atualizarInfoRota(dest) {
+  const custo = custoMovimento(dest);
+  const infoEl = document.getElementById('mapa-rota-info');
+  const custoTxt = document.getElementById('mapa-rota-custo-texto');
+  const custoVal = document.getElementById('mapa-rota-custo-val');
+  if (custoTxt) custoTxt.textContent = `Mover ${custo} quadrado(s) custa`;
+  if (custoVal) custoVal.textContent = `−${custo}⚡`;
+  infoEl.classList.add('visible');
+
+  const btnConfirmar = document.getElementById('mapa-confirmar-mover');
+  const energiaDisp = state.energy.cur >= custo;
+  if (btnConfirmar) {
+    btnConfirmar.classList.add('visible');
+    btnConfirmar.disabled = !energiaDisp;
+    btnConfirmar.style.opacity = energiaDisp ? '1' : '0.4';
+    btnConfirmar.textContent = energiaDisp
+      ? `✓ Confirmar Movimento (−${custo}⚡)`
+      : `⚡ Sem energia suficiente (precisa ${custo}, tem ${state.energy.cur})`;
+  }
+}
+
+// ── Confirmar o movimento: debita energia e atualiza posição ──
+function confirmarMovimento() {
+  const dest = mapaState.destinoSelecionado;
+  if (!dest) return;
+
+  const custo = custoMovimento(dest);
+  if (state.energy.cur < custo) {
+    mostrarToast('⚡ Energia insuficiente para este movimento.', 3500);
+    return;
+  }
+
+  // Debita energia
+  state.energy.cur = Math.max(0, state.energy.cur - custo);
+  renderScale2(); salvarFichaSilenciosa();
+
+  // Atualiza posição
+  const antesRow = mapaState.posEu.row;
+  const antesCol = mapaState.posEu.col;
+  mapaState.posEu = { row: dest.row, col: dest.col };
+  mapaState.destinoSelecionado = null;
+
+  // Registra ação de movimento
+  const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
+  const descDist = dist >= 2 ? 'à distância' : 'adjacente ao oponente';
+  ativarAcaoCombate('mover', `🚶 Moveu ${custo} quadrado(s) — agora ${descDist}`, `−${custo}⚡`, '');
+
+  mostrarToast(`🚶 Movimento confirmado! −${custo}⚡. Posição: linha ${dest.row+1}, coluna ${dest.col+1}. ${descDist.charAt(0).toUpperCase()+descDist.slice(1)}.`, 5000);
+
+  // Re-renderiza grid e fecha
+  limparRotaSVG();
+  document.getElementById('mapa-rota-info').classList.remove('visible');
+  document.getElementById('mapa-confirmar-mover').classList.remove('visible');
+  renderizarMapaGrid();
+
+  // Emite evento para o servidor (mapa de posição) se socket disponível
+  if (typeof socket !== 'undefined' && socket.connected) {
+    socket.emit('mapa-movimento', {
+      de: usuarioAtual,
+      posAntes: { row: antesRow, col: antesCol },
+      posDepois: { row: dest.row, col: dest.col },
+    });
+  }
+}
+
+// ── Ativar modo "Mover-se" a partir do menu de ações ──
+function ativarMovimento() {
+  if (!combateState.ativo) {
+    mostrarToast('⚔️ Inicie um combate primeiro para se mover.', 3500);
+    return;
+  }
+  if (state.energy.cur < 1) {
+    mostrarToast('⚡ Sem energia para se mover.', 3000);
+    return;
+  }
+  abrirMapaCombate(true);
+  mostrarToast('🚶 Selecione o quadrado de destino no mapa.', 3500);
+}
+
+// ── Ativar modo "Arremessar" ──
+function ativarArremesso() {
+  if (!combateState.ativo) {
+    mostrarToast('⚔️ Inicie um combate primeiro para arremessar.', 3500);
+    return;
+  }
+  if (state.energy.cur < 2) {
+    mostrarToast('⚡ Arremesso requer pelo menos 2 de Energia.', 3500);
+    return;
+  }
+
+  // Verifica se tem arma equipada
+  let armaArremessada = '';
+  const equips = document.querySelectorAll('#equip-body tr');
+  equips.forEach(tr => {
+    const inputs = tr.querySelectorAll('td input');
+    if (inputs[0] && inputs[0].value && inputs[1] && /arma/i.test(inputs[1].value || '')) {
+      if (!armaArremessada) armaArremessada = inputs[0].value;
+    }
+  });
+
+  // Armas com penalidade (todas exceto adaga, machado, lança)
+  const EXCECOES_ARREMESSO = /adaga|machado|lan[çc]a/i;
+  const temExcecao = EXCECOES_ARREMESSO.test(armaArremessada);
+
+  state.energy.cur = Math.max(0, state.energy.cur - 2);
+  renderScale2(); salvarFichaSilenciosa();
+
+  let descArremesso = armaArremessada ? `🪃 Arremessou ${armaArremessada}` : '🪃 Arremessou item';
+  let avisoDebuff = '';
+
+  if (armaArremessada && !temExcecao) {
+    avisoDebuff = ' — dano e utilidade ÷2 (vulnerável no ar)';
+    descArremesso += ' (debuffado)';
+  } else if (temExcecao) {
+    avisoDebuff = ' — arma de arremesso nata: sem penalidade!';
+  }
+
+  ativarAcaoCombate('arremesso', descArremesso, '−2⚡', '');
+  atacouEsteTurno = true;
+  atualizarBarraCombate();
+
+  mostrarToast(`🪃 Arremesso declarado! −2⚡${avisoDebuff}. Narre o arremesso na mensagem.`, 6000);
+}
+
+// ── Desenhar seta SVG de rota ──
+function desenharRotaSVG(orig, dest) {
+  const svg = document.getElementById('mapa-rota-svg');
+  if (!svg) return;
+  svg.innerHTML = '';
+
+  const grid = document.getElementById('mapa-grid');
+  if (!grid) return;
+
+  // Calcula coordenadas percentuais das células
+  const cellW = 100 / 4;
+  const cellH = 100 / 4;
+
+  const x1 = (orig.col + 0.5) * cellW;
+  const y1 = (orig.row + 0.5) * cellH;
+  const x2 = (dest.col + 0.5) * cellW;
+  const y2 = (dest.row + 0.5) * cellH;
+
+  // Define marcador de seta
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="rgba(250,204,21,0.9)" />
+    </marker>`;
+  svg.appendChild(defs);
+
+  // Linha da seta
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', x1 + '%');
+  line.setAttribute('y1', y1 + '%');
+  line.setAttribute('x2', x2 + '%');
+  line.setAttribute('y2', y2 + '%');
+  line.setAttribute('stroke', 'rgba(250,204,21,0.85)');
+  line.setAttribute('stroke-width', '2.5');
+  line.setAttribute('stroke-dasharray', '6,3');
+  line.setAttribute('marker-end', 'url(#arrowhead)');
+  svg.appendChild(line);
+}
+
+// ── Limpar SVG de rota ──
+function limparRotaSVG() {
+  const svg = document.getElementById('mapa-rota-svg');
+  if (svg) svg.innerHTML = '';
+}
+
+// ── Atualizar visibilidade do botão de mapa ao mudar estado de combate ──
+// (Chamado dentro de atualizarBarraCombate existente via hook)
+const _origAtualizarBarraCombate = typeof atualizarBarraCombate === 'function' ? atualizarBarraCombate : null;
+function atualizarBotaoMapa() {
+  const btn = document.getElementById('btn-mapa-combate');
+  if (btn) {
+    if (combateState && combateState.ativo) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }
+}
+
+// Hook no socket de combate-iniciado para inicializar o mapa
+socket.on('combate-iniciado', (dados) => {
+  // Inicializa posições do mapa quando o combate começa
+  setTimeout(() => {
+    inicializarMapaState();
+    atualizarBotaoMapa();
+  }, 500);
+});
+
+// ── Acaohelp entries para mover e arremesso ──
+const _ACAO_HELP_MAPA = {
+  mover: {
+    titulo: '🚶 Mover-se',
+    corpo: 'Custa <strong>1⚡ por quadrado</strong> percorrido no Mapa de Batalha (4×4). Máximo de <strong>3 quadrados por turno</strong>.\n\n• Abra o Mapa, clique no quadrado de destino.\n• A seta mostrará o custo em ⚡.\n• Confirme para debitar a energia e mudar de posição.\n\n<em>Atacantes à distância podem atacar sem se mover. Melee precisa estar adjacente ou gastar 1 turno para se aproximar.</em>'
+  },
+  arremesso: {
+    titulo: '🪃 Arremessar',
+    corpo: 'Arremessar um item ou arma custa <strong>2⚡</strong> e conta como ataque à distância (permite atingir o oponente a 1 turno de distância no mesmo turno).\n\n<strong>Penalidades:</strong> Dano e utilidades ÷2 (arredondado para baixo) e a arma fica vulnerável enquanto no ar.\n\n<strong>Exceções (sem penalidade):</strong> Adaga, Machado e Lança — armas de arremesso natas mantêm seus status normais.'
+  },
+};
+
+// Hook no acaoHelp existente para adicionar entradas do mapa
+const _origAcaoHelp = typeof acaoHelp === 'function' ? acaoHelp : null;
+if (_origAcaoHelp) {
+  window.acaoHelp = function(key) {
+    if (_ACAO_HELP_MAPA[key]) {
+      const h = _ACAO_HELP_MAPA[key];
+      const titleEl = document.getElementById('acao-help-title');
+      const bodyEl  = document.getElementById('acao-help-body');
+      const tooltip = document.getElementById('acao-help-tooltip');
+      if (titleEl) titleEl.textContent = h.titulo;
+      if (bodyEl)  bodyEl.innerHTML    = h.corpo.replace(/\n/g, '<br>');
+      if (tooltip) tooltip.style.display = 'flex';
+      return;
+    }
+    _origAcaoHelp(key);
+  };
+}
+
+// Escuta atualizações de posição do oponente via socket
+socket.on('mapa-movimento', (dados) => {
+  if (dados.de !== usuarioAtual) {
+    // Atualiza posição do oponente no mapa local
+    mapaState.posOponente = dados.posDepois;
+    if (mapaState.aberto) renderizarMapaGrid();
+    mostrarToast(`🗺️ ${escaparHtml(dados.de)} se moveu no mapa de combate.`, 3000);
+  }
+});
+
 socket.on('combate-encerrado', () => {
   if (combateState.ativo) {
     resetarCombateState();
@@ -8209,6 +8811,41 @@ socket.on('parou-de-digitar', (dados) => {
     <p style="font-family:var(--mono);font-size:0.62rem;color:#90c090;margin-bottom:0.8rem;line-height:1.5;">Revele um de seus atributos. Para intimidar, ele precisa superar <strong>qualquer</strong> um dos atributos do oponente. Se efetivo, o alvo fica <strong>hesitante — perde 1 turno sem agir</strong>.<br><br>O oponente pode rebater exibindo qualquer atributo igual ou maior para se livrar.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.7rem;" id="intimidacao-opcoes"></div>
     <button onclick="fecharIntimidacao()" style="width:100%;font-family:var(--mono);font-size:0.65rem;background:none;border:1px solid rgba(255,255,255,0.12);color:#888;border-radius:6px;padding:0.35rem;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══ MAPA DE COMBATE ═══ -->
+<div id="mapa-overlay" onclick="fecharMapaCombate(event)">
+  <div id="mapa-box" onclick="event.stopPropagation()">
+
+    <div id="mapa-header">
+      <h3>🗺️ Mapa de Combate</h3>
+      <button id="mapa-fechar" onclick="fecharMapaCombate()">✕</button>
+    </div>
+
+    <div id="mapa-legenda">
+      <span>⬜ Branca = você</span>
+      <span>⬛ Preta = oponente</span>
+      <span id="mapa-legenda-dist"></span>
+    </div>
+
+    <div id="mapa-grid-wrap">
+      <div id="mapa-grid"></div>
+      <svg id="mapa-rota-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div id="mapa-rota-info">
+      <span class="rota-icon">⚡</span>
+      <span id="mapa-rota-custo-texto">Custo: —</span>
+      <span id="mapa-rota-custo-val"></span>
+    </div>
+
+    <button id="mapa-confirmar-mover" onclick="confirmarMovimento()">✓ Confirmar Movimento</button>
+
+    <div id="mapa-regras-nota">
+      <strong>Distância:</strong> Atiradores atacam a 1 turno (2+ quadrados). Melee precisa estar adjacente ou arremessar (2⚡, dano/utilidade ÷2 exceto Adaga, Machado, Lança).
+    </div>
+
   </div>
 </div>
 
