@@ -1400,12 +1400,16 @@ body::before {
 
 /* ─── Painel Ofensivo (acima do compositor) ─── */
 #combat-offensive-panel {
-  display: none; gap: 0.35rem; flex-wrap: wrap; align-items: center;
+  display: none; flex-direction: column; align-items: stretch;
   padding: 0.35rem 0.6rem; margin-bottom: 0.25rem;
   background: rgba(180,40,30,0.12); border: 1px solid rgba(217,83,79,0.25); border-radius: 7px;
+  max-height: 50vh; overflow-y: auto; overflow-x: hidden;
+  box-sizing: border-box;
 }
 #combat-offensive-panel.visible { display: flex; }
 #combat-offensive-panel .cop-label { font-family: var(--mono); font-size: 0.58rem; color: #f3a0a0; }
+#combat-offensive-panel::-webkit-scrollbar { width: 4px; }
+#combat-offensive-panel::-webkit-scrollbar-thumb { background: rgba(217,83,79,0.3); border-radius: 2px; }
 .cop-btn {
   font-family: var(--mono); font-size: 0.6rem; border-radius: 5px; padding: 0.2rem 0.5rem;
   cursor: pointer; border: 1px solid rgba(255,150,100,0.35);
@@ -1418,14 +1422,18 @@ body::before {
 /* ═══ MENU ÁRVORE DE AÇÕES ═══ */
 #acao-tree-root {
   width: 100%; padding: 0.3rem 0.4rem 0.15rem;
+  box-sizing: border-box;
 }
 .acao-tree-row {
   display: flex; align-items: center; gap: 0.25rem;
   margin-bottom: 0.18rem; min-height: 1.6rem;
+  flex-wrap: wrap;
+  width: 100%; box-sizing: border-box;
 }
 .acao-tree-branch {
   overflow: hidden;
   animation: acao-branch-in 0.18s ease;
+  width: 100%; box-sizing: border-box;
 }
 @keyframes acao-branch-in {
   from { opacity: 0; transform: translateY(-4px); }
@@ -1466,6 +1474,24 @@ body::before {
   background: rgba(80,80,80,0.12);
   border-color: rgba(180,180,180,0.22);
   transform: none;
+}
+/* Slots estáticos de reação a dano — sempre presentes no DOM, alternam visibilidade */
+.reacao-slots-grupo {
+  border-top: 1px solid rgba(255,200,100,0.18);
+  margin-top: 0.2rem; padding-top: 0.2rem;
+  width: 100%; box-sizing: border-box;
+}
+.reacao-slots-header {
+  font-size: 0.58rem; color: #f3a0a0;
+  padding: 0.1rem 0 0.15rem 1.6rem;
+  letter-spacing: 0.03em;
+  overflow-wrap: break-word; word-break: break-word;
+}
+.reacao-slot { display: none; }
+.reacao-slot.show { display: flex; }
+.reacao-dano-btn.reacao-ativa {
+  border-color: #7bc4f7 !important;
+  background: rgba(59,107,214,0.35) !important;
 }
 .root-btn {
   font-size: 0.65rem; font-weight: 600; padding: 0.22rem 0.6rem;
@@ -1655,23 +1681,27 @@ body::before {
 }
 .mapa-hex::before {
   content: '';
-  position: absolute; inset: 2px;
+  position: absolute; inset: 1.5px;
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   background: transparent;
-  border: 1px solid rgba(201,162,39,0.22);
+  border: 1.75px solid rgba(201,162,39,0.55);
   pointer-events: none;
 }
 .mapa-hex:hover { background: rgba(201,162,39,0.12); filter: brightness(1.15); }
+.mapa-hex:hover::before { border-color: rgba(250,204,21,0.85); }
 .mapa-hex.selected-rota {
   background: rgba(201,162,39,0.22);
   filter: brightness(1.25);
 }
 .mapa-hex.selected-rota::before {
-  border-color: rgba(250,204,21,0.8);
+  border-color: rgba(250,204,21,0.95);
+  border-width: 2px;
 }
 .mapa-hex.ocupado-eu { cursor: pointer; }
+.mapa-hex.ocupado-eu::before { border-color: rgba(255,255,255,0.65); }
 .mapa-hex.ocupado-eu:hover { background: rgba(255,255,255,0.1); }
 .mapa-hex.ocupado-oponente { cursor: default; }
+.mapa-hex.ocupado-oponente::before { border-color: rgba(255,150,150,0.55); }
 .mapa-hex.ocupado-oponente:hover { background: rgba(255,255,255,0.04); }
 
 /* Peça de xadrez dentro do hexágono */
@@ -4865,6 +4895,15 @@ renderPP();
                     <button class="acao-help-btn" onclick="acaoHelp('sac-energia')" title="O que é Sacrifício de Energia?">?</button>
                   </div>
 
+                  <!-- Reações de dano (Ofensivas) — slots estáticos, sempre presentes -->
+                  <div class="reacao-slots-grupo" id="reacoes-grupo-ofensivas" style="display:none">
+                    <div class="reacao-slots-header" id="reacoes-header-ofensivas"></div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-interceptar" data-reacao-id="interceptar" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-interceptar"></button>
+                    </div>
+                  </div>
+
                 </div><!-- /branch-ofensivas -->
 
                 <!-- DEFENSIVAS -->
@@ -4885,6 +4924,35 @@ renderPP();
                       👁️ Furtividade
                     </button>
                     <button class="acao-help-btn" onclick="acaoHelp('furtividade')" title="O que é Furtividade?">?</button>
+                  </div>
+
+                  <!-- Reações de dano (Defensivas) — slots estáticos, sempre presentes -->
+                  <div class="reacao-slots-grupo" id="reacoes-grupo-defensivas" style="display:none">
+                    <div class="reacao-slots-header" id="reacoes-header-defensivas"></div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-receber" data-reacao-id="receber" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-receber"></button>
+                    </div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-postura-def" data-reacao-id="postura-def" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-postura-def"></button>
+                    </div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-esquiva" data-reacao-id="esquiva" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-esquiva"></button>
+                    </div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-sacrificio-def" data-reacao-id="sacrificio-def" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-sacrificio-def"></button>
+                    </div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-dano-direto" data-reacao-id="dano-direto" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-dano-direto"></button>
+                    </div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-sacrificio-guarda-def" data-reacao-id="sacrificio-guarda-def" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-sacrificio-guarda-def"></button>
+                    </div>
                   </div>
 
                 </div><!-- /branch-defensivas -->
@@ -4943,6 +5011,15 @@ renderPP();
                       👁️‍🗨️ Ação Oculta (2🔰)
                     </button>
                     <button class="acao-help-btn" onclick="acaoHelp('acao-oculta')" title="O que é Ação Oculta?">?</button>
+                  </div>
+
+                  <!-- Reações de dano (Estratégicas) — slots estáticos, sempre presentes -->
+                  <div class="reacao-slots-grupo" id="reacoes-grupo-estrategicas" style="display:none">
+                    <div class="reacao-slots-header" id="reacoes-header-estrategicas"></div>
+                    <div class="acao-tree-row level-2 reacao-slot" id="reacao-slot-canalizar-foco" data-reacao-id="canalizar-foco" style="display:none">
+                      <span class="acao-tree-line">╰────── </span>
+                      <button class="acao-tree-btn cop-btn reacao-dano-btn" id="reacao-btn-canalizar-foco"></button>
+                    </div>
                   </div>
 
                 </div><!-- /branch-estrategicas -->
@@ -6331,8 +6408,8 @@ function fecharPromptDano(msgId) {
   // Remove prompt inline de cura (se existir)
   const el = document.getElementById(`mec-prompt-${msgId}`);
   if (el) el.remove();
-  // Remove blocos de reação injetados na árvore de ações
-  document.querySelectorAll('.reacao-dano-inject').forEach(el => el.remove());
+  // Esconde os slots de reação estáticos (sem remover do DOM)
+  _limparSlotsReacao();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -7199,91 +7276,72 @@ function tentarAdicionarPromptDeMecanica(msg) {
 // Chamada por tentarAdicionarPromptDeMecanica quando detecta dano.
 // Remove injeções antigas, gera novos botões e os insere nas branches corretas.
 function injetarReacoesNaArvore(msgId, autorOrigem, dano, custoAtaque) {
-  // Remove qualquer bloco de reação já injetado anteriormente
-  document.querySelectorAll('.reacao-dano-inject').forEach(el => el.remove());
+  // Limpa qualquer estado de reação anterior (esconde todos os slots primeiro)
+  _limparSlotsReacao();
 
   const autorEscaped = autorOrigem.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   const opcoes = obterOpcoesReaçãoADano(dano, custoAtaque);
 
-  // Mapeamento de opção → branch da árvore
-  // Defensivas: receber, postura-def, esquiva, sacrificio-def, dano-direto, sacrificio-guarda-def
-  // Ofensivas:  interceptar
-  // Estratégicas: canalizar-foco
+  // Mapeamento de opção → grupo de slots estáticos
   const mapa = {
-    'receber':               'branch-defensivas',
-    'postura-def':           'branch-defensivas',
-    'esquiva':               'branch-defensivas',
-    'sacrificio-def':        'branch-defensivas',
-    'dano-direto':           'branch-defensivas',
-    'sacrificio-guarda-def': 'branch-defensivas',
-    'interceptar':           'branch-ofensivas',
-    'canalizar-foco':        'branch-estrategicas',
+    'receber':               'defensivas',
+    'postura-def':           'defensivas',
+    'esquiva':               'defensivas',
+    'sacrificio-def':        'defensivas',
+    'dano-direto':           'defensivas',
+    'sacrificio-guarda-def': 'defensivas',
+    'interceptar':           'ofensivas',
+    'canalizar-foco':        'estrategicas',
   };
 
-  // Agrupa por branch
-  const porBranch = {};
+  // Agrupa por categoria
+  const porGrupo = {};
   for (const op of opcoes) {
-    const branchId = mapa[op.id];
-    if (!branchId) continue;
-    if (!porBranch[branchId]) porBranch[branchId] = [];
-    porBranch[branchId].push(op);
+    const grupoId = mapa[op.id];
+    if (!grupoId) continue;
+    if (!porGrupo[grupoId]) porGrupo[grupoId] = [];
+    porGrupo[grupoId].push(op);
   }
 
   const temAcaoAtiva = acaoCombateAtiva !== null;
 
-  for (const [branchId, ops] of Object.entries(porBranch)) {
-    const branch = document.getElementById(branchId);
-    if (!branch) continue;
+  // Guarda o contexto atual da reação pendente para reuso (ex.: ao reabrir o painel)
+  window._reacaoPendenteAtual = { msgId, autorOrigem, dano, custoAtaque };
 
-    // Contêiner agrupado para facilitar remoção futura
-    const container = document.createElement('div');
-    container.className = 'reacao-dano-inject';
-    container.style.cssText = 'border-top:1px solid rgba(255,200,100,0.18);margin-top:0.2rem;padding-top:0.2rem;';
+  for (const [grupoId, ops] of Object.entries(porGrupo)) {
+    const grupoEl = document.getElementById(`reacoes-grupo-${grupoId}`);
+    const headerEl = document.getElementById(`reacoes-header-${grupoId}`);
+    if (!grupoEl) continue;
 
-    // Cabeçalho indicativo
-    const header = document.createElement('div');
-    header.style.cssText = 'font-size:0.58rem;color:#f3a0a0;padding:0.1rem 0 0.15rem 1.6rem;letter-spacing:0.03em;';
-    header.textContent = `⚔️ Reagir ao dano (${dano}) de ${escaparHtml(autorOrigem)}:`;
-    container.appendChild(header);
+    grupoEl.style.display = '';
+    if (headerEl) headerEl.textContent = `⚔️ Reagir ao dano (${dano}) de ${autorOrigem}:`;
 
     for (const op of ops) {
+      const slot = document.getElementById(`reacao-slot-${op.id}`);
+      const btn  = document.getElementById(`reacao-btn-${op.id}`);
+      if (!slot || !btn) continue;
+
       const disponivel = op.verificar();
-      const row = document.createElement('div');
-      row.className = 'acao-tree-row level-2';
 
-      const line = document.createElement('span');
-      line.className = 'acao-tree-line';
-      line.textContent = '╰────── ';
+      slot.style.display = 'flex';
+      slot.classList.add('show');
 
-      const btn = document.createElement('button');
-      btn.className = 'acao-tree-btn cop-btn reacao-dano-btn';
-      if (!disponivel) {
-        btn.disabled = true;
-        btn.style.opacity = '0.45';
-      }
-      if (temAcaoAtiva && acaoCombateAtiva.id === op.id) {
-        btn.style.borderColor = '#7bc4f7';
-        btn.style.background = 'rgba(59,107,214,0.35)';
-      }
+      btn.disabled = !disponivel;
+      btn.classList.toggle('disabled-action', !disponivel);
+      btn.classList.toggle('reacao-ativa', temAcaoAtiva && acaoCombateAtiva.id === op.id);
+
       const custoHtml = op.custo ? ` <span style="font-size:0.6rem;opacity:0.75;">[${op.custo}]</span>` : '';
       btn.innerHTML = `${op.icon} ${escaparHtml(op.label)}${custoHtml}`;
       btn.title = op.descricao;
-      btn.setAttribute('onclick',
-        `selecionarReacao(${msgId}, '${op.id}', ${dano}, '${autorEscaped}', ${custoAtaque})`
-      );
-
-      row.appendChild(line);
-      row.appendChild(btn);
-      container.appendChild(row);
+      btn.onclick = disponivel
+        ? function() { selecionarReacao(msgId, op.id, dano, autorOrigem, custoAtaque); }
+        : null;
     }
-
-    branch.appendChild(container);
   }
 
   // Abre automaticamente o menu Defensivas se estava oculto, para o jogador ver
   const branchDef = document.getElementById('branch-defensivas');
   if (branchDef && branchDef.style.display === 'none') {
-    // Abre cat e defensivas via acaoTreeToggle se a função estiver disponível
     const branchCat = document.getElementById('branch-cat');
     if (branchCat) branchCat.style.display = '';
     branchDef.style.display = '';
@@ -7291,7 +7349,29 @@ function injetarReacoesNaArvore(msgId, autorOrigem, dano, custoAtaque) {
     if (chevCat) chevCat.textContent = '▴';
     const chevDef = document.getElementById('chev-defensivas');
     if (chevDef) chevDef.textContent = '▴';
+    if (typeof _acaoTreeAbertos !== 'undefined') {
+      _acaoTreeAbertos.add('cat');
+      _acaoTreeAbertos.add('defensivas');
+    }
   }
+}
+
+// Esconde todos os slots de reação estáticos e limpa seus rótulos (sem remover do DOM)
+function _limparSlotsReacao() {
+  document.querySelectorAll('.reacao-slot').forEach(slot => {
+    slot.style.display = 'none';
+    slot.classList.remove('show');
+  });
+  document.querySelectorAll('.reacao-slots-grupo').forEach(grupo => {
+    grupo.style.display = 'none';
+  });
+  document.querySelectorAll('.reacao-dano-btn').forEach(btn => {
+    btn.onclick = null;
+    btn.disabled = true;
+    btn.classList.add('disabled-action');
+    btn.classList.remove('reacao-ativa');
+  });
+  window._reacaoPendenteAtual = null;
 }
 
 // Detecta o custo de energia que o atacante usou (para calcular custo da esquiva).
@@ -7719,6 +7799,7 @@ function _acaoTreeFecharTudo() {
     if (chev)   chev.classList.remove('open');
   });
   _acaoTreeAbertos.clear();
+  _limparSlotsReacao();
 }
 
 // ── Atualiza o estado visual (disabled-action) dos botões da árvore de ações ──
@@ -8653,6 +8734,20 @@ function fecharMapaCombate(e) {
   limparRotaSVG();
   document.getElementById('mapa-rota-info').classList.remove('visible');
   document.getElementById('mapa-confirmar-mover').classList.remove('visible');
+  // Para o loop 3D ao fechar o mapa
+  m3d.stopLoop();
+  // Volta para aba de colocação na próxima abertura
+  if (m3d.modoAtual === '3d') {
+    const p3d = document.getElementById('mapa-painel-3d');
+    const pcol = document.getElementById('mapa-painel-colocacao');
+    if (p3d) p3d.style.display = 'none';
+    if (pcol) pcol.style.display = '';
+    const tabCol = document.getElementById('tab-colocacao');
+    const tab3d  = document.getElementById('tab-3d');
+    if (tabCol) tabCol.classList.add('active');
+    if (tab3d)  tab3d.classList.remove('active');
+    m3d.modoAtual = 'colocacao';
+  }
 }
 
 // ── Renderizar grid hexagonal 5×5 ──
@@ -9100,8 +9195,9 @@ const m3d = {
       this.poseEu[j.id]        = { rx:0, ry:0, rz:0 };
       this.poseOponente[j.id]  = { rx:0, ry:0, rz:0 };
     }
-    this._bindCanvas('m3d-canvas',   false);
-    this._bindCanvas('m3d-preview-canvas', true);
+    // NÃO faz bind/resize do canvas aqui — o overlay está hidden e as dimensões são 0.
+    // O bind acontece na primeira ativação do modo 3D (setMapaMode).
+    this._canvasBound = false;
     this._buildJointList();
   },
 
@@ -9128,33 +9224,31 @@ const m3d = {
     };
   },
 
-  // ── Computar posições mundo (FK) ──
+  // ── Computar posições mundo (FK) — sem baseX, aplicado só na projeção ──
   computeFK(pose, baseX) {
     const world = {};
     const computeNode = (jid, parentPos, parentRot) => {
       const jDef = this.JOINTS.find(j=>j.id===jid);
       if (!jDef) return;
       const ang = pose[jid] || {rx:0,ry:0,rz:0};
-      // Aplica offset local com rotação pai simplificada
       let [ox,oy,oz] = jDef.off;
-      // Rotação pai (simplificada — aplica rotX no eixo lateral)
       const cosR = Math.cos(parentRot.ry), sinR = Math.sin(parentRot.ry);
       let nx = ox * cosR - oz * sinR;
       let nz = ox * sinR + oz * cosR;
       const cosE = Math.cos(parentRot.rx), sinE = Math.sin(parentRot.rx);
       let ny = oy * cosE - nz * sinE;
       nz = oy * sinE + nz * cosE;
-      const wx = parentPos[0] + nx + baseX;
+      // baseX aplicado apenas na raiz para centralizar o personagem
+      const bx = (jid === 'hips') ? baseX : 0;
+      const wx = parentPos[0] + nx + bx;
       const wy = parentPos[1] + ny;
       const wz = parentPos[2] + nz;
       world[jid] = [wx, wy, wz];
-      // Rotação acumulada (simplificada)
       const cr = {
         rx: parentRot.rx + (ang.rx * Math.PI/180),
         ry: parentRot.ry + (ang.ry * Math.PI/180),
         rz: parentRot.rz + (ang.rz * Math.PI/180)
       };
-      // Filhos
       for (const child of this.JOINTS.filter(j=>j.pai===jid)) {
         computeNode(child.id, [wx,wy,wz], cr);
       }
@@ -9179,7 +9273,8 @@ const m3d = {
     // Ordena por profundidade (pintor)
     const projMap = {};
     for (const [id, pos] of Object.entries(world)) {
-      projMap[id] = this.project(pos[0]-baseX, pos[1], pos[2], cam, cw, ch);
+      // baseX já está nas world coords — projeta direto
+      projMap[id] = this.project(pos[0], pos[1], pos[2], cam, cw, ch);
     }
     const sorted = [...segs].sort((a,b)=>{
       const da = (projMap[a[0]]?.depth||0) + (projMap[a[1]]?.depth||0);
@@ -9295,15 +9390,19 @@ const m3d = {
     let isDragging = false;
 
     const resize = () => {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width  = Math.round(rect.width || 300);
-      canvas.height = Math.round(isPreview ? 200 : Math.round(rect.height || 300));
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const rect = parent.getBoundingClientRect();
+      const w = Math.round(rect.width  || parent.offsetWidth  || 300);
+      const h = Math.round(isPreview ? 200 : (rect.height || parent.offsetHeight || 300));
+      if (w > 0 && h > 0) { canvas.width = w; canvas.height = h; }
     };
+    // Resize imediato e via observer
     resize();
-
-    // Resize observer
-    const ro = new ResizeObserver(resize);
+    const ro = new ResizeObserver(() => { resize(); });
     ro.observe(canvas.parentElement);
+    // Guarda referência para re-resize ao abrir o painel
+    if (!isPreview) this._resizeMainCanvas = resize;
 
     // Mouse
     canvas.addEventListener('mousedown', e => {
@@ -9368,7 +9467,6 @@ const m3d = {
         }
       } else if (t.length === 2) {
         const dist = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
-        // Pinça: zoom
         camRef.zoom = Math.max(0.3, Math.min(3.5, camRef.zoom * (dist / Math.max(lastPinchDist, 1))));
         lastPinchDist = dist;
         // Pan com 2 dedos
@@ -9376,8 +9474,8 @@ const m3d = {
         const cy = (t[0].clientY + t[1].clientY)/2;
         const lcx = (touches[0].clientX + touches[1].clientX)/2;
         const lcy = (touches[0].clientY + touches[1].clientY)/2;
-        camRef.panX += (cx - lcx) * 0.004;
-        camRef.panY -= (cy - lcy) * 0.004;
+        camRef.panX = (camRef.panX || 0) + (cx - lcx) * 0.004;
+        camRef.panY = (camRef.panY || 0) - (cy - lcy) * 0.004;
         touches = t;
       }
       if (isPreview) this.render('m3d-preview-canvas', this.preview);
@@ -9390,7 +9488,7 @@ const m3d = {
     const world = this.computeFK(this.poseEu, -0.65);
     let best = null, bestDist = 20;
     for (const [id, pos] of Object.entries(world)) {
-      const p = this.project(pos[0]+0.65, pos[1], pos[2], this.cam, cw, ch);
+      const p = this.project(pos[0], pos[1], pos[2], this.cam, cw, ch);
       const d = Math.hypot(p.sx - mx, p.sy - my);
       if (d < bestDist) { bestDist = d; best = id; }
     }
@@ -9404,7 +9502,7 @@ const m3d = {
     const tooltip = document.getElementById('m3d-joint-tooltip');
     let best = null, bestDist = 18;
     for (const [id, pos] of Object.entries(world)) {
-      const p = this.project(pos[0]+0.65, pos[1], pos[2], this.cam, cw, ch);
+      const p = this.project(pos[0], pos[1], pos[2], this.cam, cw, ch);
       const d = Math.hypot(p.sx - mx, p.sy - my);
       if (d < bestDist) { bestDist = d; best = id; }
     }
@@ -9412,9 +9510,12 @@ const m3d = {
       const jDef = this.JOINTS.find(j=>j.id===best);
       tooltip.textContent = jDef ? jDef.nome : best;
       tooltip.style.display = 'block';
-      const canvasRect = document.getElementById('m3d-canvas').getBoundingClientRect();
-      tooltip.style.left = (cx - canvasRect.left + 12) + 'px';
-      tooltip.style.top  = (cy - canvasRect.top - 20) + 'px';
+      const canvasEl = document.getElementById('m3d-canvas');
+      if (canvasEl) {
+        const canvasRect = canvasEl.getBoundingClientRect();
+        tooltip.style.left = (cx - canvasRect.left + 12) + 'px';
+        tooltip.style.top  = (cy - canvasRect.top - 20) + 'px';
+      }
     } else if (tooltip) {
       tooltip.style.display = 'none';
     }
@@ -9502,7 +9603,24 @@ function setMapaMode(modo) {
   document.getElementById('tab-colocacao').classList.toggle('active', modo === 'colocacao');
   document.getElementById('tab-3d').classList.toggle('active', modo === '3d');
   if (modo === '3d') {
-    m3d.startLoop();
+    // Bind do canvas adiado até a primeira ativação (quando o DOM está visível)
+    if (!m3d._canvasBound) {
+      m3d._canvasBound = true;
+      // Aguarda um frame para o painel ficar visível com dimensões reais
+      requestAnimationFrame(() => {
+        m3d._bindCanvas('m3d-canvas', false);
+        m3d._bindCanvas('m3d-preview-canvas', true);
+        // Força resize explícito após bind
+        if (m3d._resizeMainCanvas) m3d._resizeMainCanvas();
+        m3d.startLoop();
+      });
+    } else {
+      // Já foi bound — apenas força resize caso o overlay tenha sido fechado/aberto
+      requestAnimationFrame(() => {
+        if (m3d._resizeMainCanvas) m3d._resizeMainCanvas();
+        m3d.startLoop();
+      });
+    }
     // Atualiza labels HUD
     const eu = document.getElementById('m3d-hud-eu');
     const op = document.getElementById('m3d-hud-op');
@@ -9560,14 +9678,16 @@ if (typeof socket !== 'undefined') {
 m3d.init();
 
 // Escuta atualizações de posição do oponente via socket
-socket.on('mapa-movimento', (dados) => {
-  if (dados.de !== usuarioAtual) {
-    // Atualiza posição do oponente no mapa local
-    mapaState.posOponente = dados.posDepois;
-    if (mapaState.aberto) renderizarMapaGrid();
-    mostrarToast(`🗺️ ${escaparHtml(dados.de)} se moveu no mapa de combate.`, 3000);
-  }
-});
+if (typeof socket !== 'undefined' && socket) {
+  socket.on('mapa-movimento', (dados) => {
+    if (dados.de !== usuarioAtual) {
+      // Atualiza posição do oponente no mapa local
+      mapaState.posOponente = dados.posDepois;
+      if (mapaState.aberto) renderizarMapaGrid();
+      mostrarToast(`🗺️ ${escaparHtml(dados.de)} se moveu no mapa de combate.`, 3000);
+    }
+  });
+}
 
 socket.on('combate-encerrado', () => {
   if (combateState.ativo) {
