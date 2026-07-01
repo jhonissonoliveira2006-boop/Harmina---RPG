@@ -1674,7 +1674,12 @@ body::before {
   width: 100%;
   /* altura calculada para acomodar 5 linhas de hexágonos staggered */
 }
-/* Hexágono individual — bordas brancas simples, sem preenchimento */
+/* Hexágono individual — contorno desenhado via SVG (stroke uniforme nas 6
+   arestas). Um `border` num elemento com clip-path só pinta as arestas
+   alinhadas aos lados retos da caixa (por isso só a base aparecia inteira);
+   o SVG contorna o hexágono real. O viewBox usa a proporção do hexágono
+   regular (altura = largura × √3⁄2), igual ao clip-path, então o stroke
+   sai com espessura uniforme em todos os lados ao esticar para cada célula. */
 .mapa-hex {
   position: absolute;
   display: flex; flex-direction: column;
@@ -1689,14 +1694,13 @@ body::before {
 }
 .mapa-hex::before {
   content: '';
-  position: absolute; inset: 0;
-  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-  background: transparent;
-  /* Borda branca uniforme em todas as arestas — sem inset, para que hexágonos
-     adjacentes compartilhem exatamente a mesma linha (visual limpo e contínuo). */
-  border: 1px solid rgba(255,255,255,0.55);
+  position: absolute; inset: -1px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86.6'%3E%3Cpolygon points='25,0 75,0 100,43.3 75,86.6 25,86.6 0,43.3' fill='none' stroke='white' stroke-opacity='0.55' stroke-width='7' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
   pointer-events: none;
-  box-sizing: border-box;
+  z-index: 0;
 }
 .mapa-hex:hover { background: rgba(255,255,255,0.06); }
 .mapa-hex.selected-rota { background: rgba(250,204,21,0.12); }
@@ -1705,16 +1709,25 @@ body::before {
 .mapa-hex.ocupado-oponente { cursor: default; }
 .mapa-hex.ocupado-oponente:hover { background: transparent; }
 
-/* Peça de xadrez dentro do hexágono */
+/* Peça de xadrez dentro do hexágono — glifos sólidos (o mesmo símbolo
+   preenchido é usado nas duas cores via JS), coloridas por `color` em vez
+   dos glifos "vazados" de xadrez branco, que deixavam a linha do hexágono
+   por trás aparecer através do corpo da peça. Maiores e com sombras em
+   camadas para dar sensação de profundidade/3D sobre o tabuleiro. */
 .mapa-peca {
-  font-size: clamp(0.9rem, 4vw, 1.3rem);
+  font-size: clamp(1.5rem, 7vw, 2.3rem);
   line-height: 1;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
   transition: transform 0.2s;
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
 }
-.mapa-peca.branca { filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,255,255,0.6)); }
-.mapa-peca.preta  { filter: brightness(0.25) drop-shadow(0 1px 4px rgba(0,0,0,0.9)); }
+.mapa-peca.branca {
+  color: #f5efe0;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.85)) drop-shadow(0 0 7px rgba(255,255,255,0.4));
+}
+.mapa-peca.preta {
+  color: #0c0a08;
+  filter: drop-shadow(0 0 1px rgba(255,255,255,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.9));
+}
 
 .mapa-nome {
   font-family: var(--mono); font-size: 0.38rem; letter-spacing: 0.03em;
@@ -1731,10 +1744,11 @@ body::before {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 1px;
-  font-size: clamp(0.9rem, 4vw, 1.3rem);
+  font-size: clamp(1.5rem, 7vw, 2.3rem);
   line-height: 1;
+  color: #f5efe0;
   transition: left 0.18s cubic-bezier(0.4,0,0.2,1), top 0.18s cubic-bezier(0.4,0,0.2,1);
-  filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.7));
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.85)) drop-shadow(0 0 8px rgba(255,255,255,0.5));
 }
 
 /* SVG de seta de rota */
@@ -6790,9 +6804,29 @@ function aplicarReacoesPendentes() {
 let selectedAttack = null; // { id, icon, label, dano, tipo, custo }
 let attackPanelOpen = false;
 
+// ─── Adjacência no Mapa de Batalha ────────────────────────────────────────
+// Dano corpo a corpo só é válido quando as duas peças estão em hexágonos
+// vizinhos (distância 1 — lado a lado, sem nenhum hexágono entre elas).
+// Se o mapa ainda não tiver posições definidas, não bloqueia (assume que a
+// checagem não se aplica fora de uma sessão de mapa ativa).
+function estaoAdjacentesNoMapa() {
+  if (typeof mapaState === 'undefined' || !mapaState.posEu || !mapaState.posOponente) return true;
+  return distanciaGrid(mapaState.posEu, mapaState.posOponente) <= 1;
+}
+
+// Distância atual (em hexágonos) entre as duas peças, ou null se o mapa
+// ainda não tiver posições definidas.
+function distanciaAtualNoMapa() {
+  if (typeof mapaState === 'undefined' || !mapaState.posEu || !mapaState.posOponente) return null;
+  return distanciaGrid(mapaState.posEu, mapaState.posOponente);
+}
+
 // Constrói a lista de ataques disponíveis a partir da ficha atual
 function obterOpcoesDeAtaque() {
   const opcoes = [];
+  const adjacente = estaoAdjacentesNoMapa();
+  const distAtual = distanciaAtualNoMapa();
+  const avisoDistancia = distAtual !== null ? ` · 🔒 fora de alcance corpo a corpo (dist: ${distAtual} hex — aproxime-se ou arremesse)` : '';
 
   // ── Corpo a Corpo / Desarmado ──────────────────────────────────────────
   const v = state.vita.max;
@@ -6804,8 +6838,8 @@ function obterOpcoesDeAtaque() {
     dano: danoCaC,
     tipo: 'fisico',
     custo: '1⚡',
-    tip: `${Math.floor(v/3)} (vita÷3) + ${Math.floor(v/4)} (vita÷4) = ${danoCaC} · desarmado`,
-    disponivel: state.energy.cur >= 1
+    tip: `${Math.floor(v/3)} (vita÷3) + ${Math.floor(v/4)} (vita÷4) = ${danoCaC} · desarmado${adjacente ? '' : avisoDistancia}`,
+    disponivel: state.energy.cur >= 1 && adjacente
   });
 
   // ── Armas Equipadas (lê o equip-body) ─────────────────────────────────
@@ -6824,6 +6858,8 @@ function obterOpcoesDeAtaque() {
     const isRanged = /arco|besta|arremess|lanç/i.test(tipo);
     const custo = isRanged ? '2⚡' : '1⚡';
     const custoE = isRanged ? 2 : 1;
+    // Armas não-ranged são corpo a corpo: exigem adjacência no mapa.
+    const disponivelPorDistancia = isRanged || adjacente;
     opcoes.push({
       id: `arma_${idx}`,
       icon: isRanged ? '🏹' : '⚔️',
@@ -6831,8 +6867,8 @@ function obterOpcoesDeAtaque() {
       dano: danoMax,
       tipo: isRanged ? 'ranged' : 'fisico',
       custo,
-      tip: `${tipo} · ${danoRaw} de dano`,
-      disponivel: state.energy.cur >= custoE
+      tip: `${tipo} · ${danoRaw} de dano${disponivelPorDistancia ? '' : avisoDistancia}`,
+      disponivel: state.energy.cur >= custoE && disponivelPorDistancia
     });
   });
 
@@ -7010,6 +7046,19 @@ function enviarMensagem() {
     if (ehAtaque) {
       if (combateState.ativo) {
         // selectedAttack garantido aqui — ehAtaque só é true se !!selectedAttack
+
+        // ── Adjacência no Mapa de Batalha (dano corpo a corpo) ──────────────
+        // Ataques físicos (corpo a corpo/armas não-ranged) só valem se as
+        // peças estiverem em hexágonos vizinhos (distância 1, sem nenhum
+        // hexágono entre elas). O painel já desabilita essas opções quando
+        // fora de alcance — esta é uma checagem de segurança para o caso de
+        // o oponente ter se movido no mapa depois que o ataque foi selecionado.
+        if (selectedAttack.tipo === 'fisico' && !estaoAdjacentesNoMapa()) {
+          const distAtual = distanciaAtualNoMapa();
+          mostrarToast(`⚠️ Ataque corpo a corpo requer que os hexágonos estejam adjacentes no Mapa de Batalha (distância atual: ${distAtual !== null ? distAtual : '?'} hex). Aproxime-se, arremesse ou escolha um ataque à distância.`, 4500);
+          limparAtaqueSelecionado();
+          return;
+        }
 
         // ── Sacrifício de Energia Atual ────────────────────────────────────
         if (energySacrificeBonus > 0) {
@@ -8699,12 +8748,16 @@ function mostrarContestacao() {
 
 // Peças de xadrez disponíveis (emoji Unicode)
 const PECAS_XADREZ = {
-  peao:   { branca: '♙', preta: '♟' },
-  cavalo: { branca: '♘', preta: '♞' },
-  torre:  { branca: '♖', preta: '♜' },
-  bispo:  { branca: '♗', preta: '♝' },
-  rainha: { branca: '♕', preta: '♛' },
-  rei:    { branca: '♔', preta: '♚' },
+  // Usa o mesmo glifo sólido (preenchido) para as duas cores — os símbolos
+  // "brancos" do Unicode (♙♘♖♗♕♔) são apenas contorno/vazados e deixavam a
+  // borda do hexágono por trás aparecer através do corpo da peça. A cor real
+  // (branca/preta) é aplicada via CSS (.mapa-peca.branca / .preta).
+  peao:   { branca: '♟', preta: '♟' },
+  cavalo: { branca: '♞', preta: '♞' },
+  torre:  { branca: '♜', preta: '♜' },
+  bispo:  { branca: '♝', preta: '♝' },
+  rainha: { branca: '♛', preta: '♛' },
+  rei:    { branca: '♚', preta: '♚' },
 };
 
 // Estado do mapa
@@ -9021,7 +9074,7 @@ function confirmarMovimento() {
   const animEl = document.getElementById('mapa-peca-animada');
 
   if (animEl && caminho.length >= 2) {
-    animEl.innerHTML = `<span style="filter:brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.8));">${pecaInfo.branca}</span>`;
+    animEl.innerHTML = `<span style="color:#f5efe0;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.85)) drop-shadow(0 0 8px rgba(255,255,255,0.5));">${pecaInfo.branca}</span>`;
     animEl.style.display = 'flex';
 
     // Posiciona no ponto inicial
