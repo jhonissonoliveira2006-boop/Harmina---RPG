@@ -1497,6 +1497,15 @@ body::before {
   font-size: 0.65rem; font-weight: 600; padding: 0.22rem 0.6rem;
   background: rgba(180,40,30,0.22); border-color: rgba(255,150,100,0.45);
 }
+/* Feedback visual: borda dourada pulsando lentamente, indicando que o
+   jogador recebeu uma resposta e já pode agir novamente. */
+.root-btn.pulse-pronto {
+  animation: acao-pulse-dourado 2.4s ease-in-out infinite;
+}
+@keyframes acao-pulse-dourado {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0.55); border-color: rgba(255,150,100,0.45); }
+  50%      { box-shadow: 0 0 0 4px rgba(250,204,21,0); border-color: rgba(250,204,21,0.9); }
+}
 .acao-chevron {
   font-size: 0.5rem; opacity: 0.65; transition: transform 0.15s; display: inline-block;
 }
@@ -1680,23 +1689,20 @@ body::before {
 }
 .mapa-hex::before {
   content: '';
-  position: absolute; inset: 1px;
+  position: absolute; inset: 0;
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   background: transparent;
-  border: 1.5px solid rgba(255,255,255,0.5);
+  /* Borda branca uniforme em todas as arestas — sem inset, para que hexágonos
+     adjacentes compartilhem exatamente a mesma linha (visual limpo e contínuo). */
+  border: 1px solid rgba(255,255,255,0.55);
   pointer-events: none;
   box-sizing: border-box;
-  transition: border-color 0.12s;
 }
-.mapa-hex:hover::before { border-color: rgba(255,255,255,0.95); }
 .mapa-hex:hover { background: rgba(255,255,255,0.06); }
-.mapa-hex.selected-rota::before { border-color: rgba(250,204,21,0.9); border-width: 2px; }
-.mapa-hex.selected-rota { background: rgba(250,204,21,0.07); }
+.mapa-hex.selected-rota { background: rgba(250,204,21,0.12); }
 .mapa-hex.ocupado-eu { cursor: pointer; }
-.mapa-hex.ocupado-eu::before { border-color: rgba(255,255,255,0.8); }
 .mapa-hex.ocupado-eu:hover { background: rgba(255,255,255,0.08); }
 .mapa-hex.ocupado-oponente { cursor: default; }
-.mapa-hex.ocupado-oponente::before { border-color: rgba(255,255,255,0.35); }
 .mapa-hex.ocupado-oponente:hover { background: transparent; }
 
 /* Peça de xadrez dentro do hexágono */
@@ -5916,6 +5922,14 @@ function calcularDanoMaximoPermitido() {
   return danoBase + bonus;
 }
 
+// ─── Detecta se o ataque declarado é à distância/arremesso (não corpo a corpo) ─
+// Usado para isentar a checagem de adjacência do Mapa de Batalha.
+function ataqueEhADistancia(texto) {
+  const t = (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const termos = ['arremess', 'distanc', 'atirei', 'atira', 'flecha', 'projetil', 'disparo', 'disparei', 'arco'];
+  return termos.some(function(termo){ return t.includes(termo); });
+}
+
 // ─── Valida o dano declarado em uma mensagem de ataque ───────────────────────
 // Retorna null se válido, ou uma string de erro se inválido.
 function validarDanoDeclarado(texto) {
@@ -5925,6 +5939,15 @@ function validarDanoDeclarado(texto) {
   // Detecta se há declaração de dano na mensagem
   const mecanica = detectarMecanica(texto);
   if (!mecanica || mecanica.tipo !== 'dano') return null;
+
+  // ── Exige adjacência no Mapa de Batalha para dano corpo a corpo ────────────
+  // Ataques à distância/arremesso ficam isentos dessa checagem.
+  if (typeof mapaState !== 'undefined' && mapaState.posEu && mapaState.posOponente && !ataqueEhADistancia(texto)) {
+    const distAtual = distanciaGrid(mapaState.posEu, mapaState.posOponente);
+    if (distAtual >= 2) {
+      return `⚠️ Ataque corpo a corpo requer que os hexágonos estejam adjacentes no Mapa de Batalha (distância atual: ${distAtual} hex). Aproxime-se, arremesse ou declare um ataque à distância.`;
+    }
+  }
 
   const danoDeclarado = mecanica.valor;
   const danoMax = calcularDanoMaximoPermitido();
@@ -5978,6 +6001,7 @@ function resetarCombateState() {
   desativarAcaoCombate();
   _acaoOcultaPendente = null;
   if (typeof _acaoTreeFecharTudo === 'function') _acaoTreeFecharTudo();
+  desativarPulseAcaoBtn();
   atualizarBarraCombate();
   atualizarTagAtaque();
   // Atualiza estado visual dos botões mesmo fora de combate
@@ -7066,6 +7090,10 @@ function enviarMensagem() {
 
     // Regen de Energia ao final do turno
     regenEnergiaFinaldeTurno();
+
+    // ── Ação enviada: fecha o menu de ações automaticamente ──────────────────
+    if (combateState.ativo && typeof _acaoTreeFecharTudo === 'function') _acaoTreeFecharTudo();
+    desativarPulseAcaoBtn();
   } else {
     textoComDano = textoLimpo;
   }
@@ -7809,7 +7837,20 @@ function executarIntimidacao(atributoId, atributoLabel, valor) {
 
 const _acaoTreeAbertos = new Set(); // quais branches estão abertos
 
+// ── Feedback visual: borda dourada pulsando no botão "Ação" ──────────────────
+// Ativada quando o oponente responde (mensagem recebida em combate ativo);
+// desativada assim que o jogador abre o menu ou envia sua própria ação.
+function ativarPulseAcaoBtn() {
+  const btn = document.getElementById('btn-acao-raiz');
+  if (btn) btn.classList.add('pulse-pronto');
+}
+function desativarPulseAcaoBtn() {
+  const btn = document.getElementById('btn-acao-raiz');
+  if (btn) btn.classList.remove('pulse-pronto');
+}
+
 function acaoTreeToggle(id) {
+  if (id === 'cat') desativarPulseAcaoBtn();
   const branch = document.getElementById(`branch-${id}`);
   const chev   = document.getElementById(`chev-${id}`);
   if (!branch) return;
@@ -8723,13 +8764,17 @@ function distanciaGrid(a, b) {
 }
 
 // ── Retorna lista de hexágonos adjacentes válidos (dentro do grid 5×5) ──
+// Vizinhos para o layout "odd-q" (flat-top, colunas ímpares deslocadas para
+// baixo em meio hexágono) — o mesmo esquema usado em renderizarMapaGrid()
+// (yOffset = hexH*0.5 quando col é ímpar) e em hexOffsetToCube().
 function hexAdjacentes(row, col) {
-  // Vizinhos flat-top, even-q offset
   var dirs;
   if ((col & 1) === 0) {
-    dirs = [[+1,0],[-1,0],[0,+1],[0,-1],[+1,+1],[+1,-1]];
+    // Coluna par: vizinhos diagonais ficam uma linha ACIMA nas colunas vizinhas
+    dirs = [[-1,0],[+1,0],[-1,-1],[-1,+1],[0,-1],[0,+1]];
   } else {
-    dirs = [[+1,0],[-1,0],[0,+1],[0,-1],[-1,+1],[-1,-1]];
+    // Coluna ímpar: vizinhos diagonais ficam uma linha ABAIXO nas colunas vizinhas
+    dirs = [[-1,0],[+1,0],[0,-1],[0,+1],[+1,-1],[+1,+1]];
   }
   return dirs
     .map(function(d){ return {row: row+d[0], col: col+d[1]}; })
@@ -9847,6 +9892,11 @@ socket.on('chat-mensagem', (dados) => {
     mine: ehMinha,
     statusSnapshot: snapshot
   });
+
+  // Resposta do oponente em combate ativo: acende o aviso pulsante no botão "Ação"
+  if (!ehMinha && dados.tipo !== 'ooc' && combateState.ativo) {
+    ativarPulseAcaoBtn();
+  }
 });
 
 socket.on('chat-sistema', (dados) => {
