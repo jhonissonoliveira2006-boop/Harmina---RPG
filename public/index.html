@@ -1665,44 +1665,39 @@ body::before {
   width: 100%;
   /* altura calculada para acomodar 5 linhas de hexágonos staggered */
 }
-/* Hexágono individual — forma via clip-path */
+/* Hexágono individual — bordas brancas simples, sem preenchimento */
 .mapa-hex {
   position: absolute;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 1px;
   cursor: pointer;
-  /* clip-path flat-top hexagon */
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-  background: rgba(255,255,255,0.04);
+  background: transparent;
   border: none;
-  transition: background 0.15s, filter 0.15s;
+  transition: background 0.12s;
   box-sizing: border-box;
 }
 .mapa-hex::before {
   content: '';
-  position: absolute; inset: 1.5px;
+  position: absolute; inset: 1px;
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   background: transparent;
-  border: 1.75px solid rgba(201,162,39,0.55);
+  border: 1.5px solid rgba(255,255,255,0.5);
   pointer-events: none;
+  box-sizing: border-box;
+  transition: border-color 0.12s;
 }
-.mapa-hex:hover { background: rgba(201,162,39,0.12); filter: brightness(1.15); }
-.mapa-hex:hover::before { border-color: rgba(250,204,21,0.85); }
-.mapa-hex.selected-rota {
-  background: rgba(201,162,39,0.22);
-  filter: brightness(1.25);
-}
-.mapa-hex.selected-rota::before {
-  border-color: rgba(250,204,21,0.95);
-  border-width: 2px;
-}
+.mapa-hex:hover::before { border-color: rgba(255,255,255,0.95); }
+.mapa-hex:hover { background: rgba(255,255,255,0.06); }
+.mapa-hex.selected-rota::before { border-color: rgba(250,204,21,0.9); border-width: 2px; }
+.mapa-hex.selected-rota { background: rgba(250,204,21,0.07); }
 .mapa-hex.ocupado-eu { cursor: pointer; }
-.mapa-hex.ocupado-eu::before { border-color: rgba(255,255,255,0.65); }
-.mapa-hex.ocupado-eu:hover { background: rgba(255,255,255,0.1); }
+.mapa-hex.ocupado-eu::before { border-color: rgba(255,255,255,0.8); }
+.mapa-hex.ocupado-eu:hover { background: rgba(255,255,255,0.08); }
 .mapa-hex.ocupado-oponente { cursor: default; }
-.mapa-hex.ocupado-oponente::before { border-color: rgba(255,150,150,0.55); }
-.mapa-hex.ocupado-oponente:hover { background: rgba(255,255,255,0.04); }
+.mapa-hex.ocupado-oponente::before { border-color: rgba(255,255,255,0.35); }
+.mapa-hex.ocupado-oponente:hover { background: transparent; }
 
 /* Peça de xadrez dentro do hexágono */
 .mapa-peca {
@@ -1712,14 +1707,28 @@ body::before {
   transition: transform 0.2s;
   position: relative; z-index: 1;
 }
-.mapa-peca.branca { filter: brightness(1.1) drop-shadow(0 1px 4px rgba(255,255,255,0.5)); }
-.mapa-peca.preta  { filter: brightness(0.3) drop-shadow(0 1px 4px rgba(0,0,0,0.8)); }
+.mapa-peca.branca { filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,255,255,0.6)); }
+.mapa-peca.preta  { filter: brightness(0.25) drop-shadow(0 1px 4px rgba(0,0,0,0.9)); }
 
 .mapa-nome {
   font-family: var(--mono); font-size: 0.38rem; letter-spacing: 0.03em;
   color: rgba(255,255,255,0.75); text-align: center; line-height: 1;
   max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   position: relative; z-index: 1;
+}
+
+/* Peça animada deslizando pelo mapa */
+#mapa-peca-animada {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1px;
+  font-size: clamp(0.9rem, 4vw, 1.3rem);
+  line-height: 1;
+  transition: left 0.18s cubic-bezier(0.4,0,0.2,1), top 0.18s cubic-bezier(0.4,0,0.2,1);
+  filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.7));
 }
 
 /* SVG de seta de rota */
@@ -1873,30 +1882,69 @@ body::before {
 
 /* Joint selection panel */
 #m3d-joint-panel {
-  position: absolute; right: 6px; top: 6px;
-  background: rgba(14,10,5,0.88); border: 1px solid rgba(201,162,39,0.3);
-  border-radius: 8px; padding: 0.5rem; display: none;
-  width: 120px; max-height: 220px; overflow-y: auto;
-  z-index: 20;
+  position: absolute; right: 4px; top: 4px; bottom: 4px;
+  width: 132px;
+  background: rgba(10,8,4,0.92);
+  border: 1px solid rgba(201,162,39,0.28); border-radius: 7px;
+  display: none; flex-direction: column; gap: 4px;
+  padding: 6px 5px; overflow-y: auto; overflow-x: hidden;
+  box-sizing: border-box; z-index: 20;
   backdrop-filter: blur(4px);
 }
 #m3d-joint-title {
-  font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.1em;
-  color: var(--chat-action); text-transform: uppercase;
-  margin-bottom: 0.4rem; padding-bottom: 0.3rem;
-  border-bottom: 1px solid rgba(201,162,39,0.2);
+  font-family: var(--mono); font-size: 0.52rem; color: var(--chat-action);
+  letter-spacing: 0.06em; text-align: center; padding-bottom: 4px;
+  border-bottom: 1px solid rgba(201,162,39,0.18); flex-shrink: 0;
 }
-#m3d-joint-list { display: flex; flex-direction: column; gap: 2px; }
-.m3d-joint-btn {
-  background: transparent; border: 1px solid transparent;
-  color: var(--chat-muted); font-family: var(--mono); font-size: 0.5rem;
-  padding: 3px 6px; border-radius: 4px; cursor: pointer; text-align: left;
-  transition: all 0.12s;
+/* Diagrama corporal de pontos */
+#m3d-body-diagram {
+  position: relative; height: 130px; width: 100%;
+  flex-shrink: 0;
 }
-.m3d-joint-btn:hover { background: rgba(201,162,39,0.1); color: var(--parchment); border-color: rgba(201,162,39,0.2); }
-.m3d-joint-btn.selected { background: rgba(201,162,39,0.2); color: var(--chat-action); border-color: rgba(201,162,39,0.5); }
-.m3d-joint-btn.locked { color: #555; cursor: not-allowed; }
-.m3d-joint-btn.locked:hover { background: transparent; border-color: transparent; }
+.m3d-bj {
+  position: absolute; transform: translate(-50%,-50%);
+  background: none; border: none; padding: 0;
+  font-size: 0.72rem; line-height: 1; cursor: pointer;
+  opacity: 0.65; transition: opacity 0.1s, transform 0.1s;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.m3d-bj:hover { opacity: 1; transform: translate(-50%,-50%) scale(1.35); }
+.m3d-bj.selected { opacity: 1; filter: drop-shadow(0 0 5px #f0c060); transform: translate(-50%,-50%) scale(1.5); }
+/* Controles de eixo */
+#m3d-joint-controls {
+  display: flex; flex-direction: column; gap: 4px;
+  border-top: 1px solid rgba(201,162,39,0.18);
+  padding-top: 5px; flex-shrink: 0;
+}
+#m3d-joint-sel-name {
+  font-family: var(--mono); font-size: 0.58rem; color: #f0c060;
+  text-align: center; font-weight: bold; margin-bottom: 2px;
+}
+.m3d-axis-row {
+  display: flex; align-items: center; gap: 3px;
+}
+.m3d-axis-row > span:first-child {
+  font-family: var(--mono); font-size: 0.43rem; color: rgba(255,255,255,0.58);
+  width: 30px; flex-shrink: 0;
+}
+.m3d-axis-row > span:last-child {
+  font-family: var(--mono); font-size: 0.43rem; color: rgba(255,255,255,0.58);
+  width: 24px; text-align: right; flex-shrink: 0;
+}
+.m3d-axis-row input[type=range] {
+  flex: 1; height: 3px; accent-color: #c9941a;
+  cursor: pointer; min-width: 0;
+}
+#m3d-joint-reset-btn {
+  font-family: var(--mono); font-size: 0.48rem;
+  background: rgba(180,40,30,0.2); border: 1px solid rgba(217,83,79,0.3);
+  color: #fbb; border-radius: 4px; padding: 3px 5px;
+  cursor: pointer; margin-top: 2px; width: 100%;
+}
+#m3d-joint-reset-btn:hover { background: rgba(180,40,30,0.4); }
+/* Legacy joint-list (kept for compat, hidden) */
+#m3d-joint-list { display: none; }
 
 /* Nota opcional */
 #m3d-opt-nota {
@@ -7339,21 +7387,10 @@ function injetarReacoesNaArvore(msgId, autorOrigem, dano, custoAtaque) {
     }
   }
 
-  // Abre automaticamente o menu Defensivas se estava oculto, para o jogador ver
-  const branchDef = document.getElementById('branch-defensivas');
-  if (branchDef && branchDef.style.display === 'none') {
-    const branchCat = document.getElementById('branch-cat');
-    if (branchCat) branchCat.style.display = '';
-    branchDef.style.display = '';
-    const chevCat = document.getElementById('chev-cat');
-    if (chevCat) chevCat.textContent = '▴';
-    const chevDef = document.getElementById('chev-defensivas');
-    if (chevDef) chevDef.textContent = '▴';
-    if (typeof _acaoTreeAbertos !== 'undefined') {
-      _acaoTreeAbertos.add('cat');
-      _acaoTreeAbertos.add('defensivas');
-    }
-  }
+  // As reações foram populadas nos slots estáticos — o jogador as vê
+  // ao clicar na categoria correspondente. NÃO abrimos nenhuma branch automaticamente.
+  // Um toast notifica que há reações disponíveis.
+  mostrarToast(`⚔️ ${escaparHtml(autorOrigem)} causou ${dano} de dano — abra as categorias em ⚔️ Ação para reagir.`, 5000);
 }
 
 // Esconde todos os slots de reação estáticos e limpa seus rótulos (sem remover do DOM)
@@ -8751,38 +8788,30 @@ function fecharMapaCombate(e) {
 }
 
 // ── Renderizar grid hexagonal 5×5 ──
-function renderizarMapaGrid() {
+// modoAnimacao=true: omite a peça do jogador (ela está sendo animada externamente)
+function renderizarMapaGrid(modoAnimacao) {
   const grid = document.getElementById('mapa-grid');
   grid.innerHTML = '';
-  limparRotaSVG();
+  if (!modoAnimacao) limparRotaSVG();
 
-  // Dimensões do hexágono (flat-top):
-  // hexW = largura total, hexH = altura total
-  // Para flat-top: hexH = size*2, hexW = sqrt(3)*size
-  // Vamos calcular tamanho com base na largura do container
   const containerW = grid.parentElement.clientWidth || 340;
   const cols = 5;
-  // flat-top: coluna ocupa hexW*0.75 de largura horizontal, exceto a última
-  // totalW ≈ hexW * (0.75*(cols-1) + 1)
   const hexW = Math.floor(containerW / (0.75 * (cols - 1) + 1));
-  const hexH = Math.round(hexW / Math.sqrt(3) * Math.sqrt(3)); // hexH ≈ hexW * (√3/2)*2 / cos30 → simplify: hexH = hexW * 2/sqrt(3)
-  // Para flat-top: hexH = hexW * sqrt(3)/sqrt(3) — na verdade para flat-top pointy: hexH = sqrt(3)*size, hexW = 2*size
-  // Corrigindo: flat-top hex: width=2*size, height=sqrt(3)*size
-  // Então hexH = hexW * sqrt(3)/2
   const hexHcalc = Math.round(hexW * Math.sqrt(3) / 2);
 
+  // Salva globalmente para usar na animação
+  window._lastHexW = hexW;
+  window._lastHexH = hexHcalc;
+
   const rows = 5;
-  // Altura total do grid: hexHcalc * rows + hexHcalc*0.5 (offset de colunas ímpares)
   const gridH = hexHcalc * rows + Math.round(hexHcalc * 0.5);
   grid.style.height = gridH + 'px';
   grid.style.position = 'relative';
 
-  // Verificar quais hexágonos fazem parte da rota
   const rotaSet = new Set((mapaState.rotaHex || []).map(h => h.row + ',' + h.col));
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      // Posição flat-top staggered (even-q: colunas ímpares deslocadas para baixo)
       const xCenter = c * hexW * 0.75 + hexW / 2;
       const yOffset = (c & 1) ? hexHcalc * 0.5 : 0;
       const yCenter = r * hexHcalc + yOffset + hexHcalc / 2;
@@ -8792,7 +8821,6 @@ function renderizarMapaGrid() {
       hex.dataset.row = r;
       hex.dataset.col = c;
 
-      // Posiciona e dimensiona
       hex.style.left   = Math.round(xCenter - hexW / 2) + 'px';
       hex.style.top    = Math.round(yCenter - hexHcalc / 2) + 'px';
       hex.style.width  = hexW + 'px';
@@ -8801,7 +8829,7 @@ function renderizarMapaGrid() {
       const ehEu       = mapaState.posEu.row === r && mapaState.posEu.col === c;
       const ehOponente = mapaState.posOponente.row === r && mapaState.posOponente.col === c;
 
-      if (ehEu) {
+      if (ehEu && !modoAnimacao) {
         hex.classList.add('ocupado-eu');
         const pecaInfo = PECAS_XADREZ[mapaState.pecaEu] || PECAS_XADREZ.peao;
         hex.innerHTML = `<span class="mapa-peca branca">${pecaInfo.branca}</span><span class="mapa-nome">${mapaState.nomeEu}</span>`;
@@ -8811,7 +8839,6 @@ function renderizarMapaGrid() {
         hex.innerHTML = `<span class="mapa-peca preta">${pecaInfo.preta}</span><span class="mapa-nome">${mapaState.nomeOponente}</span>`;
       }
 
-      // Marca hexágonos da rota
       if (rotaSet.has(r + ',' + c)) {
         hex.classList.add('selected-rota');
       }
@@ -8821,7 +8848,6 @@ function renderizarMapaGrid() {
     }
   }
 
-  // Atualiza legenda de distância
   const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
   const legendaDist = document.getElementById('mapa-legenda-dist');
   if (legendaDist) {
@@ -8829,8 +8855,7 @@ function renderizarMapaGrid() {
     legendaDist.textContent = `Distância: ${dist} hex(s) — ${turnos}`;
   }
 
-  // Redesenha seta se havia rota selecionada
-  if (mapaState.rotaHex && mapaState.rotaHex.length > 0) {
+  if (!modoAnimacao && mapaState.rotaHex && mapaState.rotaHex.length > 0) {
     desenharRotaSVG(mapaState.posEu, mapaState.rotaHex);
     atualizarInfoRota(mapaState.rotaHex[mapaState.rotaHex.length - 1]);
   }
@@ -8923,48 +8948,93 @@ function atualizarInfoRota(dest) {
 
 // ── Confirmar o movimento: debita energia e atualiza posição ──
 function confirmarMovimento() {
-  const dest = mapaState.rotaHex && mapaState.rotaHex.length > 0
-    ? mapaState.rotaHex[mapaState.rotaHex.length - 1]
-    : mapaState.destinoSelecionado;
+  const rota = mapaState.rotaHex && mapaState.rotaHex.length > 0 ? mapaState.rotaHex : null;
+  const dest = rota ? rota[rota.length - 1] : mapaState.destinoSelecionado;
   if (!dest) return;
 
-  const custo = mapaState.rotaHex ? mapaState.rotaHex.length : distanciaGrid(mapaState.posEu, dest);
+  const custo = rota ? rota.length : distanciaGrid(mapaState.posEu, dest);
   if (state.energy.cur < custo) {
     mostrarToast('⚡ Energia insuficiente para este movimento.', 3500);
     return;
   }
 
-  // Debita energia
+  // Debita energia imediatamente
   state.energy.cur = Math.max(0, state.energy.cur - custo);
   renderScale2(); salvarFichaSilenciosa();
 
-  // Atualiza posição
   const antesRow = mapaState.posEu.row;
   const antesCol = mapaState.posEu.col;
-  mapaState.posEu = { row: dest.row, col: dest.col };
-  mapaState.destinoSelecionado = null;
-  mapaState.rotaHex = [];
 
-  // Registra ação de movimento
-  const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
-  const descDist = dist >= 2 ? 'à distância' : 'adjacente ao oponente';
-  ativarAcaoCombate('mover', `🚶 Moveu ${custo} hexágono(s) — agora ${descDist}`, `−${custo}⚡`, '');
-
-  mostrarToast(`🚶 Movimento confirmado! −${custo}⚡. ${descDist.charAt(0).toUpperCase()+descDist.slice(1)}.`, 5000);
-
-  // Re-renderiza grid e fecha
-  limparRotaSVG();
+  // Esconde botões durante animação
   document.getElementById('mapa-rota-info').classList.remove('visible');
   document.getElementById('mapa-confirmar-mover').classList.remove('visible');
-  renderizarMapaGrid();
+  limparRotaSVG();
 
-  // Emite evento para o servidor
-  if (typeof socket !== 'undefined' && socket.connected) {
-    socket.emit('mapa-movimento', {
-      de: usuarioAtual,
-      posAntes: { row: antesRow, col: antesCol },
-      posDepois: { row: dest.row, col: dest.col },
-    });
+  // ── Animação de deslize ──
+  const caminho = [{ row: antesRow, col: antesCol }, ...(rota || [dest])];
+  const pecaInfo = PECAS_XADREZ[mapaState.pecaEu] || PECAS_XADREZ.peao;
+  const animEl = document.getElementById('mapa-peca-animada');
+
+  if (animEl && caminho.length >= 2) {
+    animEl.innerHTML = `<span style="filter:brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.8));">${pecaInfo.branca}</span>`;
+    animEl.style.display = 'flex';
+
+    // Posiciona no ponto inicial
+    const startCenter = hexCenter(caminho[0].row, caminho[0].col);
+    const hexW = _lastHexW || 60;
+    const hexH = _lastHexH || 52;
+    animEl.style.width  = hexW + 'px';
+    animEl.style.height = hexH + 'px';
+    animEl.style.marginLeft = (-hexW / 2) + 'px';
+    animEl.style.marginTop  = (-hexH / 2) + 'px';
+    animEl.style.transition = 'none';
+    animEl.style.left = startCenter.x + 'px';
+    animEl.style.top  = startCenter.y + 'px';
+
+    // Esconde a peça estática do hexágono de origem durante a animação
+    renderizarMapaGrid(true); // true = modo animação (omite peça do jogador)
+
+    let step = 1;
+    const moverProximo = () => {
+      if (step >= caminho.length) {
+        // Fim da animação — atualiza posição real
+        animEl.style.display = 'none';
+        mapaState.posEu = { row: dest.row, col: dest.col };
+        mapaState.destinoSelecionado = null;
+        mapaState.rotaHex = [];
+        renderizarMapaGrid();
+        const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
+        const descDist = dist >= 2 ? 'à distância' : 'adjacente ao oponente';
+        ativarAcaoCombate('mover', `🚶 Moveu ${custo} hexágono(s) — agora ${descDist}`, `−${custo}⚡`, '');
+        mostrarToast(`🚶 Movimento! −${custo}⚡. ${descDist.charAt(0).toUpperCase()+descDist.slice(1)}.`, 4500);
+        if (typeof socket !== 'undefined' && socket.connected) {
+          socket.emit('mapa-movimento', {
+            de: usuarioAtual,
+            posAntes: { row: antesRow, col: antesCol },
+            posDepois: { row: dest.row, col: dest.col },
+          });
+        }
+        return;
+      }
+      const c = hexCenter(caminho[step].row, caminho[step].col);
+      animEl.style.transition = 'left 0.2s cubic-bezier(0.4,0,0.2,1), top 0.2s cubic-bezier(0.4,0,0.2,1)';
+      animEl.style.left = c.x + 'px';
+      animEl.style.top  = c.y + 'px';
+      step++;
+      setTimeout(moverProximo, 210);
+    };
+    // Força reflow antes de iniciar transição
+    requestAnimationFrame(() => requestAnimationFrame(moverProximo));
+  } else {
+    // Sem elemento animado — vai direto
+    mapaState.posEu = { row: dest.row, col: dest.col };
+    mapaState.destinoSelecionado = null;
+    mapaState.rotaHex = [];
+    renderizarMapaGrid();
+    const dist = distanciaGrid(mapaState.posEu, mapaState.posOponente);
+    const descDist = dist >= 2 ? 'à distância' : 'adjacente ao oponente';
+    ativarAcaoCombate('mover', `🚶 Moveu ${custo} hexágono(s) — agora ${descDist}`, `−${custo}⚡`, '');
+    mostrarToast(`🚶 Movimento! −${custo}⚡. ${descDist.charAt(0).toUpperCase()+descDist.slice(1)}.`, 4500);
   }
 }
 
@@ -9160,26 +9230,26 @@ const m3d = {
   JOINTS: [
     // id,           nome,            paiId,         offset (local em repouso),   limites
     { id:'hips',     nome:'Quadril',   pai:null,       off:[0,0,0],                 lim:{xMin:-30,xMax:30,yMin:-45,yMax:45,zMin:-20,zMax:20}  },
-    { id:'spine',    nome:'Coluna',    pai:'hips',     off:[0,0.28,0],              lim:{xMin:-40,xMax:40,yMin:-35,yMax:35,zMin:-25,zMax:25}  },
-    { id:'chest',    nome:'Peito',     pai:'spine',    off:[0,0.24,0],              lim:{xMin:-25,xMax:25,yMin:-25,yMax:25,zMin:-15,zMax:15}  },
-    { id:'neck',     nome:'Pescoço',   pai:'chest',    off:[0,0.22,0],              lim:{xMin:-40,xMax:55,yMin:-60,yMax:60,zMin:-30,zMax:30}  },
-    { id:'head',     nome:'Cabeça',    pai:'neck',     off:[0,0.18,0],              lim:{xMin:-45,xMax:60,yMin:-80,yMax:80,zMin:-40,zMax:40}  },
+    { id:'spine',    nome:'Coluna',    pai:'hips',     off:[0,0.25,0],              lim:{xMin:-40,xMax:40,yMin:-35,yMax:35,zMin:-25,zMax:25}  },
+    { id:'chest',    nome:'Peito',     pai:'spine',    off:[0,0.21,0],              lim:{xMin:-25,xMax:25,yMin:-25,yMax:25,zMin:-15,zMax:15}  },
+    { id:'neck',     nome:'Pescoço',   pai:'chest',    off:[0,0.17,0],              lim:{xMin:-40,xMax:55,yMin:-60,yMax:60,zMin:-30,zMax:30}  },
+    { id:'head',     nome:'Cabeça',    pai:'neck',     off:[0,0.14,0],              lim:{xMin:-45,xMax:60,yMin:-80,yMax:80,zMin:-40,zMax:40}  },
     // Braço esquerdo
-    { id:'lshoulder',nome:'Ombro E',   pai:'chest',    off:[-0.22,0.1,0],           lim:{xMin:-180,xMax:60,yMin:-90,yMax:180,zMin:-90,zMax:90} },
-    { id:'lelbow',   nome:'Cotovelo E',pai:'lshoulder',off:[-0.22,0,0],             lim:{xMin:-145,xMax:0, yMin:-10,yMax:10, zMin:-10,zMax:10} },
-    { id:'lwrist',   nome:'Pulso E',   pai:'lelbow',   off:[-0.18,0,0],             lim:{xMin:-70,xMax:70,yMin:-90,yMax:90,zMin:-20,zMax:20}  },
+    { id:'lshoulder',nome:'Ombro E',   pai:'chest',    off:[-0.16,0.07,0],          lim:{xMin:-180,xMax:60,yMin:-90,yMax:180,zMin:-90,zMax:90} },
+    { id:'lelbow',   nome:'Cotovelo E',pai:'lshoulder',off:[-0.17,0,0],             lim:{xMin:-145,xMax:0, yMin:-10,yMax:10, zMin:-10,zMax:10} },
+    { id:'lwrist',   nome:'Pulso E',   pai:'lelbow',   off:[-0.14,0,0],             lim:{xMin:-70,xMax:70,yMin:-90,yMax:90,zMin:-20,zMax:20}  },
     // Braço direito
-    { id:'rshoulder',nome:'Ombro D',   pai:'chest',    off:[0.22,0.1,0],            lim:{xMin:-180,xMax:60,yMin:-180,yMax:90,zMin:-90,zMax:90} },
-    { id:'relbow',   nome:'Cotovelo D',pai:'rshoulder',off:[0.22,0,0],              lim:{xMin:-145,xMax:0, yMin:-10,yMax:10, zMin:-10,zMax:10} },
-    { id:'rwrist',   nome:'Pulso D',   pai:'relbow',   off:[0.18,0,0],              lim:{xMin:-70,xMax:70,yMin:-90,yMax:90,zMin:-20,zMax:20}  },
+    { id:'rshoulder',nome:'Ombro D',   pai:'chest',    off:[0.16,0.07,0],           lim:{xMin:-180,xMax:60,yMin:-180,yMax:90,zMin:-90,zMax:90} },
+    { id:'relbow',   nome:'Cotovelo D',pai:'rshoulder',off:[0.17,0,0],              lim:{xMin:-145,xMax:0, yMin:-10,yMax:10, zMin:-10,zMax:10} },
+    { id:'rwrist',   nome:'Pulso D',   pai:'relbow',   off:[0.14,0,0],              lim:{xMin:-70,xMax:70,yMin:-90,yMax:90,zMin:-20,zMax:20}  },
     // Perna esquerda
-    { id:'lhip',     nome:'Quadril E', pai:'hips',     off:[-0.14,-0.04,0],         lim:{xMin:-120,xMax:30,yMin:-45,yMax:45,zMin:-45,zMax:20} },
-    { id:'lknee',    nome:'Joelho E',  pai:'lhip',     off:[0,-0.32,0],             lim:{xMin:0,xMax:135,yMin:-10,yMax:10,zMin:-10,zMax:10}  },
-    { id:'lankle',   nome:'Tornozelo E',pai:'lknee',   off:[0,-0.3,0],              lim:{xMin:-50,xMax:30,yMin:-30,yMax:30,zMin:-20,zMax:20}  },
+    { id:'lhip',     nome:'Quadril E', pai:'hips',     off:[-0.10,-0.03,0],         lim:{xMin:-120,xMax:30,yMin:-45,yMax:45,zMin:-45,zMax:20} },
+    { id:'lknee',    nome:'Joelho E',  pai:'lhip',     off:[0,-0.27,0],             lim:{xMin:0,xMax:135,yMin:-10,yMax:10,zMin:-10,zMax:10}  },
+    { id:'lankle',   nome:'Tornozelo E',pai:'lknee',   off:[0,-0.25,0],             lim:{xMin:-50,xMax:30,yMin:-30,yMax:30,zMin:-20,zMax:20}  },
     // Perna direita
-    { id:'rhip',     nome:'Quadril D', pai:'hips',     off:[0.14,-0.04,0],          lim:{xMin:-120,xMax:30,yMin:-45,yMax:45,zMin:-20,zMax:45} },
-    { id:'rknee',    nome:'Joelho D',  pai:'rhip',     off:[0,-0.32,0],             lim:{xMin:0,xMax:135,yMin:-10,yMax:10,zMin:-10,zMax:10}  },
-    { id:'rankle',   nome:'Tornozelo D',pai:'rknee',   off:[0,-0.3,0],              lim:{xMin:-50,xMax:30,yMin:-30,yMax:30,zMin:-20,zMax:20}  },
+    { id:'rhip',     nome:'Quadril D', pai:'hips',     off:[0.10,-0.03,0],          lim:{xMin:-120,xMax:30,yMin:-45,yMax:45,zMin:-20,zMax:45} },
+    { id:'rknee',    nome:'Joelho D',  pai:'rhip',     off:[0,-0.27,0],             lim:{xMin:0,xMax:135,yMin:-10,yMax:10,zMin:-10,zMax:10}  },
+    { id:'rankle',   nome:'Tornozelo D',pai:'rknee',   off:[0,-0.25,0],             lim:{xMin:-50,xMax:30,yMin:-30,yMax:30,zMin:-20,zMax:20}  },
   ],
 
   // Poses: array de ângulos por articulação {rx,ry,rz}
@@ -9263,11 +9333,11 @@ const m3d = {
 
     // Segmentos: [pai, filho, grossura]
     const segs = [
-      ['hips','spine',4],['spine','chest',4],['chest','neck',3],['neck','head',3],
-      ['chest','lshoulder',3],['lshoulder','lelbow',3],['lelbow','lwrist',2.5],
-      ['chest','rshoulder',3],['rshoulder','relbow',3],['relbow','rwrist',2.5],
-      ['hips','lhip',3],['lhip','lknee',3],['lknee','lankle',2.5],
-      ['hips','rhip',3],['rhip','rknee',3],['rknee','rankle',2.5],
+      ['hips','spine',2.8],['spine','chest',2.8],['chest','neck',2.2],['neck','head',2.0],
+      ['chest','lshoulder',2.2],['lshoulder','lelbow',2.0],['lelbow','lwrist',1.8],
+      ['chest','rshoulder',2.2],['rshoulder','relbow',2.0],['relbow','rwrist',1.8],
+      ['hips','lhip',2.2],['lhip','lknee',2.0],['lknee','lankle',1.8],
+      ['hips','rhip',2.2],['rhip','rknee',2.0],['rknee','rankle',1.8],
     ];
 
     // Ordena por profundidade (pintor)
@@ -9302,7 +9372,7 @@ const m3d = {
     // Articulações (esferas)
     for (const [id, pos] of Object.entries(projMap)) {
       const isSelected = !isLocked && this.selectedJoint === id;
-      const r = Math.max(2.5, pos.scale * (id === 'head' ? 0.22 : id === 'hips' ? 0.14 : 0.1));
+      const r = Math.max(2, pos.scale * (id === 'head' ? 0.17 : id === 'hips' ? 0.10 : 0.075));
       ctx.beginPath();
       ctx.arc(pos.sx, pos.sy, r, 0, Math.PI*2);
       ctx.fillStyle = isSelected ? '#f0e060' : jointColor;
@@ -9424,8 +9494,8 @@ const m3d = {
       if (!isPreview && this.tool === 'articular' && this.selectedJoint) {
         this._rotateJoint(dx, dy);
       } else {
-        camRef.rotY += dx * 0.007;
-        camRef.rotX = Math.max(-1.3, Math.min(1.3, camRef.rotX - dy * 0.007));
+        camRef.rotY += dx * 0.007;   // arrastar direita → gira direita
+        camRef.rotX = Math.max(-1.3, Math.min(1.3, camRef.rotX + dy * 0.007)); // arrastar baixo → inclina para baixo
       }
       if (isPreview) this.render('m3d-preview-canvas', this.preview);
     });
@@ -9462,8 +9532,8 @@ const m3d = {
         if (!isPreview && this.tool === 'articular' && this.selectedJoint) {
           this._rotateJoint(dx, dy);
         } else {
-          camRef.rotY += dx * 0.009;
-          camRef.rotX = Math.max(-1.3, Math.min(1.3, camRef.rotX - dy * 0.009));
+          camRef.rotY += dx * 0.009;   // arrastar direita → gira direita
+          camRef.rotX = Math.max(-1.3, Math.min(1.3, camRef.rotX + dy * 0.009));
         }
       } else if (t.length === 2) {
         const dist = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
@@ -9532,31 +9602,59 @@ const m3d = {
     pose.rx = Math.max(jDef.lim.xMin, Math.min(jDef.lim.xMax, pose.rx - dy * speed));
   },
 
-  // ── Build painel de articulações ──
+  // ── Build painel de articulações (novo: diagrama corporal) ──
   _buildJointList() {
-    const list = document.getElementById('m3d-joint-list');
-    if (!list) return;
-    list.innerHTML = '';
-    for (const j of this.JOINTS) {
-      const btn = document.createElement('button');
-      btn.className = 'm3d-joint-btn';
-      btn.dataset.jid = j.id;
-      btn.textContent = j.nome;
-      btn.onclick = () => {
-        this.selectedJoint = j.id;
+    // Liga cliques nos botões do diagrama corporal
+    const panel = document.getElementById('m3d-joint-panel');
+    if (!panel) return;
+    panel.querySelectorAll('.m3d-bj').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const jid = btn.dataset.jid;
+        this.selectedJoint = jid;
         this._updateJointListUI();
-      };
-      list.appendChild(btn);
-    }
-  },
-  _updateJointListUI() {
-    document.querySelectorAll('.m3d-joint-btn').forEach(btn => {
-      btn.classList.toggle('selected', btn.dataset.jid === this.selectedJoint);
+        this._updateJointPanel();
+      });
     });
   },
+
+  _updateJointListUI() {
+    // Destaca botão do diagrama corporal
+    document.querySelectorAll('.m3d-bj').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.jid === this.selectedJoint);
+    });
+    // Atualiza sliders
+    this._syncSliders();
+  },
+
+  _syncSliders() {
+    const jid = this.selectedJoint;
+    const ctrl = document.getElementById('m3d-joint-controls');
+    const nameEl = document.getElementById('m3d-joint-sel-name');
+    if (!jid || !ctrl) return;
+    const jDef = this.JOINTS.find(j => j.id === jid);
+    const pose = this.poseEu[jid] || { rx:0, ry:0, rz:0 };
+    if (nameEl) nameEl.textContent = jDef ? jDef.nome : jid;
+    ctrl.style.display = 'flex';
+    // Atualiza ranges e valores
+    ['rx','ry','rz'].forEach(axis => {
+      const sl = document.getElementById(`m3d-sl-${axis}`);
+      const vl = document.getElementById(`m3d-sl-${axis}-val`);
+      if (!sl || !vl) return;
+      if (jDef) {
+        const mn = jDef.lim[axis === 'rx' ? 'xMin' : axis === 'ry' ? 'yMin' : 'zMin'];
+        const mx = jDef.lim[axis === 'rx' ? 'xMax' : axis === 'ry' ? 'yMax' : 'zMax'];
+        sl.min = mn; sl.max = mx;
+      }
+      const v = Math.round(pose[axis] || 0);
+      sl.value = v;
+      vl.textContent = v + '°';
+    });
+  },
+
   _updateJointPanel() {
     const panel = document.getElementById('m3d-joint-panel');
-    if (panel && this.tool === 'articular') panel.style.display = 'block';
+    if (panel && this.tool === 'articular') panel.style.display = 'flex';
+    if (this.selectedJoint) this._syncSliders();
   },
 
   // ── Preset de câmera ──
@@ -9647,7 +9745,7 @@ function m3dSetTool(tool) {
   if (hint) hint.textContent = hints[tool] || '';
 
   if (panel) {
-    panel.style.display = tool === 'articular' ? 'block' : 'none';
+    panel.style.display = tool === 'articular' ? 'flex' : 'none';
   }
   if (tool !== 'articular') {
     m3d.selectedJoint = null;
@@ -9658,6 +9756,27 @@ function m3dSetTool(tool) {
 function m3dEnviarPose() { m3d.enviarPose(); }
 function m3dCamPreset(p) { m3d.setCamPreset(p); }
 function m3dResetPose() { m3d.resetPose(); }
+
+// Chamado pelos sliders do painel de articulação
+function m3dSliderChange(axis, value) {
+  const jid = m3d.selectedJoint;
+  if (!jid) return;
+  const pose = m3d.poseEu[jid];
+  if (!pose) return;
+  const jDef = m3d.JOINTS.find(j => j.id === jid);
+  const v = parseFloat(value);
+  pose[axis] = v;
+  const valEl = document.getElementById(`m3d-sl-${axis}-val`);
+  if (valEl) valEl.textContent = Math.round(v) + '°';
+}
+
+// Reseta apenas a articulação selecionada
+function m3dResetJoint() {
+  const jid = m3d.selectedJoint;
+  if (!jid) return;
+  m3d.poseEu[jid] = { rx:0, ry:0, rz:0 };
+  m3d._syncSliders();
+}
 
 function m3dFecharPreview() {
   const p = document.getElementById('m3d-pose-preview');
@@ -9826,6 +9945,7 @@ socket.on('parou-de-digitar', (dados) => {
       <div id="mapa-grid-wrap">
         <div id="mapa-grid"></div>
         <svg id="mapa-rota-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="mapa-peca-animada" style="display:none;"></div>
       </div>
 
       <div id="mapa-rota-info">
@@ -9895,10 +10015,49 @@ socket.on('parou-de-digitar', (dados) => {
           <!-- Indicador de ferramenta ativa -->
           <div id="m3d-tool-hint"></div>
 
-          <!-- Painel de seleção de articulação -->
+          <!-- Painel de seleção de articulação — redesign com diagrama corporal -->
           <div id="m3d-joint-panel">
-            <div id="m3d-joint-title">Articulações</div>
-            <div id="m3d-joint-list"></div>
+            <div id="m3d-joint-title">🦴 Selecione a Articulação</div>
+            <!-- Diagrama corporal rápido -->
+            <div id="m3d-body-diagram">
+              <button class="m3d-bj" data-jid="head"      style="top:0%;left:40%">👤</button>
+              <button class="m3d-bj" data-jid="neck"      style="top:11%;left:40%">🔵</button>
+              <button class="m3d-bj" data-jid="chest"     style="top:21%;left:40%">🫁</button>
+              <button class="m3d-bj" data-jid="spine"     style="top:33%;left:40%">🔵</button>
+              <button class="m3d-bj" data-jid="hips"      style="top:44%;left:40%">🔵</button>
+              <button class="m3d-bj" data-jid="lshoulder" style="top:21%;left:16%">🔵</button>
+              <button class="m3d-bj" data-jid="lelbow"    style="top:33%;left:8%">🔵</button>
+              <button class="m3d-bj" data-jid="lwrist"    style="top:45%;left:2%">🔵</button>
+              <button class="m3d-bj" data-jid="rshoulder" style="top:21%;left:64%">🔵</button>
+              <button class="m3d-bj" data-jid="relbow"    style="top:33%;left:72%">🔵</button>
+              <button class="m3d-bj" data-jid="rwrist"    style="top:45%;left:78%">🔵</button>
+              <button class="m3d-bj" data-jid="lhip"      style="top:55%;left:32%">🔵</button>
+              <button class="m3d-bj" data-jid="lknee"     style="top:70%;left:28%">🔵</button>
+              <button class="m3d-bj" data-jid="lankle"    style="top:84%;left:24%">🔵</button>
+              <button class="m3d-bj" data-jid="rhip"      style="top:55%;left:48%">🔵</button>
+              <button class="m3d-bj" data-jid="rknee"     style="top:70%;left:52%">🔵</button>
+              <button class="m3d-bj" data-jid="rankle"    style="top:84%;left:56%">🔵</button>
+            </div>
+            <!-- Controles de ângulo da articulação selecionada -->
+            <div id="m3d-joint-controls" style="display:none">
+              <div id="m3d-joint-sel-name">—</div>
+              <div class="m3d-axis-row">
+                <span>↕ Vert</span>
+                <input type="range" id="m3d-sl-rx" min="-180" max="180" value="0" oninput="m3dSliderChange('rx',this.value)">
+                <span id="m3d-sl-rx-val">0°</span>
+              </div>
+              <div class="m3d-axis-row">
+                <span>↔ Horiz</span>
+                <input type="range" id="m3d-sl-ry" min="-180" max="180" value="0" oninput="m3dSliderChange('ry',this.value)">
+                <span id="m3d-sl-ry-val">0°</span>
+              </div>
+              <div class="m3d-axis-row">
+                <span>↻ Roll</span>
+                <input type="range" id="m3d-sl-rz" min="-90" max="90" value="0" oninput="m3dSliderChange('rz',this.value)">
+                <span id="m3d-sl-rz-val">0°</span>
+              </div>
+              <button id="m3d-joint-reset-btn" onclick="m3dResetJoint()">↩ Resetar</button>
+            </div>
           </div>
         </div>
 
