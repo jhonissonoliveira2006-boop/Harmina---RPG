@@ -1029,6 +1029,17 @@ body::before {
 }
 .msg-row.ooc-msg .msg-author { color: var(--chat-muted); opacity: 0.7; }
 
+/* Mensagem enviada durante o modo Playground — visual de "teste", não-canônica */
+.msg-row.playground-msg .msg-bubble {
+  border: 1px dashed rgba(56,189,178,0.5) !important;
+  box-shadow: none;
+}
+.msg-row.playground-msg .msg-bubble::after {
+  content: '🧪 playground'; display: block; margin-top: 0.25rem;
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.05em;
+  color: #38bdb2; opacity: 0.8;
+}
+
 /* Mensagem privada (#pv) — visível só para remetente e destinatário */
 .msg-row.pv-msg { max-width: 80%; }
 .msg-row.pv-msg .msg-bubble {
@@ -1398,6 +1409,20 @@ body::before {
 #desafio-recebido-bar .drb-negar { background: none; border-color: rgba(255,100,80,0.4); color: #fca5a5; }
 #desafio-recebido-bar .drb-negar:hover { background: rgba(255,100,80,0.15); }
 
+/* ─── Barra de aviso: Modo Playground ativo ─── */
+#playground-bar {
+  display: none; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  background: rgba(56,189,178,0.16); border-bottom: 1px solid rgba(56,189,178,0.4);
+  padding: 0.4rem 0.8rem; font-family: var(--mono); font-size: 0.64rem; color: #8fe0d8;
+}
+#playground-bar.visible { display: flex; }
+#playground-bar .pgb-end {
+  margin-left: auto; background: none; border: 1px solid rgba(56,189,178,0.5);
+  color: #8fe0d8; font-family: var(--mono); font-size: 0.58rem; border-radius: 5px;
+  padding: 0.15rem 0.5rem; cursor: pointer;
+}
+#playground-bar .pgb-end:hover { background: rgba(56,189,178,0.2); }
+
 /* ─── Painel Ofensivo (acima do compositor) ─── */
 #combat-offensive-panel {
   display: none; flex-direction: column; align-items: stretch;
@@ -1657,6 +1682,113 @@ body::before {
 }
 #mapa-fechar:hover { background: rgba(255,255,255,0.08); color: var(--parchment,#f0e8d5); }
 
+/* ═══════════════════════════════════════════
+   MAPA DO MUNDO — regiões conectadas por "tubos"
+   ═══════════════════════════════════════════ */
+#mundo-mapa-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,0.75);
+  display: none; align-items: center; justify-content: center;
+  padding: 1rem; backdrop-filter: blur(3px);
+}
+#mundo-mapa-overlay.open { display: flex; }
+#mundo-mapa-box {
+  background: #16120b; border: 1px solid rgba(201,162,39,0.4); border-radius: 10px;
+  width: min(460px, 96vw); padding: 1rem 1rem 1.2rem;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; gap: 0.7rem;
+}
+#mundo-mapa-header { display: flex; justify-content: space-between; align-items: center; }
+#mundo-mapa-header h3 {
+  font-family: var(--serif); font-size: 0.95rem; color: var(--chat-action); margin: 0;
+  letter-spacing: 0.06em;
+}
+#mundo-mapa-fechar {
+  background: none; border: none; color: var(--chat-muted);
+  font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem 0.4rem;
+  border-radius: 4px; transition: background 0.15s;
+}
+#mundo-mapa-fechar:hover { background: rgba(255,255,255,0.08); color: var(--parchment,#f0e8d5); }
+#mundo-mapa-legenda {
+  display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 0.56rem; color: var(--chat-muted);
+}
+#mundo-mapa-svg-wrap {
+  position: relative; width: 100%; aspect-ratio: 1 / 1;
+  background: radial-gradient(ellipse at 50% 30%, rgba(90,138,63,0.08), transparent 70%);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden;
+}
+#mundo-mapa-svg-wrap svg { width: 100%; height: 100%; display: block; }
+.mm-tubo {
+  fill: none; stroke: #4a3a22; stroke-width: 10; stroke-linecap: round;
+}
+.mm-tubo-interna {
+  fill: none; stroke: #7a6338; stroke-width: 5; stroke-linecap: round; opacity: 0.55;
+}
+.mm-no {
+  cursor: pointer; stroke: #16120b; stroke-width: 3;
+  transition: r 0.15s ease, filter 0.15s ease;
+}
+.mm-no:hover { filter: brightness(1.25); }
+.mm-no.atual { fill: #5fb84a; filter: drop-shadow(0 0 6px rgba(95,184,74,0.7)); }
+.mm-no.outra { fill: #3f8fd9; }
+.mm-no.outra.acessivel { stroke: #e0b73e; stroke-width: 4; }
+.mm-rotulo {
+  font-family: var(--mono); font-size: 10px; fill: #e8dfc8; pointer-events: none;
+  text-anchor: middle;
+}
+#mundo-mapa-info {
+  font-family: var(--body); font-size: 0.78rem; color: var(--parchment,#f0e8d5);
+  min-height: 1.4em; text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   SUB-ÁREAS — "segundo mapa" dentro da região atual
+   (visitar não custa PA/energia extra)
+   ═══════════════════════════════════════════ */
+#subareas-secao {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.6rem;
+}
+#subareas-titulo {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.06em;
+  color: var(--chat-muted); text-transform: uppercase;
+}
+#subareas-atual-nome { color: var(--chat-action); }
+#subareas-vazio { font-family: var(--body); font-size: 0.76rem; color: var(--chat-muted); }
+#subareas-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.4rem;
+}
+.subarea-chip {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(201,162,39,0.3);
+  border-radius: 6px; color: var(--parchment,#f0e8d5); font-family: var(--body);
+  font-size: 0.74rem; padding: 0.45rem 0.4rem; cursor: pointer; text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.subarea-chip:hover { background: rgba(201,162,39,0.14); }
+.subarea-chip.selecionada { border-color: #5fb84a; background: rgba(95,184,74,0.14); }
+#subarea-balao {
+  background: #1c1710; border: 1px solid rgba(201,162,39,0.45); border-radius: 6px;
+  padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;
+}
+#subarea-balao.oculto { display: none; }
+#subarea-balao-nome {
+  font-family: var(--serif); font-size: 0.85rem; color: var(--rust); letter-spacing: 0.03em;
+}
+#subarea-balao-desc {
+  font-family: var(--body); font-size: 0.78rem; color: var(--parchment,#f0e8d5); line-height: 1.5;
+}
+#subarea-balao-acoes { display: flex; gap: 0.5rem; justify-content: flex-end; }
+#subarea-balao-acoes button {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase;
+  border-radius: 5px; padding: 0.4rem 0.7rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05); color: var(--chat-muted); transition: background 0.15s;
+}
+#subarea-balao-confirmar { border-color: rgba(95,184,74,0.5); color: #bfe8b0; }
+#subarea-balao-confirmar:hover { background: rgba(95,184,74,0.2); }
+#subarea-balao-cancelar:hover { background: rgba(255,255,255,0.1); }
+
 /* Legenda do mapa */
 #mapa-legenda {
   display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
@@ -1785,6 +1917,157 @@ body::before {
 #mapa-confirmar-mover:hover { background: rgba(111,140,90,0.42); }
 #mapa-confirmar-mover.visible { display: block; }
 
+/* ═══════════════════════════════════════════
+   BUILDER DE CENÁRIO — BIOMA "PRADARIA"
+   ═══════════════════════════════════════════ */
+#mapa-terreno-toolbar {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+#mapa-modo-interacao {
+  display: flex; gap: 0.4rem;
+}
+.mti-btn {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--chat-muted);
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.mti-btn:hover { background: rgba(255,255,255,0.08); }
+.mti-btn.active {
+  background: rgba(201,162,39,0.18); border-color: rgba(201,162,39,0.55);
+  color: var(--chat-action, #e0b73e);
+}
+#mapa-paleta-terreno {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 0.5rem;
+}
+#mapa-paleta-tiles {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem;
+}
+.paleta-tile {
+  aspect-ratio: 1; border-radius: 5px; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem;
+  image-rendering: pixelated;
+  transition: transform 0.1s, border-color 0.1s;
+  position: relative;
+}
+.paleta-tile:hover { transform: scale(1.06); }
+.paleta-tile.active { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,0.35); }
+.paleta-tile-icon { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+#mapa-paleta-elevacao {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--chat-muted);
+}
+.paleta-elev-btn {
+  width: 22px; height: 22px; border-radius: 4px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: var(--parchment,#f0e8d5); cursor: pointer; font-size: 0.8rem; line-height: 1;
+}
+.paleta-elev-btn:hover { background: rgba(255,255,255,0.15); }
+#mapa-elev-val { min-width: 1ch; text-align: center; color: var(--parchment,#f0e8d5); }
+#mapa-paleta-acoes {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+#mapa-paleta-acoes button {
+  flex: 1 1 auto;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  color: var(--chat-muted); font-family: var(--mono); font-size: 0.58rem;
+  padding: 0.35rem 0.4rem; border-radius: 5px; cursor: pointer; white-space: nowrap;
+}
+#mapa-paleta-acoes button:hover { background: rgba(255,255,255,0.1); color: var(--parchment,#f0e8d5); }
+
+#mapa-paleta-acoes-biblioteca { display: flex; gap: 0.35rem; }
+#mapa-paleta-acoes-biblioteca button {
+  flex: 1 1 auto;
+  background: rgba(201,162,39,0.1); border: 1px solid rgba(201,162,39,0.35);
+  color: var(--chat-action, #e0b73e); font-family: var(--mono); font-size: 0.58rem;
+  padding: 0.35rem 0.4rem; border-radius: 5px; cursor: pointer; white-space: nowrap;
+}
+#mapa-paleta-acoes-biblioteca button:hover { background: rgba(201,162,39,0.22); }
+
+#mapa-biblioteca-popup {
+  display: none; position: absolute; left: 0; right: 0; bottom: calc(100% + 0.4rem);
+  z-index: 20; max-height: 220px; overflow-y: auto;
+  background: rgba(20,16,10,0.97); border: 1px solid rgba(201,162,39,0.35); border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5); padding: 0.5rem;
+}
+#mapa-biblioteca-popup.open { display: block; }
+#mapa-biblioteca-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--chat-action, #e0b73e); margin-bottom: 0.4rem; padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.mbp-fechar {
+  background: none; border: none; color: var(--chat-muted); cursor: pointer; font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+}
+.mbp-fechar:hover { color: var(--parchment,#f0e8d5); }
+.mapa-biblioteca-vazio {
+  font-family: var(--body); font-style: italic; font-size: 0.72rem; color: var(--chat-muted);
+  text-align: center; padding: 0.8rem 0.4rem;
+}
+.mapa-biblioteca-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+  padding: 0.35rem 0.2rem; border-bottom: 1px dashed rgba(255,255,255,0.08);
+}
+.mapa-biblioteca-item:last-child { border-bottom: none; }
+.mbi-nome {
+  font-family: var(--body); font-size: 0.78rem; color: var(--parchment,#f0e8d5);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+}
+.mbi-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.mbi-btns button {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  color: var(--chat-muted); font-family: var(--mono); font-size: 0.58rem;
+  padding: 0.25rem 0.4rem; border-radius: 5px; cursor: pointer; white-space: nowrap;
+}
+.mbi-btns button:hover { background: rgba(255,255,255,0.14); color: var(--parchment,#f0e8d5); }
+
+/* Setas de expansão de borda — só aparecem no modo Terreno */
+#mapa-grid-expand-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+}
+#mapa-grid-linha-meio {
+  display: flex; align-items: center; gap: 0.3rem; width: 100%;
+}
+.mapa-expand-btn {
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(201,162,39,0.12); border: 1px dashed rgba(201,162,39,0.5);
+  color: var(--chat-action, #e0b73e);
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.mapa-expand-btn:hover { background: rgba(201,162,39,0.25); }
+#mapa-grid-expand-wrap.terreno-ativo .mapa-expand-btn { display: flex; }
+.expand-cima, .expand-baixo { align-self: center; }
+
+/* Objeto decorativo de terreno (árvore/arbusto) — centralizado sobre o hex,
+   não interfere no clique (o próprio .mapa-hex já trata o clique). */
+.mapa-hex-obj {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  font-size: 1.1em; pointer-events: none; user-select: none;
+  filter: drop-shadow(0 2px 1px rgba(0,0,0,0.55));
+  image-rendering: pixelated;
+}
+
+/* Peça de xadrez sobre hex elevado ganha leve realce (borda do "platô") */
+.mapa-hex-elevado::after {
+  content: '';
+  position: absolute; inset: 0;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.35);
+  pointer-events: none;
+}
+
 /* Nota de regras no rodapé do mapa */
 #mapa-regras-nota {
   font-family: var(--body); font-style: italic; font-size: 0.7rem;
@@ -1815,6 +2098,40 @@ body::before {
   box-shadow: inset 0 0 0 1px rgba(201,162,39,0.4);
 }
 .mapa-tab:not(.active):hover { background: rgba(255,255,255,0.05); color: var(--parchment); }
+
+/* ═══════════════════════════════════════════
+   MAPA DE COMBATE COMO FUNDO DO CHAT
+   (miniatura ao vivo do mapa, atrás das mensagens, visível durante combate)
+   ═══════════════════════════════════════════ */
+#chat-map-bg {
+  position: absolute; inset: 0; z-index: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; pointer-events: none;
+  opacity: 0; transition: opacity 0.35s ease;
+  background: rgba(0,0,0,0.18);
+}
+#chat-map-bg-grid {
+  position: relative; width: min(92%, 480px); aspect-ratio: 1.15 / 1;
+}
+#chat-map-bg-grid .mapa-hex {
+  position: absolute; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  background-color: rgba(90,138,63,0.5);
+}
+#chat-map-bg-grid .mapa-hex .mapa-peca { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 1.4em; }
+#chat-map-bg-grid .mapa-hex .mapa-peca.branca { color: #f0e8d5; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+#chat-map-bg-grid .mapa-hex .mapa-peca.preta  { color: #d95050; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+
+/* Combate ativo: o mapa aparece de leve atrás das mensagens */
+.chat-main.combat-map-active #chat-map-bg { opacity: 0.24; }
+.chat-main.combat-map-active .chat-messages { position: relative; z-index: 1; }
+.chat-main.combat-map-active .chat-messages .msg-row { transition: opacity 0.25s ease; }
+.chat-main.combat-map-active .msg-row .msg-bubble,
+.chat-main.combat-map-active .msg-row.action-msg { transition: opacity 0.25s ease; }
+
+/* Clique-e-segure fora das mensagens: mapa fica nítido, mensagens somem */
+.chat-main.combat-map-active.map-focus #chat-map-bg { opacity: 0.97; transition: opacity 0.18s ease; }
+.chat-main.combat-map-active.map-focus .chat-messages .msg-row { opacity: 0.08; }
+.chat-main.combat-map-active.map-focus .chat-day-divider { opacity: 0.08; transition: opacity 0.18s ease; }
 
 /* ═══════════════════════════════════════════
    MAPA 3D — LAYOUT
@@ -3046,7 +3363,7 @@ body::before {
 
         desc: "• Planejamento: Aumenta guarda ao preparar plano.\n• Leitura de combate: Aumenta atributos ao focar e não atacar.",
 
-        itens: [ { nome: "Grimório Comum", tipo: "item", usos: 4, efeito: "2 feitiços armazenados (x2)" } ]
+        itens: [ { nome: "Grimório Comum", tipo: "item", usos: 4, efeito: "2 feitiços armazenados (x2) · Feitiços alcançam 2 turnos de distância" } ]
 
       },
 
@@ -3066,7 +3383,7 @@ body::before {
 
           { nome: "Terço com Runa", tipo: "item", efeito: "Foco ritualístico" },
 
-          { nome: "Grimório Avançado", tipo: "item", usos: 12, efeito: "4 feitiços armazenados (x2)" }
+          { nome: "Grimório Avançado", tipo: "item", usos: 12, efeito: "4 feitiços armazenados (x2) · Feitiços alcançam 2 turnos de distância" }
 
         ]
 
@@ -3124,7 +3441,7 @@ body::before {
 
         itens: [
 
-          { nome: "Arco", tipo: "arma", dano: 2, usos: 20, efeito: "Ataca a 1 turno de distância" },
+          { nome: "Arco", tipo: "arma", dano: 2, usos: 20, efeito: "Ataca a 2 turnos de distância" },
 
           { nome: "Faca", tipo: "arma", dano: 1, usos: 5, efeito: "Contra-ataque" }
 
@@ -3994,9 +4311,11 @@ const state = {
 
   pp: { max: 12, cur: 12 },
 
-  _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 3 energia = +2 guarda)
+  _energyGuardBonus: 0, // Bônus atual de guarda vindo da energia (cada 3 energia = +1 guarda)
 
-  _manaVitaPenalty: 0   // Penalidade atual de vita vinda da magia (cada 3 magia = -1 vita)
+  _manaVitaPenalty: 0,  // Penalidade atual de vita vinda da magia (cada 3 magia = -1 vita)
+
+  _vitaSnapshotTurno: null // snapshot de vita.cur no início do turno, para regen de Guarda
 
 };
 
@@ -4032,7 +4351,7 @@ function renderScale1() {
   for (let i = 1; i <= v; i++) {
     const cell = document.createElement('div');
     cell.className = 'pip-bar-cell' + (i <= state.vita.cur ? ' filled' : '');
-    cell.title = `Vitalidade ${i} (cada 3 vita = −2 energia máx.)`;
+    cell.title = `Vitalidade ${i} (cada 3 vita = −1 energia máx.)`;
     cell.textContent = '❤️';
     cell.onclick = () => toggleCur(1, 'vita', i);
     // Pips de vita que forçam custo de energia têm anel âmbar
@@ -4101,7 +4420,7 @@ function increaseVita() {
 
   state.guard.cur = Math.min(state.guard.cur, state.guard.max);
 
-  // REGRAS: cada 3 vita consome 2 de energia máx., energia pode dar bônus
+  // REGRAS: cada 3 vita consome 1 de energia máx., energia pode dar bônus
   // de guarda, magia realocada pode penalizar vita — reconcilia tudo.
   reconciliarEscalas();
 
@@ -4144,16 +4463,16 @@ function renderDerivedS1(v, g) {
     container.innerHTML += `<div class="derived-chip">❤️ <span>+${dmgBonus}</span> dano físico (s/ arma) · ${v} vita ÷ 3 = ${dmgBonus}</div>`;
   }
 
-  // Custo obrigatório de energia: cada 3 vita consome 2 de energia máx.
-  const energyCost = Math.floor(v / 3) * 2;
+  // Custo obrigatório de energia: cada 3 vita consome 1 de energia máx.
+  const energyCost = Math.floor(v / 3) * 1;
   if (energyCost > 0) {
-    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️ → –<span>${energyCost}⚡</span> Energia Máx. obrigatório · cada 3❤️ custa 2⚡</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(245,158,11,0.6);color:#b45309;">❤️ → –<span>${energyCost}⚡</span> Energia Máx. obrigatório · cada 3❤️ custa 1⚡</div>`;
   }
 
   // Bônus de guarda derivado da energia (mostrado aqui para contexto)
   const energyBonus = state._energyGuardBonus || 0;
   if (energyBonus > 0) {
-    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(250,204,21,0.5);color:#a16207;">⚡ → +<span>${energyBonus}🔰</span> Guarda Máx. · cada 3⚡ adiciona 2🔰</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(250,204,21,0.5);color:#a16207;">⚡ → +<span>${energyBonus}🔰</span> Guarda Máx. · cada 3⚡ adiciona 1🔰</div>`;
   }
 
 }
@@ -4162,10 +4481,10 @@ function renderDerivedS2(e, m) {
 
   const container = document.getElementById('scale2-derived'); container.innerHTML = '';
 
-  // Bônus de guarda por energia: cada 3 energia = +2 guarda máx.
+  // Bônus de guarda por energia: cada 3 energia = +1 guarda máx.
   const energyTiers = Math.floor(e / 3);
   if (energyTiers > 0) {
-    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡ → +<span>${energyTiers * 2}🔰</span> Guarda Máx. · ${e}⚡ ÷ 3 = ${energyTiers} tier(s) × 2 (aplicado)</div>`;
+    container.innerHTML += `<div class="derived-chip" style="border-color:rgba(74,222,128,0.5);color:#15803d;">⚡ → +<span>${energyTiers * 1}🔰</span> Guarda Máx. · ${e}⚡ ÷ 3 = ${energyTiers} tier(s) × 1 (aplicado)</div>`;
   }
 
   // Magia: dano mágico e penalidade de vita
@@ -4179,10 +4498,10 @@ function renderDerivedS2(e, m) {
 
 function applyVitaEnergyConstraint(v) {
 
-  // REGRA: cada 3 pontos de vitalidade consomem obrigatoriamente 2 de energia máxima.
-  // Isso REDUZ o teto disponível da Escala 2. Ex: vita=3 → energia só pode ir até 8; vita=6 → até 6.
+  // REGRA: cada 3 pontos de vitalidade consomem obrigatoriamente 1 de energia máxima.
+  // Isso REDUZ o teto disponível da Escala 2. Ex: vita=3 → energia só pode ir até 9; vita=6 → até 8.
 
-  const penalty = Math.floor(v / 3) * 2;
+  const penalty = Math.floor(v / 3) * 1;
 
 
   const energyCeiling = 10 - penalty; // Energia máxima permitida (teto)
@@ -4210,7 +4529,7 @@ function applyVitaEnergyConstraint(v) {
 
     renderScale2Silent();
 
-    showToast('⚠️', `Vitalidade ${v} obriga –<strong>${penalty} de Energia máx.</strong> (regra: cada 3 Vita = –2 Energia máx.)`, 5000);
+    showToast('⚠️', `Vitalidade ${v} obriga –<strong>${penalty} de Energia máx.</strong> (regra: cada 3 Vita = –1 Energia máx.)`, 5000);
 
   }
 
@@ -4228,9 +4547,9 @@ function renderScale2() {
 
   const bar = document.getElementById('scale2-bar'); bar.innerHTML = '';
 
-  // Pips de energia "bloqueados" pela penalidade de vita (cada 3 vita = -2 energia):
-  // o teto real é 10 - floor(vita/3)*2. Os pips acima do teto "ficaram" para a magia.
-  const energyCeiling = 10 - Math.floor(state.vita.max / 3) * 2;
+  // Pips de energia "bloqueados" pela penalidade de vita (cada 3 vita = -1 energia):
+  // o teto real é 10 - floor(vita/3)*1. Os pips acima do teto "ficaram" para a magia.
+  const energyCeiling = 10 - Math.floor(state.vita.max / 3) * 1;
 
   for (let i = 1; i <= e; i++) {
     const cell = document.createElement('div');
@@ -4245,7 +4564,7 @@ function renderScale2() {
       cell.style.borderRadius = '3px';
       cell.title = `Energia ${i} — teto imposto pela Vitalidade (${state.vita.max} vita = max ${energyCeiling}⚡)`;
     } else {
-      cell.title = `Energia ${i} (cada 3⚡ = +2🔰 na Guarda)`;
+      cell.title = `Energia ${i} (cada 3⚡ = +1🔰 na Guarda)`;
     }
     bar.appendChild(cell);
   }
@@ -4282,8 +4601,8 @@ function renderScale2Silent() { renderScale2(); }
 
 function increaseEnergy() {
 
-  // Teto de energia: limitado pela penalidade da vita (cada 3 vita = -2 energia máx)
-  const energyPenalty = Math.floor(state.vita.max / 3) * 2;
+  // Teto de energia: limitado pela penalidade da vita (cada 3 vita = -1 energia máx)
+  const energyPenalty = Math.floor(state.vita.max / 3) * 1;
   const energyCeiling = 10 - energyPenalty;
 
   if (state.energy.max >= energyCeiling) {
@@ -4349,7 +4668,7 @@ function increaseMana() {
 
 function applyEnergyGuardBonus() {
 
-  // REGRA: Para cada 3 de energia, +2 de Guarda máxima.
+  // REGRA: Para cada 3 de energia, +1 de Guarda máxima.
   // Calculamos o bônus BASE de energia (sem contar bônus anteriores de energia)
   // A guarda base é o que está em state.guard.max MENOS qualquer bônus atual de energia.
   // Para simplificar: recalculamos guard.max = base_guard + energyBonus
@@ -4359,7 +4678,7 @@ function applyEnergyGuardBonus() {
 
   const energyTiers = Math.floor(state.energy.max / 3);
   const prevBonus = state._energyGuardBonus || 0;
-  const newBonus = energyTiers * 2;
+  const newBonus = energyTiers * 1;
 
   if (newBonus !== prevBonus) {
 
@@ -4816,10 +5135,12 @@ renderPP();
         <div class="chat-topbar-sub" id="chat-presence">3 aventureiros à mesa</div>
       </div>
       <div class="chat-topbar-actions">
+        <button id="playground-toggle-btn" onclick="togglePlayground()" title="Modo Playground — nada do que acontecer aqui é canônico na ficha; clique de novo para desativar" style="background:none;border:1px solid rgba(240,232,213,0.2);color:var(--parchment,#f0e8d5);font-family:var(--mono);font-size:0.6rem;letter-spacing:0.06em;padding:0.28rem 0.55rem;border-radius:4px;cursor:pointer;transition:all 0.18s;white-space:nowrap;flex-shrink:0;margin-right:0.35rem;">🧪 Playground</button>
         <button id="ia-arbiter-btn" onclick="abrirArbitroIA()" title="Árbitro de IA — Solicitar Avaliação Narrativa">⚖️<span class="ia-badge" id="ia-badge"></span></button>
         <button class="chat-icon-btn" id="chat-menu-btn" onclick="toggleChatMenu(event)" title="Mais opções">⋮</button>
         <div class="chat-menu" id="chat-menu">
           <div class="chat-menu-item" onclick="abrirRegistroAcoes()">📜 Registro de Ações</div>
+          <div class="chat-menu-item" onclick="abrirMapaMundo()">🗺️ Mapa do Mundo</div>
           <div class="chat-menu-item" onclick="toggleSomAmbiente()">
             <span id="som-ambiente-label">🔈 Som ambiente: desligado</span>
           </div>
@@ -4842,6 +5163,12 @@ renderPP();
     <!-- Botão Mapa de Combate (visível só em combate ativo) -->
     <button id="btn-mapa-combate" onclick="abrirMapaCombate()">🗺️ Mapa de Combate</button>
 
+    <!-- Barra de aviso: Modo Playground ativo -->
+    <div id="playground-bar">
+      <span>🧪 Modo Playground ativo — nada do que acontecer aqui afeta a ficha.</span>
+      <button class="pgb-end" onclick="togglePlayground()">Desativar</button>
+    </div>
+
     <!-- Barra de Desafio Recebido -->
     <div id="desafio-recebido-bar">
       <span>⚔️</span>
@@ -4863,6 +5190,11 @@ renderPP();
       </div>
 
       <div class="chat-main">
+        <!-- Fundo do chat com o mapa de combate — só aparece durante combate ativo -->
+        <div id="chat-map-bg" aria-hidden="true">
+          <div id="chat-map-bg-grid"></div>
+        </div>
+
         <div class="chat-messages" id="chat-messages">
           <div class="chat-day-divider"><span>Hoje</span></div>
         </div>
@@ -4988,7 +5320,7 @@ renderPP();
                   <!-- Furtividade (defensiva/evasão) -->
                   <div class="acao-tree-row level-2">
                     <span class="acao-tree-line">╰────── </span>
-                    <button class="acao-tree-btn cop-btn" id="cop-furtivo" onclick="ativarFurtividade()" title="Entrar em furtividade se tiver mais Guarda que o oponente">
+                    <button class="acao-tree-btn cop-btn" id="cop-furtivo" onclick="ativarFurtividade()" title="Entrar em furtividade — só é possível ao atordoar um inimigo">
                       👁️ Furtividade
                     </button>
                     <button class="acao-help-btn" onclick="acaoHelp('furtividade')" title="O que é Furtividade?">?</button>
@@ -5850,6 +6182,28 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 // CHAT / MESA DE RPG
 // ═══════════════════════════════════════════════════════
 
+// ─── Fundo do mapa de combate no chat: clique-e-segure fora das mensagens
+//     deixa o mapa nítido; soltar volta ao normal. A edição continua sendo
+//     feita apenas pelo botão "Mapa de Combate" (overlay/modal), como antes.
+(function configurarFundoMapaChat() {
+  const chatMain = document.querySelector('.chat-main');
+  const chatMsgs = document.getElementById('chat-messages');
+  if (!chatMain || !chatMsgs) return;
+  function alvoValido(e) {
+    return !e.target.closest('.msg-bubble, .msg-author, button, textarea, input, a, .new-messages-pill');
+  }
+  function ativarFoco(e) {
+    if (!chatMain.classList.contains('combat-map-active')) return;
+    if (!alvoValido(e)) return;
+    chatMain.classList.add('map-focus');
+  }
+  function desativarFoco() { chatMain.classList.remove('map-focus'); }
+  chatMsgs.addEventListener('pointerdown', ativarFoco);
+  chatMsgs.addEventListener('pointerup', desativarFoco);
+  chatMsgs.addEventListener('pointerleave', desativarFoco);
+  chatMsgs.addEventListener('pointercancel', desativarFoco);
+})();
+
 // ─── Conexão em tempo real com o servidor ───
 const socket = io();
 let usuarioAtual = null; // definido em entrarComSessao() quando o jogador faz login/cadastro
@@ -5936,12 +6290,38 @@ function calcularDanoMaximoPermitido() {
   return danoBase + bonus;
 }
 
+// ─── Alcances de ataque (em hexágonos do Mapa de Batalha) ────────────────────
+// Corpo a corpo (desarmado ou arma não-ranged): exige adjacência — 0 turnos
+// de deslocamento para alcançar o alvo.
+// Arremesso: atinge até 1 turno de distância (fecha a distância no mesmo turno).
+// Arco, Besta e Feitiços (via Grimório): CORREÇÃO — atingem até 2 turnos de
+// distância (antes o Arco só alcançava 1 turno; agora arco e grimório usam a
+// mesma regra de alcance longo).
+const ALCANCE_HEX_CORPO_A_CORPO = 1;
+const ALCANCE_HEX_ARREMESSO     = 2; // 1 turno de distância
+const ALCANCE_HEX_DISTANCIA     = 3; // 2 turnos de distância (arco/besta/feitiço)
+
 // ─── Detecta se o ataque declarado é à distância/arremesso (não corpo a corpo) ─
-// Usado para isentar a checagem de adjacência do Mapa de Batalha.
+// Mantida por compatibilidade (não é mais usada para isentar a checagem de
+// distância — ver alcanceMaximoAtaque abaixo, que impõe um alcance máximo
+// real em vez de isentar completamente a checagem).
 function ataqueEhADistancia(texto) {
   const t = (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const termos = ['arremess', 'distanc', 'atirei', 'atira', 'flecha', 'projetil', 'disparo', 'disparei', 'arco'];
   return termos.some(function(termo){ return t.includes(termo); });
+}
+
+// ─── Determina o alcance máximo (em hexágonos) de um ataque declarado por texto ─
+// Corpo a corpo por padrão (exige adjacência). Palavras de arremesso liberam
+// até 1 turno de distância. Palavras de arco/besta/feitiço liberam até 2
+// turnos de distância (correção).
+function alcanceMaximoAtaque(texto) {
+  const t = (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const termosDistancia = ['arco', 'besta', 'flecha', 'projetil', 'disparo', 'disparei', 'feitico', 'magia', 'grimorio'];
+  const termosArremesso = ['arremess', 'atirei', 'atira'];
+  if (termosDistancia.some(function(termo){ return t.includes(termo); })) return ALCANCE_HEX_DISTANCIA;
+  if (termosArremesso.some(function(termo){ return t.includes(termo); })) return ALCANCE_HEX_ARREMESSO;
+  return ALCANCE_HEX_CORPO_A_CORPO;
 }
 
 // ─── Valida o dano declarado em uma mensagem de ataque ───────────────────────
@@ -5954,12 +6334,18 @@ function validarDanoDeclarado(texto) {
   const mecanica = detectarMecanica(texto);
   if (!mecanica || mecanica.tipo !== 'dano') return null;
 
-  // ── Exige adjacência no Mapa de Batalha para dano corpo a corpo ────────────
-  // Ataques à distância/arremesso ficam isentos dessa checagem.
-  if (typeof mapaState !== 'undefined' && mapaState.posEu && mapaState.posOponente && !ataqueEhADistancia(texto)) {
+  // ── Exige alcance compatível no Mapa de Batalha ────────────────────────────
+  // Corpo a corpo exige adjacência; arremesso alcança 1 turno de distância;
+  // arco/besta/feitiço (grimório) alcançam 2 turnos de distância (correção).
+  if (typeof mapaState !== 'undefined' && mapaState.posEu && mapaState.posOponente) {
     const distAtual = distanciaGrid(mapaState.posEu, mapaState.posOponente);
-    if (distAtual >= 2) {
-      return `⚠️ Ataque corpo a corpo requer que os hexágonos estejam adjacentes no Mapa de Batalha (distância atual: ${distAtual} hex). Aproxime-se, arremesse ou declare um ataque à distância.`;
+    const alcanceMax = alcanceMaximoAtaque(texto);
+    if (distAtual > alcanceMax) {
+      if (alcanceMax === ALCANCE_HEX_CORPO_A_CORPO) {
+        return `⚠️ Ataque corpo a corpo requer que os hexágonos estejam adjacentes no Mapa de Batalha (distância atual: ${distAtual} hex). Aproxime-se, arremesse ou declare um ataque à distância.`;
+      }
+      const turnosMax = alcanceMax - 1;
+      return `⚠️ Fora de alcance! Esse ataque atinge até ${turnosMax} turno(s) de distância (máx. ${alcanceMax} hex), mas a distância atual é ${distAtual} hex. Aproxime-se antes de atacar.`;
     }
   }
 
@@ -5990,6 +6376,8 @@ const combateState = {
   imobilizado: false,       // está sendo imobilizado
   nocauteado: false,        // vita chegou a 0
   atordoado: false,         // perdeu turno por atordoamento
+  exausto: false,           // perdeu turno + sem regen de energia (energia zerou)
+  _exaustoPendente: false,  // energia zerou neste turno; exaustão ativa no próximo
   acaoOculta: false,        // ação oculta ativa neste turno
   intimidando: false,        // intimidação ativa neste turno
   hesitante: false,          // perdeu este turno por intimidação
@@ -6007,6 +6395,8 @@ function resetarCombateState() {
   combateState.imobilizado = false;
   combateState.nocauteado = false;
   combateState.atordoado = false;
+  combateState.exausto = false;
+  combateState._exaustoPendente = false;
   combateState.acaoOculta = false;
   combateState.intimidando = false;
   combateState.hesitante = false;
@@ -6030,6 +6420,103 @@ const chatState = {
   estaNoFinal: true,  // se o usuário está rolado até o fim (controla a bolinha de "novas mensagens")
   inicializado: false
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODO PLAYGROUND — tudo que acontece aqui não é canônico na ficha.
+// Ao ativar, tiramos uma "foto" de tudo que pode mudar (state, combateState,
+// mapaState). Ao desativar (clicando de novo), restauramos essa foto e
+// apagamos do chat/registro tudo que foi enviado durante o modo, como se
+// nunca tivesse acontecido.
+// ═══════════════════════════════════════════════════════════════════════════
+let playgroundAtivo = false;
+let playgroundSnapshot = null; // { state, combateState, mapaState }
+let playgroundMsgIds = [];     // ids das mensagens enviadas durante o playground
+
+function togglePlayground() {
+  playgroundAtivo = !playgroundAtivo;
+  const btn = document.getElementById('playground-toggle-btn');
+  const bar = document.getElementById('playground-bar');
+
+  if (playgroundAtivo) {
+    // ── Ativa: tira a "foto" de tudo que pode ser alterado ────────────────
+    playgroundSnapshot = {
+      state: JSON.parse(JSON.stringify(state)),
+      combateState: JSON.parse(JSON.stringify(combateState)),
+      mapaState: (typeof mapaState !== 'undefined') ? JSON.parse(JSON.stringify(mapaState)) : null
+    };
+    playgroundMsgIds = [];
+
+    if (btn) {
+      btn.textContent = '🧪 Playground ON';
+      btn.style.background = 'rgba(56,189,178,0.22)';
+      btn.style.borderColor = '#38bdb2';
+      btn.style.color = '#8fe0d8';
+    }
+    if (bar) bar.classList.add('visible');
+
+    // No Playground, libera o botão do mapa mesmo sem combate ativo — permite
+    // criar/editar um cenário próprio a qualquer momento.
+    const btnMapaPg = document.getElementById('btn-mapa-combate');
+    if (btnMapaPg) btnMapaPg.classList.add('visible');
+
+    if (typeof adicionarMensagem === 'function' && typeof fichaAtivaChat !== 'undefined') {
+      adicionarMensagem({
+        autor: 'Sistema',
+        texto: '🧪 Modo Playground ativado. Nada que acontecer a partir daqui será salvo na ficha — para voltar ao normal, clique em "Playground" de novo.',
+        tipo: 'ooc',
+        mine: false
+      });
+    }
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('🧪 Modo Playground <strong>ativado</strong>. Combates e testes agora não afetam sua ficha.', 4000);
+    }
+  } else {
+    // ── Desativa: restaura tudo e esquece o que aconteceu no meio ─────────
+    if (playgroundSnapshot) {
+      Object.keys(playgroundSnapshot.state).forEach(k => { state[k] = playgroundSnapshot.state[k]; });
+      Object.keys(playgroundSnapshot.combateState).forEach(k => { combateState[k] = playgroundSnapshot.combateState[k]; });
+      if (typeof mapaState !== 'undefined' && playgroundSnapshot.mapaState) {
+        Object.keys(playgroundSnapshot.mapaState).forEach(k => { mapaState[k] = playgroundSnapshot.mapaState[k]; });
+      }
+    }
+
+    // Apaga do chat e do registro de ações tudo que foi enviado durante o playground
+    playgroundMsgIds.forEach(id => {
+      const row = document.getElementById(`msg-row-${id}`);
+      if (row) row.remove();
+      const entry = document.querySelector(`.action-entry[data-msg-id="${id}"]`);
+      if (entry) entry.remove();
+      const idx = chatState.mensagens.findIndex(m => m.id === id);
+      if (idx !== -1) chatState.mensagens.splice(idx, 1);
+    });
+    playgroundMsgIds = [];
+    playgroundSnapshot = null;
+
+    if (btn) {
+      btn.textContent = '🧪 Playground';
+      btn.style.background = 'none';
+      btn.style.borderColor = 'rgba(240,232,213,0.2)';
+      btn.style.color = 'var(--parchment,#f0e8d5)';
+    }
+    if (bar) bar.classList.remove('visible');
+
+    // Some o botão do mapa de novo, a menos que um combate real siga ativo
+    const btnMapaPg2 = document.getElementById('btn-mapa-combate');
+    if (btnMapaPg2 && !(combateState && combateState.ativo)) btnMapaPg2.classList.remove('visible');
+
+    if (typeof renderScale1 === 'function') renderScale1();
+    if (typeof renderScale2 === 'function') renderScale2();
+    if (typeof reconciliarEscalas === 'function') reconciliarEscalas();
+    if (typeof atualizarBarraCombate === 'function') atualizarBarraCombate();
+    if (typeof renderizarMapaGrid === 'function' && typeof mapaState !== 'undefined' && mapaState.aberto) renderizarMapaGrid();
+    if (typeof salvarFichaSilenciosa === 'function') salvarFichaSilenciosa();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('🧪 Modo Playground <strong>desativado</strong>. Tudo o que aconteceu foi esquecido — ficha restaurada.', 4500);
+    }
+  }
+}
 
 function initChatSeDronar() {
   if (chatState.inicializado) return;
@@ -6171,6 +6658,12 @@ function gastarEnergiaDeAtaque() {
     return;
   }
 
+  // ── Verificar Exaustão (energia zerou no turno anterior) ────────────────
+  if (combateState.exausto) {
+    mostrarToast('😮‍💨 Você está em <strong>exaustão</strong> e perde este turno! Não pode agir.', 5000);
+    return;
+  }
+
   // ── Verificar Energia ───────────────────────────────────────────────────
   if (custo > 0 && state.energy.cur <= 0) {
     mostrarToast('😮‍💨 Sem energia! Seu personagem entra em <strong>exaustão</strong> e perde o próximo turno.', 5000);
@@ -6178,6 +6671,13 @@ function gastarEnergiaDeAtaque() {
   }
 
   state.energy.cur = Math.max(0, state.energy.cur - custo);
+
+  // Energia chegou a 0 por causa deste ataque → exaustão será aplicada no
+  // próximo turno (marcamos "pendente" para não afetar o turno atual).
+  if (state.energy.cur <= 0) {
+    combateState._exaustoPendente = true;
+  }
+
   renderScale2(); salvarFichaSilenciosa();
   atacouEsteTurno = true;
 
@@ -6194,28 +6694,71 @@ function gastarEnergiaDeAtaque() {
   atualizarPainelOfensivo();
 }
 
-// Regeneração passiva de Energia ao final de cada "turno" do jogador.
-// Regra: +1 sempre. +2 se não atacou neste turno.
+// Regeneração passiva de Energia e Guarda ao final de cada "turno" do jogador.
+// Energia — Regra: +1 sempre. +2 se não atacou neste turno. Se o personagem
+// está em exaustão (energia zerou no turno anterior), não regenera energia
+// neste turno e perde a ação (bloqueada em gastarEnergiaDeAtaque).
+// Guarda — Regra: regenera +1 se não sofreu dano à Vitalidade neste turno.
 // Chamada automaticamente cada vez que o jogador envia uma mensagem normal.
 function regenEnergiaFinaldeTurno() {
   if (!fichaAtivaChat) return;
-  const ganho = atacouEsteTurno ? 1 : 2;
-  const antes = state.energy.cur;
-  state.energy.cur = Math.min(state.energy.max, state.energy.cur + ganho);
-  const efetivo = state.energy.cur - antes;
-  if (efetivo > 0) {
-    renderScale2();
-    salvarFichaSilenciosa();
-    // Badge sutil no chat para o próprio jogador saber
-    const chatEl = document.getElementById('chat-messages');
+  const chatEl = document.getElementById('chat-messages');
+
+  // ── Energia: exaustão bloqueia a regeneração deste turno ────────────────
+  if (combateState.exausto) {
+    combateState.exausto = false; // exaustão dura só este 1 turno
+    mostrarToast('😮‍💨 Exaustão terminou — você pode agir normalmente no próximo turno.', 4000);
+  } else {
+    const ganho = atacouEsteTurno ? 1 : 2;
+    const antes = state.energy.cur;
+    state.energy.cur = Math.min(state.energy.max, state.energy.cur + ganho);
+    const efetivo = state.energy.cur - antes;
+    if (efetivo > 0) {
+      renderScale2();
+      // Badge sutil no chat para o próprio jogador saber
+      if (chatEl) {
+        const badge = document.createElement('div');
+        badge.className = 'regen-indicator';
+        badge.style.cssText = 'margin: 0.15rem auto 0.1rem; display: table;';
+        badge.innerHTML = `⚡ +${efetivo} Energia${atacouEsteTurno ? ' (regen base)' : ' (não atacou → +2)'}`;
+        chatEl.appendChild(badge);
+      }
+    }
+  }
+
+  // Ativa a exaustão vinda de um ataque que zerou a energia neste turno —
+  // ela passa a valer a partir do PRÓXIMO turno (não afeta o regen acima).
+  if (combateState._exaustoPendente) {
+    combateState._exaustoPendente = false;
+    combateState.exausto = true;
     if (chatEl) {
       const badge = document.createElement('div');
       badge.className = 'regen-indicator';
       badge.style.cssText = 'margin: 0.15rem auto 0.1rem; display: table;';
-      badge.innerHTML = `⚡ +${efetivo} Energia${atacouEsteTurno ? ' (regen base)' : ' (não atacou → +2)'}`;
+      badge.innerHTML = `😮‍💨 Energia zerada — exaustão no próximo turno (sem agir, sem regenerar).`;
       chatEl.appendChild(badge);
     }
   }
+
+  // ── Guarda: regenera +1 se não sofreu dano à Vitalidade neste turno ─────
+  if (state._vitaSnapshotTurno === null || state._vitaSnapshotTurno === undefined) {
+    state._vitaSnapshotTurno = state.vita.cur;
+  }
+  if (state.vita.cur >= state._vitaSnapshotTurno && state.guard.cur < state.guard.max) {
+    state.guard.cur = Math.min(state.guard.max, state.guard.cur + 1);
+    renderScale1();
+    if (chatEl) {
+      const badgeG = document.createElement('div');
+      badgeG.className = 'regen-indicator';
+      badgeG.style.cssText = 'margin: 0.15rem auto 0.1rem; display: table;';
+      badgeG.innerHTML = `🔰 +1 Guarda (sem dano à Vitalidade neste turno)`;
+      chatEl.appendChild(badgeG);
+    }
+  }
+  state._vitaSnapshotTurno = state.vita.cur;
+
+  salvarFichaSilenciosa();
+
   // Reset dos flags de turno para o próximo turno
   atacouEsteTurno = false;
   combateState.segundoAtaqueUsado = false;
@@ -6827,6 +7370,10 @@ function obterOpcoesDeAtaque() {
   const adjacente = estaoAdjacentesNoMapa();
   const distAtual = distanciaAtualNoMapa();
   const avisoDistancia = distAtual !== null ? ` · 🔒 fora de alcance corpo a corpo (dist: ${distAtual} hex — aproxime-se ou arremesse)` : '';
+  // Arco, Besta e Feitiços (via Grimório) alcançam até 2 turnos de distância
+  // (correção — antes essas opções não tinham limite máximo de alcance).
+  const dentroDoAlcanceDistancia = distAtual === null || distAtual <= ALCANCE_HEX_DISTANCIA;
+  const avisoDistanciaLonga = distAtual !== null ? ` · 🔒 fora de alcance (dist: ${distAtual} hex — máx. 2 turnos/${ALCANCE_HEX_DISTANCIA} hex)` : '';
 
   // ── Corpo a Corpo / Desarmado ──────────────────────────────────────────
   const v = state.vita.max;
@@ -6855,11 +7402,17 @@ function obterOpcoesDeAtaque() {
     if (!nums) return;
     const danoMax = Math.max(...nums.map(Number));
     if (isNaN(danoMax) || danoMax <= 0) return;
-    const isRanged = /arco|besta|arremess|lanç/i.test(tipo);
+    // Detecta arma à distância pelo nome OU pelo campo tipo — fichas
+    // preenchidas automaticamente pela vocação só gravam "Arma"/"Armadura"
+    // no campo tipo, então a detecção agora também olha o nome do item
+    // (ex.: "Arco"), que é onde essa informação realmente aparece.
+    const isRanged = /arco|besta|arremess|lanç/i.test(nome + ' ' + tipo);
     const custo = isRanged ? '2⚡' : '1⚡';
     const custoE = isRanged ? 2 : 1;
-    // Armas não-ranged são corpo a corpo: exigem adjacência no mapa.
-    const disponivelPorDistancia = isRanged || adjacente;
+    // Armas corpo a corpo exigem adjacência. Armas à distância (arco/besta)
+    // alcançam até 2 turnos de distância — correção; antes não tinham limite.
+    const disponivelPorDistancia = isRanged ? dentroDoAlcanceDistancia : adjacente;
+    const avisoAtual = isRanged ? avisoDistanciaLonga : avisoDistancia;
     opcoes.push({
       id: `arma_${idx}`,
       icon: isRanged ? '🏹' : '⚔️',
@@ -6867,7 +7420,7 @@ function obterOpcoesDeAtaque() {
       dano: danoMax,
       tipo: isRanged ? 'ranged' : 'fisico',
       custo,
-      tip: `${tipo} · ${danoRaw} de dano${disponivelPorDistancia ? '' : avisoDistancia}`,
+      tip: `${tipo} · ${danoRaw} de dano${disponivelPorDistancia ? '' : avisoAtual}`,
       disponivel: state.energy.cur >= custoE && disponivelPorDistancia
     });
   });
@@ -6897,8 +7450,8 @@ function obterOpcoesDeAtaque() {
         dano: danoMagia,
         tipo: 'magico',
         custo: '1⚡ + 1🔮',
-        tip: `Dano mágico: ${Math.floor(m/3)} (magia÷3) +1 = ${danoMagia}`,
-        disponivel: state.energy.cur >= 1 && manaAtual >= 1
+        tip: `Dano mágico: ${Math.floor(m/3)} (magia÷3) +1 = ${danoMagia} · alcança 2 turnos de distância${dentroDoAlcanceDistancia ? '' : avisoDistanciaLonga}`,
+        disponivel: state.energy.cur >= 1 && manaAtual >= 1 && dentroDoAlcanceDistancia
       });
     } else {
       // Mostra opção desativada para indicar que existe mas requer Grimório
@@ -7060,6 +7613,18 @@ function enviarMensagem() {
           return;
         }
 
+        // Arco, besta e feitiços (via Grimório) alcançam até 2 turnos de
+        // distância — checagem de segurança para o caso de o oponente ter
+        // se afastado no mapa depois que o ataque foi selecionado no painel.
+        if (selectedAttack.tipo === 'ranged' || selectedAttack.tipo === 'magico') {
+          const distAtualLonga = distanciaAtualNoMapa();
+          if (distAtualLonga !== null && distAtualLonga > ALCANCE_HEX_DISTANCIA) {
+            mostrarToast(`⚠️ Fora de alcance! Esse ataque atinge até 2 turnos de distância (máx. ${ALCANCE_HEX_DISTANCIA} hex), mas a distância atual é ${distAtualLonga} hex. Aproxime-se antes de atacar.`, 4500);
+            limparAtaqueSelecionado();
+            return;
+          }
+        }
+
         // ── Sacrifício de Energia Atual ────────────────────────────────────
         if (energySacrificeBonus > 0) {
           state.energy.cur = Math.max(0, state.energy.cur - energySacrificeBonus);
@@ -7175,6 +7740,12 @@ function adicionarMensagem({ autor, texto, tipo, mine, statusSnapshot, pvDestina
     timestamp: new Date()
   };
   chatState.mensagens.push(msg);
+
+  // Modo Playground: marca a mensagem para ser esquecida quando o modo for desativado.
+  if (typeof playgroundAtivo !== 'undefined' && playgroundAtivo) {
+    playgroundMsgIds.push(msg.id);
+  }
+
   renderizarMensagem(msg);
 
   // Ação Oculta: registra o msgId após renderização e aplica o span velado
@@ -7238,6 +7809,7 @@ function renderizarMensagem(msg) {
   let classes = 'msg-row ' + (msg.mine ? 'mine' : 'theirs');
   if (msg.tipo === 'ooc') classes += ' ooc-msg';
   if (msg.tipo === 'pv')  classes += ' pv-msg';
+  if (typeof playgroundMsgIds !== 'undefined' && playgroundMsgIds.includes(msg.id)) classes += ' playground-msg';
 
   row.className = classes;
 
@@ -7530,6 +8102,7 @@ function adicionarAoRegistro(msg) {
 
   const entry = document.createElement('div');
   entry.className = 'action-entry';
+  entry.setAttribute('data-msg-id', msg.id);
   entry.innerHTML = `
     <div class="action-entry-meta"><span>${escaparHtml(msg.autor)}</span><span>${formatarHora(msg.timestamp)}</span></div>
     <div class="action-entry-text">${escaparHtml(msg.texto)}</div>
@@ -7650,6 +8223,7 @@ function atualizarBarraCombate() {
   // Badges de estado
   const badges = [];
   if (combateState.atordoado) badges.push('<span class="cb-badge">😵 Atordoado</span>');
+  if (combateState.exausto) badges.push('<span class="cb-badge">😮‍💨 Exausto</span>');
   if (combateState.nocauteado) badges.push('<span class="cb-badge">💀 Nocauteado</span>');
   if (combateState.furtivo) badges.push('<span class="cb-badge">👁️ Furtivo</span>');
   if (combateState.imobilizando) badges.push('<span class="cb-badge">🤼 Imobilizando</span>');
@@ -7783,13 +8357,15 @@ function ativarFurtividade() {
     atualizarBarraCombate();
     return;
   }
-  if (state.guard.cur <= 0) {
-    mostrarToast('👁️ Guarda zerada — impossível entrar em furtividade.', 3500);
+  // REGRA: só é possível entrar em furtividade ao atordoar um inimigo.
+  const confirmado = confirm('👁️ Furtividade só pode ser ativada logo após atordoar um inimigo (zerar a Guarda dele).\n\nConfirma que você acabou de atordoar o oponente neste combate?');
+  if (!confirmado) {
+    mostrarToast('👁️ Furtividade requer ter atordoado um inimigo primeiro.', 3500);
     return;
   }
   combateState.furtivo = true;
   ativarAcaoCombate('furtivo', '👁️ Furtivo — próximo ataque ignora Guarda do alvo', '', '');
-  mostrarToast('👁️ Modo furtivo ativado! Próximo ataque causa dano direto à Vita do alvo (ignora Guarda). Requer distração para ativar durante o combate.', 6000);
+  mostrarToast('👁️ Modo furtivo ativado! Próximo ataque causa dano direto à Vita do alvo (ignora Guarda).', 6000);
   atualizarBarraCombate();
 }
 
@@ -7961,8 +8537,8 @@ function atualizarEstadoBotoesAcao() {
   setBtn('cop-intimidar',     combateAtivo);
 
   // ── Defensivas ──
-  // Furtividade: precisa de guarda > 0
-  setBtn('cop-furtivo',       s.guard.cur > 0);
+  // Furtividade: disponível em combate formal (requer ter atordoado um inimigo, confirmado ao ativar)
+  setBtn('cop-furtivo',       combateAtivo);
 
   // ── Estratégicas ──
   // Canalizar Foco: não pode ter atacado e foco não está ativo
@@ -7989,7 +8565,7 @@ const _acaoHelpTextos = {
   },
   ataque: {
     titulo: '⚔️ Ataque',
-    corpo:  'Realiza um ataque contra o alvo utilizando uma arma equipada, ataque desarmado (Corpo a Corpo) ou feitiço.\n\nCusto: 1⚡ de Energia.\n\nSelecione o tipo de ataque no painel que se abre.'
+    corpo:  'Realiza um ataque contra o alvo utilizando uma arma equipada, ataque desarmado (Corpo a Corpo) ou feitiço.\n\nCusto: 1⚡ de Energia.\n\nSelecione o tipo de ataque no painel que se abre.\n\n<strong>Alcance:</strong>\n• Corpo a corpo / armas não à distância: exige adjacência (0 turnos).\n• Arremesso: até 1 turno de distância.\n• Arco, Besta e Feitiços (via Grimório): até 2 turnos de distância.'
   },
   'segundo-ataque': {
     titulo: '⚡⚔️ 2º Ataque',
@@ -8013,7 +8589,7 @@ const _acaoHelpTextos = {
   },
   furtividade: {
     titulo: '👁️ Furtividade',
-    corpo:  'Entra em modo furtivo.\n\nEfeito: seu próximo ataque causa dano direto à Vitalidade do alvo, ignorando completamente a Guarda.\n\nRequisito: Guarda atual > 0.\n\nNarrativamente, requer algum tipo de distração ou posicionamento favorável durante o combate.'
+    corpo:  'Entra em modo furtivo.\n\nEfeito: seu próximo ataque causa dano direto à Vitalidade do alvo, ignorando completamente a Guarda.\n\nRequisito: só é possível entrar em furtividade logo após atordoar um inimigo (zerar a Guarda dele).'
   },
   estrategicas: {
     titulo: '🌟 Estratégicas',
@@ -8403,6 +8979,7 @@ function ativarCombate(oponente) {
   const energiaLocal = state && state.energy ? state.energy.cur : 0;
   const nomeOponente = oponente || '???';
   exibirIniciativa(nomeLocal, energiaLocal, nomeOponente, oponente);
+  if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
 }
 
 function encerrarCombate() {
@@ -8420,6 +8997,7 @@ function encerrarCombate() {
     chatEl.appendChild(div);
   }
   mostrarToast('✅ Combate encerrado. Mecânicas de combate desligadas.', 4000);
+  if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
 }
 
 // ─── Handlers de Socket para Combate ────────────────────────────────────
@@ -8587,6 +9165,7 @@ function _ia_montarContexto() {
   if (combateState.ativo && combateState.oponente) {
     fichasCtx.push(`Oponente em combate: ${combateState.oponente}`);
     if (combateState.atordoado) fichasCtx.push('Estado: Jogador atordoado');
+    if (combateState.exausto) fichasCtx.push('Estado: Jogador exausto (sem ação, sem regen de energia)');
     if (combateState.nocauteado) fichasCtx.push('Estado: Jogador nocauteado');
   }
 
@@ -8760,13 +9339,48 @@ const PECAS_XADREZ = {
   rei:    { branca: '♚', preta: '♚' },
 };
 
+// ── Paleta de texturas do "Bioma Pradaria" (builder de cenário) ──────────
+// Texturas geradas via CSS (sem imagens), com um look pixel-art dithered:
+// duas camadas de repeating-linear-gradient cruzadas por cima de uma cor
+// base, em blocos pequenos (6px) para simular pixels.
+function texturaPixelArt(base, clara, escura) {
+  return `repeating-linear-gradient(90deg, ${escura} 0px, ${escura} 3px, transparent 3px, transparent 6px),` +
+         `repeating-linear-gradient(0deg, ${clara}66 0px, transparent 3px, transparent 6px),` +
+         `${base}`;
+}
+const TILES_TERRENO = [
+  { id: 'grama1',   nome: 'Grama',        icon: '🌿', bg: texturaPixelArt('#5a8a3f', '#8fc76a', '#3f6b2c') },
+  { id: 'grama2',   nome: 'Grama Seca',   icon: '🌾', bg: texturaPixelArt('#8a8a3f', '#c7c76a', '#6b6b2c') },
+  { id: 'flores',   nome: 'Flores',       icon: '🌼', bg: texturaPixelArt('#5a8a3f', '#f5e56a', '#3f6b2c') },
+  { id: 'terra',    nome: 'Terra',        icon: '🟤', bg: texturaPixelArt('#7a5738', '#a5794f', '#4f3620') },
+  { id: 'areia',    nome: 'Areia',        icon: '🏖️', bg: texturaPixelArt('#d6c48a', '#efe3ba', '#b3a06a') },
+  { id: 'agua',     nome: 'Água',         icon: '🌊', bg: texturaPixelArt('#3a6b8a', '#6fa6cc', '#254a63') },
+  { id: 'pedra',    nome: 'Pedra',        icon: '🪨', bg: texturaPixelArt('#7c7c7c', '#a3a3a3', '#565656') },
+  { id: 'floresta', nome: 'Floresta',     icon: '🌲', bg: texturaPixelArt('#2f5230', '#4d7a4a', '#1c331d') },
+  { id: 'neve',     nome: 'Neve',         icon: '❄️', bg: texturaPixelArt('#dfe7ec', '#ffffff', '#b7c4cc') },
+  { id: 'lama',     nome: 'Lama/Pântano', icon: '🐊', bg: texturaPixelArt('#4a4530', '#6b6540', '#2c2818') },
+  // ── Bioma "Planície" (adições — tema grama, à la Hoplite) ──────────────
+  { id: 'arvore',   nome: 'Árvore',         icon: '🌳', obj: '🌳', bg: texturaPixelArt('#5a8a3f', '#8fc76a', '#3f6b2c') },
+  { id: 'arbusto',  nome: 'Arbusto',        icon: '🪴', obj: '🪴', bg: texturaPixelArt('#4e7d38', '#7cb85f', '#365e26') },
+  { id: 'rio',      nome: 'Rio (meio hex)', icon: '🏞️', meiohex: true,
+    bg: `repeating-linear-gradient(90deg, #1f4a63 0px, #1f4a63 3px, transparent 3px, transparent 6px),` +
+        `repeating-linear-gradient(0deg, #6fa6cc66 0px, transparent 3px, transparent 6px),` +
+        `linear-gradient(to bottom, #5a8a3f 0%, #5a8a3f 50%, #3a6b8a 50%, #3a6b8a 100%)` },
+];
+function obterTile(id) { return TILES_TERRENO.find(t => t.id === id) || TILES_TERRENO[0]; }
+
 // Estado do mapa
 const mapaState = {
   aberto: false,
   modoMovimento: false,    // true quando o jogador clicou "Mover-se"
   modoArremesso: false,    // true quando o jogador clicou "Arremessar"
 
-  // Posições no grid hexagonal 5×5: { row: 0-4, col: 0-4 }
+  // Tamanho do grid — nasce 5×5 (igual ao de combate) e expande sob demanda
+  // pelas setas nas bordas, até um máximo de 9×9.
+  gridRows: 5,
+  gridCols: 5,
+
+  // Posições no grid hexagonal: { row, col } (índices dentro de gridRows×gridCols)
   posEu: { row: 2, col: 1 },          // jogador local (branco)
   posOponente: { row: 2, col: 3 },    // oponente (preto)
 
@@ -8778,6 +9392,12 @@ const mapaState = {
 
   nomeEu: '—',
   nomeOponente: '—',
+
+  // ── Builder de cenário (bioma "pradaria") — integrado à mesma grid ──────
+  terreno: {},              // "row,col" → { tile: 'grama1', elev: 0-3 }
+  modoInteracao: 'mover',   // 'mover' (mexe peças) | 'terreno' (pinta cenário)
+  tileAtivo: 'grama1',      // textura selecionada na paleta
+  elevAtiva: 0,             // elevação (0-3) que será aplicada ao pintar
 };
 
 // Posição inicial: jogadores centralizados no grid 5×5, distância de 2 hexágonos
@@ -8831,7 +9451,7 @@ function hexAdjacentes(row, col) {
   }
   return dirs
     .map(function(d){ return {row: row+d[0], col: col+d[1]}; })
-    .filter(function(h){ return h.row>=0 && h.row<5 && h.col>=0 && h.col<5; });
+    .filter(function(h){ return h.row>=0 && h.row<mapaState.gridRows && h.col>=0 && h.col<mapaState.gridCols; });
 }
 
 // ── Custo de energia: número de hexágonos na rota selecionada ──
@@ -8844,8 +9464,8 @@ function custoMovimento(dest) {
 
 // ── Abrir mapa de combate ──
 function abrirMapaCombate(modoMov) {
-  if (!combateState.ativo) {
-    mostrarToast('⚔️ O mapa só está disponível em combate ativo.', 3500);
+  if (!combateState.ativo && !(typeof playgroundAtivo !== 'undefined' && playgroundAtivo)) {
+    mostrarToast('⚔️ O mapa só está disponível em combate ativo (ou no modo 🧪 Playground, para criar cenários).', 3500);
     return;
   }
   mapaState.modoMovimento = !!modoMov;
@@ -8853,6 +9473,10 @@ function abrirMapaCombate(modoMov) {
   mapaState.destinoSelecionado = null;
   mapaState.rotaHex = [];
   mapaState.aberto = true;
+  // Na primeira abertura (sem cenário pintado ainda nesta sessão), tenta
+  // recuperar automaticamente o último cenário salvo localmente.
+  if (Object.keys(mapaState.terreno).length === 0) carregarCenarioLocalSalvo();
+  setModoInteracaoMapa('mover');
   renderizarMapaGrid();
   document.getElementById('mapa-overlay').classList.add('open');
 }
@@ -8885,7 +9509,7 @@ function fecharMapaCombate(e) {
   }
 }
 
-// ── Renderizar grid hexagonal 5×5 ──
+// ── Renderizar grid hexagonal (tamanho dinâmico — nasce 5×5, expande sob demanda) ──
 // modoAnimacao=true: omite a peça do jogador (ela está sendo animada externamente)
 function renderizarMapaGrid(modoAnimacao) {
   const grid = document.getElementById('mapa-grid');
@@ -8893,7 +9517,8 @@ function renderizarMapaGrid(modoAnimacao) {
   if (!modoAnimacao) limparRotaSVG();
 
   const containerW = grid.parentElement.clientWidth || 340;
-  const cols = 5;
+  const cols = mapaState.gridCols;
+  const rows = mapaState.gridRows;
   const hexW = Math.floor(containerW / (0.75 * (cols - 1) + 1));
   const hexHcalc = Math.round(hexW * Math.sqrt(3) / 2);
 
@@ -8901,7 +9526,6 @@ function renderizarMapaGrid(modoAnimacao) {
   window._lastHexW = hexW;
   window._lastHexH = hexHcalc;
 
-  const rows = 5;
   const gridH = hexHcalc * rows + Math.round(hexHcalc * 0.5);
   grid.style.height = gridH + 'px';
   grid.style.position = 'relative';
@@ -8923,6 +9547,29 @@ function renderizarMapaGrid(modoAnimacao) {
       hex.style.top    = Math.round(yCenter - hexHcalc / 2) + 'px';
       hex.style.width  = hexW + 'px';
       hex.style.height = hexHcalc + 'px';
+
+      // ── Terreno do bioma (textura + elevação em platô) ────────────────
+      const dadosTerreno = mapaState.terreno[r + ',' + c];
+      if (dadosTerreno) {
+        const tile = obterTile(dadosTerreno.tile);
+        const elev = dadosTerreno.elev || 0;
+        hex.style.backgroundImage = tile.bg;
+        hex.style.backgroundSize = '100% 100%, 100% 100%, 100% 100%';
+        hex.title = `${tile.nome}${elev > 0 ? ` · elevação ${elev}` : ''}`;
+        if (elev > 0) {
+          hex.classList.add('mapa-hex-elevado');
+          hex.style.transform = `translateY(${-elev * 4}px)`;
+          hex.style.filter = `drop-shadow(0 ${elev * 4}px 0 rgba(20,15,8,0.85)) drop-shadow(0 ${elev * 4 + 3}px 6px rgba(0,0,0,0.55)) brightness(${1 + elev * 0.06})`;
+          hex.style.zIndex = String(1 + elev);
+        }
+        // Objeto decorativo (árvore/arbusto) desenhado sobre a textura do hex
+        if (tile.obj) {
+          const objSpan = document.createElement('span');
+          objSpan.className = 'mapa-hex-obj';
+          objSpan.textContent = tile.obj;
+          hex.appendChild(objSpan);
+        }
+      }
 
       const ehEu       = mapaState.posEu.row === r && mapaState.posEu.col === c;
       const ehOponente = mapaState.posOponente.row === r && mapaState.posOponente.col === c;
@@ -8957,10 +9604,361 @@ function renderizarMapaGrid(modoAnimacao) {
     desenharRotaSVG(mapaState.posEu, mapaState.rotaHex);
     atualizarInfoRota(mapaState.rotaHex[mapaState.rotaHex.length - 1]);
   }
+
+  if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
+}
+
+// ── Mini-mapa ao vivo mostrado como fundo do chat durante o combate ──────
+// Reflete o mesmo mapaState (terreno + posições), sem interação própria —
+// a edição continua acontecendo só pelo mapa-modal (#mapa-overlay).
+function atualizarMapaFundoChat() {
+  const chatMain = document.querySelector('.chat-main');
+  const wrap = document.getElementById('chat-map-bg-grid');
+  if (!chatMain || !wrap) return;
+
+  if (typeof combateState === 'undefined' || !combateState.ativo) {
+    chatMain.classList.remove('combat-map-active', 'map-focus');
+    wrap.innerHTML = '';
+    return;
+  }
+  chatMain.classList.add('combat-map-active');
+
+  const cols = mapaState.gridCols, rows = mapaState.gridRows;
+  const containerW = wrap.clientWidth || 300;
+  const hexW = Math.floor(containerW / (0.75 * (cols - 1) + 1));
+  const hexH = Math.round(hexW * Math.sqrt(3) / 2);
+  const gridH = hexH * rows + Math.round(hexH * 0.5);
+  wrap.style.height = gridH + 'px';
+
+  let html = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const xCenter = c * hexW * 0.75 + hexW / 2;
+      const yOffset = (c & 1) ? hexH * 0.5 : 0;
+      const yCenter = r * hexH + yOffset + hexH / 2;
+      const left = Math.round(xCenter - hexW / 2);
+      const top  = Math.round(yCenter - hexH / 2);
+
+      const dadosTerreno = mapaState.terreno[r + ',' + c];
+      let estilo = `left:${left}px;top:${top}px;width:${hexW}px;height:${hexH}px;`;
+      if (dadosTerreno) {
+        const tile = obterTile(dadosTerreno.tile);
+        estilo += `background-image:${tile.bg};background-size:100% 100%,100% 100%,100% 100%;`;
+      }
+
+      const ehEu       = mapaState.posEu.row === r && mapaState.posEu.col === c;
+      const ehOponente = mapaState.posOponente.row === r && mapaState.posOponente.col === c;
+      let conteudo = '';
+      if (ehEu) {
+        const pecaInfo = PECAS_XADREZ[mapaState.pecaEu] || PECAS_XADREZ.peao;
+        conteudo = `<span class="mapa-peca branca">${pecaInfo.branca}</span>`;
+      } else if (ehOponente) {
+        const pecaInfo = PECAS_XADREZ[mapaState.pecaOponente] || PECAS_XADREZ.peao;
+        conteudo = `<span class="mapa-peca preta">${pecaInfo.preta}</span>`;
+      }
+      html += `<div class="mapa-hex" style="${estilo}">${conteudo}</div>`;
+    }
+  }
+  wrap.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUILDER DE CENÁRIO — BIOMA "PRADARIA" (integrado à grid de combate)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Alterna entre mover peças e pintar terreno ──
+function setModoInteracaoMapa(modo) {
+  mapaState.modoInteracao = modo;
+  const btnMover   = document.getElementById('mti-mover');
+  const btnTerreno = document.getElementById('mti-terreno');
+  const paleta     = document.getElementById('mapa-paleta-terreno');
+  const expandWrap = document.getElementById('mapa-grid-expand-wrap');
+  if (btnMover)   btnMover.classList.toggle('active', modo === 'mover');
+  if (btnTerreno) btnTerreno.classList.toggle('active', modo === 'terreno');
+  if (paleta)     paleta.style.display = modo === 'terreno' ? 'flex' : 'none';
+  if (expandWrap) expandWrap.classList.toggle('terreno-ativo', modo === 'terreno');
+  if (modo === 'terreno') renderizarPaletaTerreno();
+}
+
+// ── Constrói a paleta de texturas (8-12 tiles, com variações) ──
+function renderizarPaletaTerreno() {
+  const wrap = document.getElementById('mapa-paleta-tiles');
+  if (!wrap) return;
+  wrap.innerHTML = TILES_TERRENO.map(t => `
+    <div class="paleta-tile ${mapaState.tileAtivo === t.id ? 'active' : ''}"
+         style="background-image:${t.bg}"
+         title="${t.nome}"
+         onclick="selecionarTileAtivo('${t.id}')">
+      <span class="paleta-tile-icon">${t.icon}</span>
+    </div>
+  `).join('');
+  const elevVal = document.getElementById('mapa-elev-val');
+  if (elevVal) elevVal.textContent = String(mapaState.elevAtiva);
+}
+
+function selecionarTileAtivo(id) {
+  mapaState.tileAtivo = id;
+  renderizarPaletaTerreno();
+}
+
+function ajustarElevacaoAtiva(delta) {
+  mapaState.elevAtiva = Math.max(0, Math.min(3, mapaState.elevAtiva + delta));
+  const elevVal = document.getElementById('mapa-elev-val');
+  if (elevVal) elevVal.textContent = String(mapaState.elevAtiva);
+}
+
+// ── Pinta um hexágono com a textura + elevação atualmente selecionadas ──
+function pintarHexTerreno(row, col) {
+  mapaState.terreno[row + ',' + col] = { tile: mapaState.tileAtivo, elev: mapaState.elevAtiva };
+  renderizarMapaGrid();
+  if (typeof socket !== 'undefined' && socket.connected) {
+    socket.emit('mapa-terreno-hex', { de: usuarioAtual, row, col, tile: mapaState.tileAtivo, elev: mapaState.elevAtiva });
+  }
+}
+
+// ── Expansão sob demanda: adiciona uma linha/coluna na borda clicada ──────
+// O grid nasce 5×5 (igual ao de combate) e cresce até no máximo 9×9.
+const MAPA_TAMANHO_MAX = 9;
+function expandirGridMapa(direcao) {
+  let dRow = 0, dCol = 0;
+  if (direcao === 'cima' || direcao === 'baixo') {
+    if (mapaState.gridRows >= MAPA_TAMANHO_MAX) {
+      mostrarToast('🔸 Tamanho máximo do mapa atingido (9×9).', 2500);
+      return;
+    }
+    mapaState.gridRows++;
+    if (direcao === 'cima') dRow = 1;
+  } else {
+    if (mapaState.gridCols >= MAPA_TAMANHO_MAX) {
+      mostrarToast('🔸 Tamanho máximo do mapa atingido (9×9).', 2500);
+      return;
+    }
+    mapaState.gridCols++;
+    if (direcao === 'esquerda') dCol = 1;
+  }
+  if (dRow || dCol) deslocarConteudoGrid(dRow, dCol);
+  renderizarMapaGrid();
+  if (typeof socket !== 'undefined' && socket.connected) {
+    // Envia o delta (não a posição absoluta): cada cliente mantém sua própria
+    // posEu/posOponente e só precisa aplicar o mesmo deslocamento localmente.
+    socket.emit('mapa-terreno-grid', { de: usuarioAtual, gridRows: mapaState.gridRows, gridCols: mapaState.gridCols, dRow, dCol });
+  }
+}
+
+// Desloca peças, rota e terreno quando uma linha/coluna é inserida no topo
+// ou na esquerda (índices existentes precisam "andar" +1 para abrir espaço).
+function deslocarConteudoGrid(dRow, dCol) {
+  mapaState.posEu = { row: mapaState.posEu.row + dRow, col: mapaState.posEu.col + dCol };
+  mapaState.posOponente = { row: mapaState.posOponente.row + dRow, col: mapaState.posOponente.col + dCol };
+  mapaState.rotaHex = (mapaState.rotaHex || []).map(h => ({ row: h.row + dRow, col: h.col + dCol }));
+  const novoTerreno = {};
+  Object.keys(mapaState.terreno).forEach(chave => {
+    const [r, c] = chave.split(',').map(Number);
+    novoTerreno[(r + dRow) + ',' + (c + dCol)] = mapaState.terreno[chave];
+  });
+  mapaState.terreno = novoTerreno;
+}
+
+// ── Persistência: local (localStorage) + exportar/importar arquivo ───────
+function _chaveCenarioLocal() {
+  const nome = (fichaAtivaChat || usuarioAtual || 'padrao').toString();
+  return `harmina_cenario_${nome}`;
+}
+
+function _serializarCenario() {
+  return {
+    gridRows: mapaState.gridRows,
+    gridCols: mapaState.gridCols,
+    terreno: mapaState.terreno,
+  };
+}
+
+function _aplicarCenario(dados) {
+  if (!dados) return false;
+  mapaState.gridRows = Math.min(MAPA_TAMANHO_MAX, Math.max(5, dados.gridRows || 5));
+  mapaState.gridCols = Math.min(MAPA_TAMANHO_MAX, Math.max(5, dados.gridCols || 5));
+  mapaState.terreno = dados.terreno || {};
+  return true;
+}
+
+function salvarCenarioMapa() {
+  try {
+    localStorage.setItem(_chaveCenarioLocal(), JSON.stringify(_serializarCenario()));
+    mostrarToast('💾 Cenário salvo localmente neste navegador.', 3000);
+  } catch (e) {
+    mostrarToast('⚠️ Não foi possível salvar localmente.', 3000);
+  }
+}
+
+function carregarCenarioLocalSalvo() {
+  try {
+    const raw = localStorage.getItem(_chaveCenarioLocal());
+    if (!raw) return false;
+    return _aplicarCenario(JSON.parse(raw));
+  } catch (e) {
+    return false;
+  }
+}
+
+function exportarCenarioMapa() {
+  const blob = new Blob([JSON.stringify(_serializarCenario(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `harmina-cenario-${(fichaAtivaChat || 'pradaria').replace(/\s+/g, '_')}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  mostrarToast('⬇️ Cenário exportado como arquivo .json.', 3000);
+}
+
+function importarCenarioMapa(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const dados = JSON.parse(reader.result);
+      _aplicarCenario(dados);
+      mapaState.posEu.row = Math.min(mapaState.posEu.row, mapaState.gridRows - 1);
+      mapaState.posEu.col = Math.min(mapaState.posEu.col, mapaState.gridCols - 1);
+      mapaState.posOponente.row = Math.min(mapaState.posOponente.row, mapaState.gridRows - 1);
+      mapaState.posOponente.col = Math.min(mapaState.posOponente.col, mapaState.gridCols - 1);
+      renderizarMapaGrid();
+      mostrarToast('⬆️ Cenário importado com sucesso.', 3000);
+      if (typeof socket !== 'undefined' && socket.connected) {
+        socket.emit('mapa-cenario-completo', {
+          de: usuarioAtual, gridRows: mapaState.gridRows, gridCols: mapaState.gridCols, terreno: mapaState.terreno,
+        });
+      }
+    } catch (e) {
+      mostrarToast('⚠️ Arquivo de cenário inválido.', 3000);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function limparCenarioMapa() {
+  mapaState.terreno = {};
+  renderizarMapaGrid();
+  if (typeof socket !== 'undefined' && socket.connected) {
+    socket.emit('mapa-cenario-completo', {
+      de: usuarioAtual, gridRows: mapaState.gridRows, gridCols: mapaState.gridCols, terreno: mapaState.terreno,
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BIBLIOTECA DE MAPAS — cenários salvos com nome, disponíveis para qualquer
+// jogador "spawnar" sob demanda no grid de combate (playground ou combate).
+// ═══════════════════════════════════════════════════════════════════════════
+function _chaveBibliotecaMapas() { return 'harmina_biblioteca_mapas'; }
+
+function obterBibliotecaMapas() {
+  try {
+    const raw = localStorage.getItem(_chaveBibliotecaMapas());
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function salvarCenarioNaBiblioteca() {
+  const nome = prompt('Nome deste mapa (ficará salvo e disponível para os jogadores spawnarem sob demanda):', 'Novo Mapa');
+  if (!nome || !nome.trim()) return;
+  const lib = obterBibliotecaMapas();
+  const item = {
+    id: 'map_' + Date.now(),
+    nome: nome.trim().slice(0, 40),
+    autor: usuarioAtual || '—',
+    criadoEm: Date.now(),
+    cenario: _serializarCenario(),
+  };
+  lib.push(item);
+  try {
+    localStorage.setItem(_chaveBibliotecaMapas(), JSON.stringify(lib));
+    mostrarToast(`💾 Mapa "${escaparHtml(item.nome)}" salvo na biblioteca.`, 3500);
+    if (typeof socket !== 'undefined' && socket.connected) socket.emit('mapa-biblioteca-add', item);
+  } catch (e) {
+    mostrarToast('⚠️ Não foi possível salvar na biblioteca (armazenamento cheio ou indisponível).', 3500);
+  }
+  renderizarBibliotecaMapas();
+}
+
+function removerCenarioDaBiblioteca(id) {
+  const lib = obterBibliotecaMapas().filter(m => m.id !== id);
+  try { localStorage.setItem(_chaveBibliotecaMapas(), JSON.stringify(lib)); } catch (e) {}
+  renderizarBibliotecaMapas();
+}
+
+// ── Aplica um mapa salvo no grid atual ("spawn sob demanda") ──
+function spawnarCenarioDaBiblioteca(id) {
+  const item = obterBibliotecaMapas().find(m => m.id === id);
+  if (!item) return;
+  _aplicarCenario(item.cenario);
+  mapaState.posEu.row = Math.min(mapaState.posEu.row, mapaState.gridRows - 1);
+  mapaState.posEu.col = Math.min(mapaState.posEu.col, mapaState.gridCols - 1);
+  mapaState.posOponente.row = Math.min(mapaState.posOponente.row, mapaState.gridRows - 1);
+  mapaState.posOponente.col = Math.min(mapaState.posOponente.col, mapaState.gridCols - 1);
+  renderizarMapaGrid();
+  mostrarToast(`📥 Mapa "${escaparHtml(item.nome)}" spawnado no combate.`, 3200);
+  if (typeof socket !== 'undefined' && socket.connected) {
+    socket.emit('mapa-cenario-completo', {
+      de: usuarioAtual, gridRows: mapaState.gridRows, gridCols: mapaState.gridCols, terreno: mapaState.terreno,
+    });
+  }
+  const pop = document.getElementById('mapa-biblioteca-popup');
+  if (pop) pop.classList.remove('open');
+}
+
+function toggleBibliotecaMapas() {
+  const pop = document.getElementById('mapa-biblioteca-popup');
+  if (!pop) return;
+  pop.classList.toggle('open');
+  if (pop.classList.contains('open')) renderizarBibliotecaMapas();
+}
+
+function renderizarBibliotecaMapas() {
+  const cont = document.getElementById('mapa-biblioteca-lista');
+  if (!cont) return;
+  const lib = obterBibliotecaMapas();
+  if (!lib.length) {
+    cont.innerHTML = '<div class="mapa-biblioteca-vazio">Nenhum mapa salvo ainda. Monte um cenário e clique em "💾 Salvar na Biblioteca".</div>';
+    return;
+  }
+  cont.innerHTML = lib.slice().reverse().map(m => `
+    <div class="mapa-biblioteca-item">
+      <span class="mbi-nome" title="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</span>
+      <div class="mbi-btns">
+        <button onclick="spawnarCenarioDaBiblioteca('${m.id}')" title="Spawnar este mapa no combate">📥 Spawnar</button>
+        <button onclick="removerCenarioDaBiblioteca('${m.id}')" title="Remover da biblioteca">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+if (typeof socket !== 'undefined' && socket) {
+  // ── Sincroniza mapas salvos por outros jogadores na mesma biblioteca ──
+  socket.on('mapa-biblioteca-add', (item) => {
+    if (!item || item.autor === usuarioAtual) return;
+    const lib = obterBibliotecaMapas();
+    if (lib.some(m => m.id === item.id)) return;
+    lib.push(item);
+    try { localStorage.setItem(_chaveBibliotecaMapas(), JSON.stringify(lib)); } catch (e) {}
+    mostrarToast(`🗺️ ${escaparHtml(item.autor)} salvou o mapa "${escaparHtml(item.nome)}" na biblioteca.`, 3500);
+    renderizarBibliotecaMapas();
+  });
 }
 
 // ── Clique em hexágono do grid ──
 function clicarCelulaGrid(row, col) {
+  // Modo de pintura de terreno: clicar aplica a textura/elevação ativas,
+  // não mexe em peças nem em rota de movimento.
+  if (mapaState.modoInteracao === 'terreno') {
+    pintarHexTerreno(row, col);
+    return;
+  }
+
   const ehEu = mapaState.posEu.row === row && mapaState.posEu.col === col;
 
   // Clicar no próprio personagem: cancela toda a rota
@@ -9199,7 +10197,7 @@ function ativarArremesso() {
 function hexCenter(row, col) {
   const grid = document.getElementById('mapa-grid');
   const containerW = grid.parentElement.clientWidth || 340;
-  const cols = 5;
+  const cols = mapaState.gridCols;
   const hexW = Math.floor(containerW / (0.75 * (cols - 1) + 1));
   const hexHcalc = Math.round(hexW * Math.sqrt(3) / 2);
   const xCenter = col * hexW * 0.75 + hexW / 2;
@@ -9901,8 +10899,39 @@ if (typeof socket !== 'undefined' && socket) {
       // Atualiza posição do oponente no mapa local
       mapaState.posOponente = dados.posDepois;
       if (mapaState.aberto) renderizarMapaGrid();
+      else if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
       mostrarToast(`🗺️ ${escaparHtml(dados.de)} se moveu no mapa de combate.`, 3000);
     }
+  });
+
+  // ── Cenário: pintura de um único hexágono (textura/elevação) ───────────
+  socket.on('mapa-terreno-hex', (dados) => {
+    if (!dados || dados.de === usuarioAtual) return;
+    mapaState.terreno[dados.row + ',' + dados.col] = { tile: dados.tile, elev: dados.elev || 0 };
+    if (mapaState.aberto) renderizarMapaGrid();
+    else if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
+  });
+
+  // ── Cenário: expansão de borda (aplica o mesmo deslocamento localmente) ─
+  socket.on('mapa-terreno-grid', (dados) => {
+    if (!dados || dados.de === usuarioAtual) return;
+    mapaState.gridRows = dados.gridRows;
+    mapaState.gridCols = dados.gridCols;
+    if (dados.dRow || dados.dCol) deslocarConteudoGrid(dados.dRow || 0, dados.dCol || 0);
+    if (mapaState.aberto) renderizarMapaGrid();
+    else if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
+    mostrarToast('🗺️ O mapa foi expandido pelo outro jogador.', 3000);
+  });
+
+  // ── Cenário: substituição completa (importar arquivo / limpar / spawn da biblioteca) ─
+  socket.on('mapa-cenario-completo', (dados) => {
+    if (!dados || dados.de === usuarioAtual) return;
+    mapaState.gridRows = dados.gridRows;
+    mapaState.gridCols = dados.gridCols;
+    mapaState.terreno = dados.terreno || {};
+    if (mapaState.aberto) renderizarMapaGrid();
+    else if (typeof atualizarMapaFundoChat === 'function') atualizarMapaFundoChat();
+    mostrarToast('🗺️ O cenário do mapa foi atualizado pelo outro jogador.', 3000);
   });
 }
 
@@ -9980,6 +11009,633 @@ socket.on('parou-de-digitar', (dados) => {
   if (dados.nome !== usuarioAtual) pararDeDigitar();
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🕰️ MÓDULO DE GESTÃO DE TEMPO E RECURSOS — HÁRMINA
+// ─────────────────────────────────────────────────────────────────────────
+// Módulo novo e AUTOCONTIDO: não altera, sobrescreve nem depende de nenhuma
+// função/variável/HTML já existente no jogo (não mexe em state.energy, que
+// é o sistema de energia de COMBATE — este módulo é sobre o relógio do
+// mundo/tempo narrativo). Usa sua própria chave de localStorage por ficha
+// ("harmina_tempo_<nome-da-ficha>"), isolada de tudo o mais.
+//
+//   Parte 1 — GameData:        tabelas de custo/venda/câmbio/mapa (dados puros)
+//   Parte 2 — Gestão do Tempo: gastarPA, verificarCiclo, penalidades de
+//                              higiene e sono
+//
+// As próximas partes (Economia e Forja) serão adicionadas depois, conforme
+// combinado.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────
+// PARTE 1 — DADOS (GameData)
+// Objeto de dados imutável (Object.freeze), sem lógica — só as tabelas
+// descritas no documento de regras (custos de coleta, câmbio, venda de
+// minérios, custo das ações cotidianas e distâncias do mapa).
+// ─────────────────────────────────────────────────────────────────────────
+const GameData = Object.freeze({
+
+  // Estrutura do ciclo cronométrico: 12 PA por dia (6 de dia + 6 de noite)
+  ciclo: Object.freeze({
+    paPorDia: 12,
+    paDia: 6,
+    paNoite: 6,
+  }),
+
+  // Coleta/extração de recursos — custo em PA e quantia obtida por coleta
+  coleta: Object.freeze({
+    erva:          Object.freeze({ icone: '🌿', nome: 'Ervas',            custo: 1, quantia: 3 }),
+    fungo:         Object.freeze({ icone: '🍄', nome: 'Fungos',           custo: 1, quantia: 3 }),
+    madeira:       Object.freeze({ icone: '🪵', nome: 'Madeira',          custo: 1, quantia: 2 }),
+    pecas:         Object.freeze({ icone: '⚙️', nome: 'Peças',            custo: 2, quantia: 2 }),
+    alcool:        Object.freeze({ icone: '🍺', nome: 'Álcool',           custo: 4, quantia: 1 }),
+    canaDeAcucar:  Object.freeze({ icone: '🎋', nome: 'Cana de Açúcar',   custo: 1, quantia: 3 }),
+    fibraVegetal:  Object.freeze({ icone: '🧵', nome: 'Fibra Vegetal',    custo: 1, quantia: 1 }),
+    areia:         Object.freeze({ icone: '⏳', nome: 'Areia',            custo: 1, quantia: 3 }),
+    carneCaca:     Object.freeze({ icone: '🍖', nome: 'Carne (Caçar)',    custo: 1, quantia: 1 }),
+    carnePesca:    Object.freeze({ icone: '🍖', nome: 'Carne (Pescar)',   custo: 1, quantia: 3 }),
+    cristalMagico: Object.freeze({ icone: '💎', nome: 'Cristais Mágicos', custo: 6, quantia: 1 }),
+    carvao:        Object.freeze({ icone: '🌑', nome: 'Carvão',           custo: 1, quantia: 3 }),
+    bronze:        Object.freeze({ icone: '🟫', nome: 'Bronze',           custo: 1, quantia: 3 }),
+    ferro:         Object.freeze({ icone: '⬛', nome: 'Ferro',            custo: 2, quantia: 2 }),
+    prata:         Object.freeze({ icone: '⬜', nome: 'Prata',            custo: 3, quantia: 2 }),
+    ouro:          Object.freeze({ icone: '🟨', nome: 'Ouro',             custo: 4, quantia: 1 }),
+  }),
+
+  // Câmbio-base entre moedas ("1 para 5")
+  cambio: Object.freeze({
+    pratasPorOuro:   5,  // 1 Ouro    = 5 Pratas
+    ourosPorCristal: 5,  // 1 Cristal = 5 Ouros
+  }),
+
+  // Venda de minérios brutos no mercado (preço unitário)
+  vendaMinerios: Object.freeze({
+    carvao:  Object.freeze({ valor: 1, moeda: 'prata' }),
+    cobre:   Object.freeze({ valor: 2, moeda: 'prata' }),
+    ferro:   Object.freeze({ valor: 3, moeda: 'prata' }),
+    ouro:    Object.freeze({ valor: 5, moeda: 'prata' }),
+    cristal: Object.freeze({ valor: 5, moeda: 'ouro' }),
+  }),
+
+  // Ações cotidianas — custo em PA (e ganhos, quando houver)
+  acoes: Object.freeze({
+    comer:              Object.freeze({ custo: 1 }),
+    comercio:           Object.freeze({ custo: 2 }),
+    trabalhoVocacional: Object.freeze({ custo: 3 }),
+    estudosTecnicos:    Object.freeze({ custo: 1, conhecimento: 1 }),
+    treinamento:        Object.freeze({ custo: 1, conhecimento: 2 }),
+    higieneBasica:      Object.freeze({ custo: 1 }),
+    armarAcampamento:   Object.freeze({ custo: 1 }),
+    dormir:             Object.freeze({ custo: 4, recuperacaoMax: 4 }),
+  }),
+
+  // Regiões e distâncias entre elas, em PA (grafo de adjacência)
+  mapa: Object.freeze({
+    'Hármina':                Object.freeze({ 'Campinas Bordas-Verdes': 1, 'Montanhas': 1 }),
+    'Campinas Bordas-Verdes': Object.freeze({ 'Hármina': 1, 'Floresta': 2 }),
+    'Montanhas':               Object.freeze({ 'Hármina': 1, 'Depressões': 2 }),
+    'Floresta':                Object.freeze({ 'Campinas Bordas-Verdes': 2, 'Depressões': 3 }),
+    'Depressões':              Object.freeze({ 'Floresta': 3, 'Montanhas': 2 }),
+  }),
+
+  // Regras de penalidade (usadas na Parte 2, abaixo)
+  penalidades: Object.freeze({
+    higiene: Object.freeze({ diasTolerados: 3, guardaPorDia: 1 }),
+    sono:    Object.freeze({ energiaMaxPorNoiteSemDormir: 1 }),
+  }),
+
+  // ── Adicionado na Parte 4 (Forja) ──────────────────────────────────────
+  // Tabela de forja: custo em PA de cada item, por material escolhido.
+  // Para armas/proteção/máquinas o custo em PA já reflete a dificuldade do
+  // material (bronze vs. ferro); a quantidade de matéria-prima BASE segue
+  // o texto da regra quando informado ("20 madeiras", "2 madeira cada") ou,
+  // quando o documento não especifica (armas em geral), assume-se 1 unidade
+  // da matéria-prima principal por item — ajustável depois, se necessário.
+  forja: Object.freeze({
+    facaAdaga:  Object.freeze({ nome: 'Facas e Adagas', custoPorMaterial: Object.freeze({ bronze: 1, ferro: 2 }) }),
+    espada:     Object.freeze({ nome: 'Espada',          custoPorMaterial: Object.freeze({ bronze: 2, ferro: 4 }) }),
+    enxada:     Object.freeze({ nome: 'Enxada',          custoPorMaterial: Object.freeze({ bronze: 1, ferro: 2 }) }),
+    lanca:      Object.freeze({ nome: 'Lança',           custoPorMaterial: Object.freeze({ bronze: 1, ferro: 2 }) }),
+    machado:    Object.freeze({ nome: 'Machado',         custoPorMaterial: Object.freeze({ bronze: 2, ferro: 3 }) }),
+    foice:      Object.freeze({ nome: 'Foice',           custoPorMaterial: Object.freeze({ bronze: 1, ferro: 2 }) }),
+    armadura:   Object.freeze({ nome: 'Armadura',        custoPorMaterial: Object.freeze({ bronze: 6, ferro: 8 }) }),
+    escudo:     Object.freeze({ nome: 'Escudo',          custoPorMaterial: Object.freeze({ bronze: 2, ferro: 4 }) }),
+    armadilha:  Object.freeze({ nome: 'Armadilha',       custoPorMaterial: Object.freeze({ madeira: 1, minerais: 2 }) }),
+    maquina:    Object.freeze({ nome: 'Máquina',         custoPorMaterial: Object.freeze({ bronze: 10, ferro: 15 }) }),
+    cabanaMadeira: Object.freeze({
+      nome: 'Cabana de Madeira',
+      custoPorMaterial: Object.freeze({ madeira: 20 }),
+      materialBaseUnidades: 20,
+    }),
+    utensilioDomestico: Object.freeze({
+      nome: 'Utensílio Doméstico',
+      custoPorMaterial: Object.freeze({ madeira: 2 }),
+      materialBaseUnidades: 2,
+    }),
+  }),
+
+  // "Equação da Customização de forja" — a Regra do +1 (por customização
+  // estrutural aplicada ao item, ex.: cabo mais longo, lâmina estendida).
+  customizacaoForja: Object.freeze({
+    paAdicional: 1,
+    materialAdicional: 1,
+    pesoAdicional: 1,
+    danoAdicional: 1,
+  }),
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// PARTE 2 — GESTÃO DE TEMPO
+// Cada ficha tem seu próprio "relógio" (PA gastos hoje, dia atual, dias sem
+// banho, dias sem dormir), persistido em localStorage sob chave própria.
+// Estas funções nunca leem/escrevem em `state` (o estado de combate já
+// existente) — quem chamar decide como aplicar os resultados retornados
+// (ex.: reduzir state.guard.max), mantendo o módulo desacoplado do resto.
+// ─────────────────────────────────────────────────────────────────────────
+
+function _chaveTempo(nomeFicha) {
+  return `harmina_tempo_${nomeFicha || 'sem-ficha'}`;
+}
+
+// Estado padrão de um novo "relógio" de personagem
+function _estadoTempoPadrao() {
+  return { diaAtual: 1, paGastosHoje: 0, diasSemBanho: 0, diasSemDormir: 0 };
+}
+
+function _fichaPadrao() {
+  return (typeof fichaAtivaChat !== 'undefined' && fichaAtivaChat) ? fichaAtivaChat : null;
+}
+
+// Lê o estado de tempo de uma ficha (por padrão, a ficha ativa no chat).
+function obterEstadoTempo(nomeFicha = _fichaPadrao()) {
+  try {
+    const raw = localStorage.getItem(_chaveTempo(nomeFicha));
+    return raw ? JSON.parse(raw) : _estadoTempoPadrao();
+  } catch (e) {
+    return _estadoTempoPadrao();
+  }
+}
+
+function _salvarEstadoTempo(nomeFicha, estado) {
+  try { localStorage.setItem(_chaveTempo(nomeFicha), JSON.stringify(estado)); }
+  catch (e) { /* localStorage indisponível — segue só em memória nesta chamada */ }
+}
+
+// Indica, de forma pura, se o total de PA já gastos no dia cai no período
+// diurno ou noturno (GameData.ciclo: 6 PA de dia + 6 PA de noite).
+function verificarCiclo(nomeFicha = _fichaPadrao()) {
+  const estado = obterEstadoTempo(nomeFicha);
+  const { paDia, paPorDia } = GameData.ciclo;
+  const posicaoNoDia = estado.paGastosHoje % paPorDia;
+  const cicloAtual = posicaoNoDia < paDia ? 'dia' : 'noite';
+  return {
+    cicloAtual,
+    dia: estado.diaAtual,
+    paGastosHoje: posicaoNoDia,
+    paRestanteNoCiclo: cicloAtual === 'dia' ? (paDia - posicaoNoDia) : (paPorDia - posicaoNoDia),
+    paRestanteNoDia: paPorDia - posicaoNoDia,
+  };
+}
+
+// Gasta `quantidade` Pontos de Ação da ficha informada (ou da ficha ativa).
+// Nunca lança exceção: se a quantidade for inválida, retorna sucesso:false.
+// Se o gasto ultrapassar os 12 PA do dia, avança automaticamente para o(s)
+// dia(s) seguinte(s) (o "resto" de PA sobra para o novo dia).
+function gastarPA(quantidade, nomeFicha = _fichaPadrao()) {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    return { sucesso: false, motivo: 'Quantidade de PA inválida.' };
+  }
+  const estado = obterEstadoTempo(nomeFicha);
+  const { paPorDia } = GameData.ciclo;
+
+  let paGastosHoje = estado.paGastosHoje + quantidade;
+  let diasAvancados = 0;
+  while (paGastosHoje >= paPorDia) {
+    paGastosHoje -= paPorDia;
+    diasAvancados++;
+  }
+
+  const novoEstado = { ...estado, diaAtual: estado.diaAtual + diasAvancados, paGastosHoje };
+  _salvarEstadoTempo(nomeFicha, novoEstado);
+
+  return { sucesso: true, estado: novoEstado, ciclo: verificarCiclo(nomeFicha), diasAvancados };
+}
+
+// Penalidade de higiene: cada dia além dos "diasTolerados" (3) sem banho
+// reduz a Guarda máxima em `guardaPorDia`. A função só RETORNA a penalidade
+// calculada — a aplicação em state.guard.max fica a critério de quem
+// chamar, para não mexer no sistema de combate já existente.
+function aplicarPenalidadeHigiene(banhouHoje, nomeFicha = _fichaPadrao()) {
+  const estado = obterEstadoTempo(nomeFicha);
+  const { diasTolerados, guardaPorDia } = GameData.penalidades.higiene;
+
+  const diasSemBanho = banhouHoje ? 0 : estado.diasSemBanho + 1;
+  _salvarEstadoTempo(nomeFicha, { ...estado, diasSemBanho });
+
+  const diasExcedentes = Math.max(0, diasSemBanho - diasTolerados);
+  return {
+    diasSemBanho,
+    penalidadeGuardaMax: diasExcedentes * guardaPorDia,
+    statusRepulsivo: diasExcedentes > 0,
+  };
+}
+
+// Penalidade de sono: cada noite sem dormir reduz a Energia máxima em
+// `energiaMaxPorNoiteSemDormir`. Se `dormiu` for true, zera o contador e
+// retorna a recuperação de vida/energia/magia máxima (+4). Só RETORNA os
+// valores — a aplicação em state.* fica a cargo de quem chamar.
+function aplicarPenalidadeSono(dormiu, nomeFicha = _fichaPadrao()) {
+  const estado = obterEstadoTempo(nomeFicha);
+  const { energiaMaxPorNoiteSemDormir } = GameData.penalidades.sono;
+
+  if (dormiu) {
+    _salvarEstadoTempo(nomeFicha, { ...estado, diasSemDormir: 0 });
+    return { diasSemDormir: 0, penalidadeEnergiaMax: 0, recuperacaoMax: GameData.acoes.dormir.recuperacaoMax };
+  }
+
+  const diasSemDormir = estado.diasSemDormir + 1;
+  _salvarEstadoTempo(nomeFicha, { ...estado, diasSemDormir });
+  return {
+    diasSemDormir,
+    penalidadeEnergiaMax: diasSemDormir * energiaMaxPorNoiteSemDormir,
+    recuperacaoMax: 0,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// PARTE 3 — ECONOMIA
+// Funções puras de cálculo (não mexem em inventário/carteira — o jogo ainda
+// não tem uma estrutura formal de "carteira"; quem chamar decide onde
+// creditar o valor retornado).
+// ─────────────────────────────────────────────────────────────────────────
+
+// Converte `valor` unidades de `tipoOrigem` ('prata' | 'ouro' | 'cristal')
+// para o total equivalente em Prata, a moeda-base ("regra do 1 para 5").
+function converterMoeda(valor, tipoOrigem) {
+  if (!Number.isFinite(valor) || valor < 0) {
+    return { sucesso: false, motivo: 'Valor inválido.' };
+  }
+  const { pratasPorOuro, ourosPorCristal } = GameData.cambio;
+  switch (tipoOrigem) {
+    case 'prata':
+      return { sucesso: true, valorConvertido: valor, moedaOrigem: 'prata', moedaDestino: 'prata' };
+    case 'ouro':
+      return { sucesso: true, valorConvertido: valor * pratasPorOuro, moedaOrigem: 'ouro', moedaDestino: 'prata' };
+    case 'cristal':
+      return {
+        sucesso: true,
+        valorConvertido: valor * ourosPorCristal * pratasPorOuro,
+        moedaOrigem: 'cristal',
+        moedaDestino: 'prata',
+      };
+    default:
+      return { sucesso: false, motivo: `Moeda de origem "${tipoOrigem}" desconhecida.` };
+  }
+}
+
+// Vende `quantidade` unidades de um minério bruto (GameData.vendaMinerios).
+// Retorna o valor total na moeda de venda do item, além do equivalente em
+// Prata (via converterMoeda), para facilitar somar com outras vendas.
+function venderRecurso(item, quantidade) {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    return { sucesso: false, motivo: 'Quantidade inválida.' };
+  }
+  const dadosVenda = GameData.vendaMinerios[item];
+  if (!dadosVenda) {
+    return { sucesso: false, motivo: `"${item}" não possui preço de venda definido.` };
+  }
+  const valorTotal = dadosVenda.valor * quantidade;
+  const equivalenteEmPrata = converterMoeda(valorTotal, dadosVenda.moeda).valorConvertido;
+  return { sucesso: true, item, quantidade, valorTotal, moeda: dadosVenda.moeda, equivalenteEmPrata };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// PARTE 4 — FORJA
+// ─────────────────────────────────────────────────────────────────────────
+
+// Forja um item, aplicando a "Equação da Customização" (Regra do +1) para
+// cada customização estrutural pedida: cada uma soma +1 PA, +1 unidade de
+// matéria-prima, +1 de Peso e +1 de Dano ao resultado final.
+//
+// `recursos` (opcional) é um objeto com o que o personagem TEM disponível
+// no momento, ex.: { pa: 6, ferro: 3 }. Cada chave informada é validada;
+// chaves omitidas simplesmente não são checadas (e entram em `avisos`) —
+// isso evita a função depender de alguma estrutura de inventário específica
+// que ainda não existe no jogo.
+function forjarItem(item, material, customizacoes = 0, recursos = {}) {
+  const dadosItem = GameData.forja[item];
+  if (!dadosItem) {
+    return { sucesso: false, motivo: `Item de forja "${item}" não existe na tabela.` };
+  }
+  const paBase = dadosItem.custoPorMaterial[material];
+  if (!Number.isFinite(paBase)) {
+    return { sucesso: false, motivo: `"${dadosItem.nome}" não pode ser forjado com "${material}".` };
+  }
+  if (!Number.isInteger(customizacoes) || customizacoes < 0) {
+    return { sucesso: false, motivo: 'Número de customizações inválido.' };
+  }
+
+  const { paAdicional, materialAdicional, pesoAdicional, danoAdicional } = GameData.customizacaoForja;
+  const materialBase = dadosItem.materialBaseUnidades ?? 1; // ver nota na tabela GameData.forja
+
+  const paTotal = paBase + customizacoes * paAdicional;
+  const materialTotal = materialBase + customizacoes * materialAdicional;
+  const pesoAdicionalTotal = customizacoes * pesoAdicional;
+  const danoAdicionalTotal = customizacoes * danoAdicional;
+
+  const avisos = [];
+  if (recursos.pa !== undefined) {
+    if (recursos.pa < paTotal) {
+      return { sucesso: false, motivo: `PA insuficiente: precisa de ${paTotal}, disponível ${recursos.pa}.` };
+    }
+  } else {
+    avisos.push('PA disponível não informado — validação de PA não foi feita.');
+  }
+  if (recursos[material] !== undefined) {
+    if (recursos[material] < materialTotal) {
+      return {
+        sucesso: false,
+        motivo: `"${material}" insuficiente: precisa de ${materialTotal}, disponível ${recursos[material]}.`,
+      };
+    }
+  } else {
+    avisos.push(`Quantidade disponível de "${material}" não informada — validação de material não foi feita.`);
+  }
+
+  return {
+    sucesso: true,
+    item: dadosItem.nome,
+    material,
+    customizacoes,
+    custo: { pa: paTotal, [material]: materialTotal },
+    resultado: { pesoAdicional: pesoAdicionalTotal, danoAdicional: danoAdicionalTotal },
+    avisos,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🗺️ MAPA DO MUNDO — regiões, localização atual e viagem entre elas
+// ─────────────────────────────────────────────────────────────────────────
+// Módulo companheiro do "relógio" de tempo: guarda em qual região cada
+// ficha está agora, também isolado em sua própria chave de localStorage.
+// Usado pela tela de mapa acessível pelo menu "⋮" do chat.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function _chaveRegiao(nomeFicha) {
+  return `harmina_regiao_${nomeFicha || 'sem-ficha'}`;
+}
+
+function obterRegiaoAtual(nomeFicha = _fichaPadrao()) {
+  try {
+    return localStorage.getItem(_chaveRegiao(nomeFicha)) || 'Hármina';
+  } catch (e) {
+    return 'Hármina';
+  }
+}
+
+function _definirRegiaoAtual(nomeFicha, regiao) {
+  try { localStorage.setItem(_chaveRegiao(nomeFicha), regiao); }
+  catch (e) { /* localStorage indisponível — segue só em memória nesta chamada */ }
+}
+
+// Viaja da região atual para `destino`, se houver conexão direta no mapa
+// (GameData.mapa). Gasta o PA correspondente à distância via gastarPA().
+function viajarParaRegiao(destino, nomeFicha = _fichaPadrao()) {
+  const origem = obterRegiaoAtual(nomeFicha);
+  const vizinhos = GameData.mapa[origem];
+  if (!vizinhos || !(destino in vizinhos)) {
+    return { sucesso: false, motivo: `Não há caminho direto de "${origem}" para "${destino}".` };
+  }
+  const custoPA = vizinhos[destino];
+  const resultadoPA = gastarPA(custoPA, nomeFicha);
+  if (!resultadoPA.sucesso) return resultadoPA;
+
+  _definirRegiaoAtual(nomeFicha, destino);
+  return { sucesso: true, origem, destino, custoPA, ciclo: resultadoPA.ciclo, estadoTempo: resultadoPA.estado };
+}
+
+// ── Layout visual do mapa (posições em um viewBox 400×420) ───────────────
+// Hármina no topo-esquerda; Montanhas no topo-direita; Campinas abaixo de
+// Hármina; Floresta abaixo da Campina, à esquerda; Depressões abaixo de
+// todas — com o "tubo" de Montanhas até Depressões fazendo uma curva que
+// passa um pouco abaixo do nível das Campinas antes de descer.
+const MAPA_MUNDO_LAYOUT = {
+  'Hármina':                { x: 90,  y: 55  },
+  'Montanhas':               { x: 310, y: 70  },
+  'Campinas Bordas-Verdes': { x: 110, y: 170 },
+  'Floresta':                { x: 65,  y: 270 },
+  'Depressões':              { x: 200, y: 365 },
+};
+const MAPA_MUNDO_EDGES = [
+  { a: 'Hármina', b: 'Campinas Bordas-Verdes' },
+  { a: 'Hármina', b: 'Montanhas' },
+  { a: 'Campinas Bordas-Verdes', b: 'Floresta' },
+  { a: 'Floresta', b: 'Depressões' },
+  { a: 'Montanhas', b: 'Depressões', curva: true, controle: { x: 300, y: 260 } },
+];
+
+// Desenha o mapa (bolinha verde = onde você está, azuis = as demais regiões,
+// com contorno dourado nas que são acessíveis diretamente da região atual).
+function renderizarMapaMundo() {
+  const wrap = document.getElementById('mundo-mapa-svg-wrap');
+  if (!wrap) return;
+
+  const atual = obterRegiaoAtual();
+  const vizinhosAtual = GameData.mapa[atual] || {};
+
+  let tubosExternos = '';
+  let tubosInternos = '';
+  MAPA_MUNDO_EDGES.forEach(e => {
+    const pa = MAPA_MUNDO_LAYOUT[e.a], pb = MAPA_MUNDO_LAYOUT[e.b];
+    if (!pa || !pb) return;
+    const d = (e.curva && e.controle)
+      ? `M${pa.x},${pa.y} Q${e.controle.x},${e.controle.y} ${pb.x},${pb.y}`
+      : `M${pa.x},${pa.y} L${pb.x},${pb.y}`;
+    tubosExternos += `<path class="mm-tubo" d="${d}"></path>`;
+    tubosInternos += `<path class="mm-tubo-interna" d="${d}"></path>`;
+  });
+
+  let nos = '';
+  Object.keys(MAPA_MUNDO_LAYOUT).forEach(nome => {
+    const p = MAPA_MUNDO_LAYOUT[nome];
+    const ehAtual = nome === atual;
+    const acessivel = !ehAtual && (nome in vizinhosAtual);
+    const classe = ehAtual ? 'atual' : ('outra' + (acessivel ? ' acessivel' : ''));
+    const nomeEscapado = nome.replace(/'/g, "\\'");
+    nos += `<circle class="mm-no ${classe}" cx="${p.x}" cy="${p.y}" r="14" onclick="cliqueRegiaoMundo('${nomeEscapado}')"><title>${nome}</title></circle>`;
+    nos += `<text class="mm-rotulo" x="${p.x}" y="${p.y + 28}">${nome}</text>`;
+  });
+
+  wrap.innerHTML = `<svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMid meet">${tubosExternos}${tubosInternos}${nos}</svg>`;
+
+  const info = document.getElementById('mundo-mapa-info');
+  if (info) info.textContent = `📍 Você está em: ${atual}`;
+
+  if (typeof renderizarSubareasRegiao === 'function') renderizarSubareasRegiao();
+}
+
+// Clique numa região do mapa: se houver conexão direta com a região atual,
+// pergunta e viaja (gastando o PA correspondente); caso contrário, avisa
+// que não há caminho direto.
+function cliqueRegiaoMundo(nome) {
+  const atual = obterRegiaoAtual();
+  const info = document.getElementById('mundo-mapa-info');
+  if (nome === atual) return;
+
+  const vizinhos = GameData.mapa[atual] || {};
+  if (!(nome in vizinhos)) {
+    if (info) info.textContent = `🚫 Não há caminho direto de "${atual}" até "${nome}".`;
+    return;
+  }
+
+  const custoPA = vizinhos[nome];
+  const confirmar = confirm(`Viajar de "${atual}" para "${nome}"? Custa ${custoPA} Ponto(s) de Ação.`);
+  if (!confirmar) return;
+
+  const resultado = viajarParaRegiao(nome);
+  if (!resultado.sucesso) {
+    if (info) info.textContent = resultado.motivo || 'Não foi possível viajar.';
+    if (typeof mostrarToast === 'function') mostrarToast(`⚠️ ${resultado.motivo || 'Não foi possível viajar.'}`, 3500);
+    return;
+  }
+
+  renderizarMapaMundo();
+  if (typeof mostrarToast === 'function') mostrarToast(`🗺️ Você viajou para ${nome}. (−${custoPA} PA)`, 3500);
+}
+
+function abrirMapaMundo() {
+  const overlay = document.getElementById('mundo-mapa-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  renderizarMapaMundo();
+  const menu = document.getElementById('chat-menu');
+  if (menu) menu.classList.remove('open');
+}
+
+function fecharMapaMundo(e) {
+  if (e && e.target !== document.getElementById('mundo-mapa-overlay')) return;
+  const overlay = document.getElementById('mundo-mapa-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUB-ÁREAS — "segundo mapa" dentro de cada região principal.
+// Visitar uma sub-área NÃO consome PA/energia: é apenas um detalhamento do
+// local onde a ficha já está. Ao tocar numa sub-área, um balão quadrado
+// mostra nome + descrição; a visita só é registrada ao apertar "Confirmar".
+// ═══════════════════════════════════════════════════════════════════════════
+const SUBAREAS_DB = {
+  'Hármina': [
+    { nome: 'Capital', desc: 'O coração de Hármina: arquitetura cinzenta e imponente dos Adoradores do Rei misturada aos letreiros luminosos e fiações elétricas trazidas pelos anões. Local onde se encontram figuras de alta autoridade.' },
+    { nome: 'O Porto', desc: 'Ponto vital da economia — chegam ali os barcos mercantes clandestinos vindos do Sul. Zona vibrante de comércio, cheia de tavernas, fumaça industrial e neblina marítima. Local onde se compram itens.' },
+    { nome: 'Praça do Relógio a Vapor', desc: 'Onde a tecnologia anã encontra a burocracia do Reino. Reúne os editais de caça e os mercenários. Local onde se encontram missões.' },
+    { nome: 'A Catedral', desc: 'Local sagrado dos fiéis à monarquia, com enorme estrutura gótica preservada, imaculada perante os avanços tecnológicos. Frequentar restaura 4 de magia por dia.' },
+  ],
+  'Campinas Bordas-Verdes': [
+    { nome: 'Campos Borda-Verde', desc: 'Vasta planície de grama alta que ondula ao vento, o "colchão" entre Hármina e a floresta. Possui uma torre de vigia de madeira voltada para a floresta.' },
+    { nome: 'Corrego Veia-Azul', desc: 'Parada relaxante vinda das montanhas, contornável por uma ponte de rochas. Bom ponto para caçar animais pequenos. Descansar aqui recupera +2 de energia extra; a caça de pequeno porte cura 2 de vitalidade e energia.' },
+    { nome: 'Vila-das-Éguas', desc: 'Aglomerado rústico de casas de madeira e moinhos de vento, onde a grama alta encontra o solo fértil. Centro comercial barato, com alimentos e itens de menor qualidade porém mais baratos, e pousadas rústicas (custo menor, mas recuperação de vida/energia reduzida em 2 pontos).' },
+  ],
+  'Floresta': [
+    { nome: 'Floresta Vácuo-Esmeralda', desc: 'Mata densa, amena e úmida, com copas tão fechadas que o chão vive em penumbra constante. Área apropriada para caçar animais de grande porte — sujeita a ataques de feras selvagens.' },
+    { nome: 'Bosque de Veludo', desc: 'Borda da floresta, onde a luz ainda entra e o ambiente é mais aberto. Área própria para coleta de ervas, fungos e madeira.' },
+    { nome: 'Tribo dos Silvestres', desc: 'Sociedade reclusa de pele pálida e orelhas longas, moradias suspensas nas árvores, comunicação pelo Idioma dos Gestos, comércio por troca. Hostis apenas a quem ameaça o ecossistema. Possuem +5 de Guarda racial e +2 extra sob cobertura de árvores.' },
+  ],
+  'Montanhas': [
+    { nome: 'Cordilheiras Trono-de-Aço (Norte)', desc: 'Área mais fortificada do continente, onde ficam as minas de "sangue de pedra". Fortemente patrulhada pelo exército de Hármina e dos anões. Local de trabalho escravo.' },
+    { nome: 'Reino Mont-Krom', desc: 'Cidade labiríntica dos anões (≈70cm), movida a pressão hidráulica e vapor, com o "Corredor do Gigante" para seres maiores e sentinelas de teto automatizadas. Abriga o Setor de Extração, onde escravos mineram sob vigilância de colossos metálicos.' },
+    { nome: 'Picos Invernais', desc: 'Lugar isolado onde neva constantemente e o ar é rarefeito. Perfeito para se esconder, meditar ou observar o horizonte. Atmosfera silenciosa e contemplativa; o perigo vem do frio e de feras selvagens.' },
+  ],
+  'Depressões': [
+    { nome: 'Mirante do Abismo', desc: 'Ponto de observação elevado na fronteira da mata, com vista panorâmica da ravina. Na borda da falésia resta um sistema quebrado de carretilhas que outrora descia suprimentos aos refugiados.' },
+    { nome: 'As Depressões', desc: 'Ravina profunda cercada por deserto seco, abrigo de uma população pobre e marginalizada, com habitações improvisadas nas paredes de rocha. Hármina envia suprimentos, mas facções locais os interceptam — ambiente perigoso e hostil.' },
+    { nome: 'A Linha de Custódia', desc: 'Fronteira Norte-Sul, terra de ninguém onde os exércitos se vigiam à distância. No fundo da ravina erguem-se as Torres Siamesas do Orgulho, monumentos de vigia e propaganda política rivais.' },
+  ],
+};
+
+let _subareaSelecionadaPendente = null;
+
+function _chaveSubarea(nomeFicha) {
+  return `harmina_subarea_${nomeFicha || 'sem-ficha'}`;
+}
+
+function obterSubareaAtual(nomeFicha = _fichaPadrao()) {
+  try { return localStorage.getItem(_chaveSubarea(nomeFicha)) || ''; }
+  catch (e) { return ''; }
+}
+
+function _definirSubareaAtual(nomeFicha, subarea) {
+  try {
+    if (subarea) localStorage.setItem(_chaveSubarea(nomeFicha), subarea);
+    else localStorage.removeItem(_chaveSubarea(nomeFicha));
+  } catch (e) { /* localStorage indisponível */ }
+}
+
+// Desenha o "segundo mapa" (grade de sub-áreas) da região onde a ficha está.
+function renderizarSubareasRegiao() {
+  const grid = document.getElementById('subareas-grid');
+  const rotulo = document.getElementById('subareas-atual-nome');
+  if (!grid || !rotulo) return;
+
+  const regiao = obterRegiaoAtual();
+  const lista = SUBAREAS_DB[regiao] || [];
+  rotulo.textContent = regiao;
+
+  cancelarSubarea();
+
+  if (!lista.length) {
+    grid.innerHTML = `<div id="subareas-vazio">Nenhuma sub-área mapeada aqui ainda.</div>`;
+    return;
+  }
+
+  const subareaSalva = obterSubareaAtual();
+  const aindaValida = lista.some(s => s.nome === subareaSalva);
+  if (!aindaValida) _definirSubareaAtual(_fichaPadrao(), '');
+
+  grid.innerHTML = lista.map(s => {
+    const nomeEscapado = s.nome.replace(/'/g, "\\'");
+    const selecionada = s.nome === obterSubareaAtual() ? ' selecionada' : '';
+    return `<button type="button" class="subarea-chip${selecionada}" onclick="selecionarSubarea('${nomeEscapado}')">${s.nome}</button>`;
+  }).join('');
+}
+
+// Toque numa sub-área: mostra o balão quadrado com nome + descrição, antes
+// de qualquer confirmação (não gasta PA nem energia).
+function selecionarSubarea(nome) {
+  const regiao = obterRegiaoAtual();
+  const lista = SUBAREAS_DB[regiao] || [];
+  const sub = lista.find(s => s.nome === nome);
+  if (!sub) return;
+
+  _subareaSelecionadaPendente = sub;
+
+  const balao = document.getElementById('subarea-balao');
+  const nomeEl = document.getElementById('subarea-balao-nome');
+  const descEl = document.getElementById('subarea-balao-desc');
+  if (nomeEl) nomeEl.textContent = sub.nome;
+  if (descEl) descEl.textContent = sub.desc;
+  if (balao) balao.classList.remove('oculto');
+}
+
+// Fecha o balão sem confirmar a visita.
+function cancelarSubarea() {
+  _subareaSelecionadaPendente = null;
+  const balao = document.getElementById('subarea-balao');
+  if (balao) balao.classList.add('oculto');
+}
+
+// Confirma a visita à sub-área selecionada (sem custo de PA/energia) e
+// atualiza os destaques do "segundo mapa".
+function confirmarSubarea() {
+  if (!_subareaSelecionadaPendente) return;
+  const nomeFicha = _fichaPadrao();
+  _definirSubareaAtual(nomeFicha, _subareaSelecionadaPendente.nome);
+  if (typeof mostrarToast === 'function') {
+    mostrarToast(`📌 Você está agora em: ${_subareaSelecionadaPendente.nome}`, 3000);
+  }
+  cancelarSubarea();
+  renderizarSubareasRegiao();
+}
+
 </script>
 
 <!-- Overlay de Nocaute / Atordoamento -->
@@ -10045,10 +11701,55 @@ socket.on('parou-de-digitar', (dados) => {
         <span id="mapa-legenda-dist"></span>
       </div>
 
-      <div id="mapa-grid-wrap">
-        <div id="mapa-grid"></div>
-        <svg id="mapa-rota-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-        <div id="mapa-peca-animada" style="display:none;"></div>
+      <!-- ── Toolbar do builder de cenário (bioma "pradaria") ── -->
+      <div id="mapa-terreno-toolbar">
+        <div id="mapa-modo-interacao">
+          <button id="mti-mover" class="mti-btn active" onclick="setModoInteracaoMapa('mover')">⚔️ Mover</button>
+          <button id="mti-terreno" class="mti-btn" onclick="setModoInteracaoMapa('terreno')">🎨 Terreno</button>
+        </div>
+        <div id="mapa-paleta-terreno" style="display:none;">
+          <div id="mapa-paleta-tiles"></div>
+          <div id="mapa-paleta-elevacao">
+            <span>🏔️ Elevação</span>
+            <button class="paleta-elev-btn" onclick="ajustarElevacaoAtiva(-1)">−</button>
+            <span id="mapa-elev-val">0</span>
+            <button class="paleta-elev-btn" onclick="ajustarElevacaoAtiva(1)">+</button>
+          </div>
+          <div id="mapa-paleta-acoes">
+            <button onclick="salvarCenarioMapa()">💾 Salvar</button>
+            <button onclick="exportarCenarioMapa()">⬇️ Exportar</button>
+            <button onclick="document.getElementById('mapa-import-input').click()">⬆️ Importar</button>
+            <button onclick="limparCenarioMapa()">🗑️ Limpar</button>
+          </div>
+          <input type="file" id="mapa-import-input" accept="application/json" style="display:none" onchange="importarCenarioMapa(event)">
+
+          <!-- Biblioteca de mapas: salvar com nome + spawnar sob demanda -->
+          <div id="mapa-paleta-acoes-biblioteca" style="position:relative;">
+            <button onclick="salvarCenarioNaBiblioteca()">📚 Salvar na Biblioteca</button>
+            <button onclick="toggleBibliotecaMapas()">🗺️ Mapas Salvos</button>
+            <div id="mapa-biblioteca-popup">
+              <div id="mapa-biblioteca-header">
+                <span>📚 Biblioteca de Mapas</span>
+                <button class="mbp-fechar" onclick="toggleBibliotecaMapas()">✕</button>
+              </div>
+              <div id="mapa-biblioteca-lista"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="mapa-grid-expand-wrap">
+        <button class="mapa-expand-btn expand-cima" onclick="expandirGridMapa('cima')" title="Expandir para cima">▲</button>
+        <div id="mapa-grid-linha-meio">
+          <button class="mapa-expand-btn expand-esquerda" onclick="expandirGridMapa('esquerda')" title="Expandir para a esquerda">◀</button>
+          <div id="mapa-grid-wrap">
+            <div id="mapa-grid"></div>
+            <svg id="mapa-rota-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div id="mapa-peca-animada" style="display:none;"></div>
+          </div>
+          <button class="mapa-expand-btn expand-direita" onclick="expandirGridMapa('direita')" title="Expandir para a direita">▶</button>
+        </div>
+        <button class="mapa-expand-btn expand-baixo" onclick="expandirGridMapa('baixo')" title="Expandir para baixo">▼</button>
       </div>
 
       <div id="mapa-rota-info">
@@ -10183,6 +11884,36 @@ socket.on('parou-de-digitar', (dados) => {
 
     </div>
 
+  </div>
+</div>
+
+<!-- ═══ OVERLAY DO MAPA DO MUNDO (regiões) ═══ -->
+<div id="mundo-mapa-overlay" onclick="fecharMapaMundo(event)">
+  <div id="mundo-mapa-box" onclick="event.stopPropagation()">
+    <div id="mundo-mapa-header">
+      <h3>🗺️ Mapa do Mundo</h3>
+      <button id="mundo-mapa-fechar" onclick="fecharMapaMundo()">✕</button>
+    </div>
+    <div id="mundo-mapa-legenda">
+      <span>🟢 Onde você está</span>
+      <span>🔵 Outras regiões</span>
+      <span>Toque numa região conectada para viajar</span>
+    </div>
+    <div id="mundo-mapa-svg-wrap"></div>
+    <div id="mundo-mapa-info"></div>
+
+    <div id="subareas-secao">
+      <div id="subareas-titulo">📌 Sub-áreas de <span id="subareas-atual-nome"></span> — visitar não custa PA</div>
+      <div id="subareas-grid"></div>
+      <div id="subarea-balao" class="oculto">
+        <div id="subarea-balao-nome"></div>
+        <div id="subarea-balao-desc"></div>
+        <div id="subarea-balao-acoes">
+          <button id="subarea-balao-cancelar" onclick="cancelarSubarea()">Cancelar</button>
+          <button id="subarea-balao-confirmar" onclick="confirmarSubarea()">Confirmar visita</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
